@@ -71,6 +71,12 @@ Build command:
 swift build
 ```
 
+Run command:
+
+```bash
+./script/build_and_run.sh
+```
+
 ## Git Rules
 
 - Keep `main` usable.

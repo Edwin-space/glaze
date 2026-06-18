@@ -19,6 +19,7 @@
 - UI 언어: 한국어/영어
 - 언어 기본값: 시스템 언어 자동 감지, 미지원 언어는 영어 fallback
 - 초기 저장소: GitHub `Edwin-space/glaze`
+- 실행 진입점: `./script/build_and_run.sh`
 
 ## 개발 시작 전 원칙
 
@@ -74,6 +75,8 @@ scripts/
 - 한국어/영어 localization 구조 추가
 - 기본 앱 실행 확인
 - `.gitignore` 재검토
+- SwiftPM GUI 앱 실행용 `.app` 번들 스테이징 스크립트 추가
+- Codex Run 액션 연결
 - Git 커밋 및 GitHub push
 
 ### 완료 기준
