@@ -1,0 +1,7 @@
+"app.name" = "글레이즈";
+"command.open_video" = "영상 열기...";
+"open_panel.title" = "영상을 선택하세요";
+"player.empty_title" = "영상을 열어 시작하세요";
+"player.empty_subtitle" = "글레이즈는 로컬 재생에서 시작해 AI 자막 준비 경험으로 확장됩니다.";
+"player.no_file" = "선택된 영상 없음";
+"player.open_video" = "영상 열기";

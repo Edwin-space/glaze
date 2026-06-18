@@ -1,0 +1,7 @@
+"app.name" = "Glaze";
+"command.open_video" = "Open Video...";
+"open_panel.title" = "Choose a video";
+"player.empty_title" = "Open a video to begin";
+"player.empty_subtitle" = "Glaze starts with local playback, then grows into AI subtitle preparation.";
+"player.no_file" = "No video selected";
+"player.open_video" = "Open Video";
