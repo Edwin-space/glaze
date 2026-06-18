@@ -37,6 +37,7 @@ When code or product behavior changes, update the matching docs:
 - Service text inventory: `docs/12_service_text_inventory.md`
 - User flows: `docs/13_user_flows.md`
 - Working principles: `docs/14_working_principles.md`
+- FFmpeg/MKV validation: `docs/15_ffmpeg_mkv_validation.md`
 
 For new user-facing text, update `docs/12_service_text_inventory.md` and the localization files together.
 

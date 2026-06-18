@@ -171,6 +171,13 @@ scripts/
 
 AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위를 확인한다.
 
+### 진행 중 구현
+
+- FFmpeg/MKV 검증 계획 문서화: `docs/15_ffmpeg_mkv_validation.md`
+- 샘플 파일 검사용 스크립트 추가: `./script/validate_media_capability.sh`
+- App Store self-contained bundle, sandbox, 외부 코드 다운로드 제한 기준 확인
+- FFmpeg LGPL/GPL/nonfree 빌드 옵션 리스크 기준 확인
+
 ### 검증 항목
 
 - MKV 재생 가능 여부

@@ -22,6 +22,7 @@
 - `12_service_text_inventory.md`: 메뉴, 버튼, 알림, 상태, 오류 등 서비스 텍스트 인벤토리
 - `13_user_flows.md`: 핵심 사용자 플로우와 예외/FAQ 후보 정리
 - `14_working_principles.md`: 구현, 검증, 문서화, GitHub 반영을 유지하기 위한 작업 운영 원칙
+- `15_ffmpeg_mkv_validation.md`: FFmpeg/MKV 도입 검증 계획, 라이선스/App Store 기준, 샘플 검사 절차
 
 ## 제품 한 줄 정의
 
