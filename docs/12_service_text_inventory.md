@@ -43,6 +43,7 @@
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
 | `subtitle.generate` | 자막 생성 | Generate Subtitles | 버튼 | 구현 |
+| `subtitle.error.read_failed` | 자막 파일을 읽을 수 없습니다. | Could not read subtitle file. | 오류 | 구현 |
 | `subtitle.import` | 자막 파일 불러오기 | Import Subtitle File | 버튼 | 구현 |
 | `subtitle.import_panel.title` | 자막 파일을 선택하세요 | Choose a subtitle file | 시스템 패널 | 구현 |
 | `subtitle.panel.toggle` | 자막 | Subtitles | 버튼 | 구현 |
@@ -66,6 +67,8 @@
 | `subtitle.status.hint` | 자막 생성은 사용자가 요청할 때만 시작됩니다. | Subtitle generation starts only when you ask for it. | 안내 | 구현 |
 | `subtitle.status.generate_or_import_hint` | 같은 이름의 자막을 찾지 못했습니다. 필요할 때 생성하거나 불러올 수 있습니다. | No matching subtitles found. Generate subtitles or import a file when needed. | 안내 | 구현 |
 | `subtitle.status.detected_hint_format` | 감지됨: %@ | Detected: %@ | 상태 | 구현 |
+| `subtitle.status.loaded_hint_format` | 표시 중: %@ | Showing: %@ | 상태 | 구현 |
+| `subtitle.status.subtitle_loaded` | 자막 표시 중 | Subtitles loaded | 상태 | 구현 |
 
 ## 앞으로 필요한 텍스트 그룹
 
@@ -74,7 +77,7 @@
 - 자막 파일 불러오기: 구현
 - SRT/VTT/SMI 파일 선택: 구현
 - 지원하지 않는 자막 형식입니다
-- 자막 파일을 읽을 수 없습니다
+- 자막 파일을 읽을 수 없습니다: 구현
 
 ### 자막 생성 요청
 

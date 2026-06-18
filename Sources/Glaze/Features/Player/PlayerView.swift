@@ -8,6 +8,11 @@ struct PlayerView: View {
     @State private var errorMessage: String?
     @State private var subtitleStatus: SubtitleStatus = .noVideo
     @State private var detectedSubtitles: [SubtitleFile] = []
+    @State private var subtitleCues: [SubtitleCue] = []
+    @State private var activeSubtitleText = ""
+    @State private var timeObserver: Any?
+    @State private var observedPlayer: AVPlayer?
+    @State private var selectedSubtitleName: String?
     @State private var showsSubtitlePanel = false
 
     var body: some View {
@@ -71,10 +76,32 @@ struct PlayerView: View {
 
             if let player {
                 VideoPlayer(player: player)
+                subtitleOverlay
             } else {
                 emptyState
             }
         }
+    }
+
+    private var subtitleOverlay: some View {
+        VStack {
+            Spacer()
+
+            if !activeSubtitleText.isEmpty {
+                Text(activeSubtitleText)
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, GlazeSpacing.lg)
+                    .padding(.vertical, GlazeSpacing.sm)
+                    .background(.black.opacity(0.68), in: RoundedRectangle(cornerRadius: 8))
+                    .shadow(radius: 2)
+                    .padding(.horizontal, GlazeSpacing.xl)
+                    .padding(.bottom, 56)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.12), value: activeSubtitleText)
     }
 
     private var emptyState: some View {
@@ -220,13 +247,19 @@ struct PlayerView: View {
             return
         }
 
+        removeTimeObserver()
+
         let item = AVPlayerItem(url: url)
         let nextPlayer = AVPlayer(playerItem: item)
         player = nextPlayer
         currentFileName = url.lastPathComponent
         errorMessage = nil
         detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
-        subtitleStatus = status(for: detectedSubtitles)
+        subtitleCues = []
+        activeSubtitleText = ""
+        selectedSubtitleName = nil
+        loadPreferredSubtitleIfAvailable()
+        installTimeObserver(on: nextPlayer)
         nextPlayer.play()
     }
 
@@ -248,7 +281,7 @@ struct PlayerView: View {
             detectedSubtitles.append(subtitle)
         }
 
-        subtitleStatus = status(for: detectedSubtitles)
+        loadSubtitle(subtitle)
         errorMessage = nil
         showsSubtitlePanel = true
     }
@@ -256,6 +289,10 @@ struct PlayerView: View {
     private var subtitleStatusHint: String {
         guard player != nil else {
             return L10n.string("subtitle.status.hint")
+        }
+
+        if let selectedSubtitleName {
+            return String(format: L10n.string("subtitle.status.loaded_hint_format"), selectedSubtitleName)
         }
 
         guard !detectedSubtitles.isEmpty else {
@@ -276,6 +313,10 @@ struct PlayerView: View {
     }
 
     private func status(for subtitles: [SubtitleFile]) -> SubtitleStatus {
+        if !subtitleCues.isEmpty {
+            return .subtitleLoaded
+        }
+
         guard !subtitles.isEmpty else {
             return .readyToGenerate
         }
@@ -285,6 +326,68 @@ struct PlayerView: View {
         }
 
         return .subtitleDetected
+    }
+
+    private func loadPreferredSubtitleIfAvailable() {
+        guard let preferredSubtitle = detectedSubtitles.sorted(by: preferredSubtitleSort).first else {
+            subtitleStatus = status(for: detectedSubtitles)
+            return
+        }
+
+        loadSubtitle(preferredSubtitle)
+    }
+
+    private func preferredSubtitleSort(_ lhs: SubtitleFile, _ rhs: SubtitleFile) -> Bool {
+        priority(for: lhs.kind) < priority(for: rhs.kind)
+    }
+
+    private func priority(for kind: SubtitleFile.Kind) -> Int {
+        switch kind {
+        case .korean:
+            0
+        case .original:
+            1
+        case .unknown:
+            2
+        }
+    }
+
+    private func loadSubtitle(_ subtitle: SubtitleFile) {
+        do {
+            subtitleCues = try SubtitleParser.parse(url: subtitle.url)
+            selectedSubtitleName = subtitle.displayName
+            activeSubtitleText = ""
+            subtitleStatus = status(for: detectedSubtitles)
+        } catch {
+            subtitleCues = []
+            selectedSubtitleName = nil
+            activeSubtitleText = ""
+            subtitleStatus = status(for: detectedSubtitles)
+            errorMessage = L10n.string("subtitle.error.read_failed")
+        }
+    }
+
+    private func installTimeObserver(on player: AVPlayer) {
+        let interval = CMTime(seconds: 0.2, preferredTimescale: 600)
+        timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+            Task { @MainActor in
+                activeSubtitleText = activeCueText(at: time.seconds)
+            }
+        }
+        observedPlayer = player
+    }
+
+    private func removeTimeObserver() {
+        if let timeObserver, let observedPlayer {
+            observedPlayer.removeTimeObserver(timeObserver)
+        }
+
+        timeObserver = nil
+        observedPlayer = nil
+    }
+
+    private func activeCueText(at time: TimeInterval) -> String {
+        subtitleCues.first { $0.contains(time) }?.text ?? ""
     }
 
     private var supportedVideoTypes: [UTType] {

@@ -6,6 +6,7 @@
 "player.no_file" = "No video selected";
 "player.open_video" = "Open Video";
 "subtitle.generate" = "Generate Subtitles";
+"subtitle.error.read_failed" = "Could not read subtitle file.";
 "subtitle.import" = "Import Subtitle File";
 "subtitle.import_panel.title" = "Choose a subtitle file";
 "subtitle.panel.auto_detect" = "Auto detect";
@@ -25,7 +26,9 @@
 "subtitle.status.detected_hint_format" = "Detected: %@";
 "subtitle.status.generate_or_import_hint" = "No matching subtitles found. Generate subtitles or import a file when needed.";
 "subtitle.status.korean_subtitle_detected" = "Korean subtitles found";
+"subtitle.status.loaded_hint_format" = "Showing: %@";
 "subtitle.status.no_subtitle" = "No subtitles";
 "subtitle.status.no_video" = "No video";
 "subtitle.status.ready_to_generate" = "Ready to generate";
+"subtitle.status.subtitle_loaded" = "Subtitles loaded";
 "subtitle.status.subtitle_detected" = "Subtitles found";

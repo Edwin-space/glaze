@@ -135,6 +135,7 @@ scripts/
 - 감지 패턴: `movie.srt`, `movie.vtt`, `movie.smi`, `movie.ko.srt`, `movie.ko.vtt`, `movie.ko.smi`, `movie.en.srt`, `movie.en.vtt`, `movie.en.smi`, `movie.original.srt`
 - 자막 상태 strip에 감지 결과 표시
 - 자막 패널에서 SRT/VTT/SMI 파일 수동 불러오기
+- SRT/VTT/SMI 기본 파싱 및 영상 위 자막 오버레이 표시
 - 자막 생성은 사용자가 요청할 때만 시작한다는 UX 원칙 유지
 
 ### 자막 안내 UX 원칙
@@ -146,7 +147,7 @@ scripts/
 
 ### 완료 기준
 
-- 샘플 SRT/VTT 자막이 영상 위에 표시된다.
+- 샘플 SRT/VTT/SMI 자막이 영상 위에 표시된다.
 - 자막 표시/숨김이 동작한다.
 - 자막이 없는 영상에서 불필요하게 흐름을 방해하지 않는다.
 
