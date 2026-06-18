@@ -19,22 +19,8 @@ enum SubtitleSidecarDetector {
 
         return candidates
             .filter { FileManager.default.fileExists(atPath: $0.path) }
-            .map { SubtitleFile(url: $0, kind: kind(for: $0)) }
+            .map { SubtitleFile.manual(url: $0) }
             .uniquedByPath()
-    }
-
-    private static func kind(for url: URL) -> SubtitleFile.Kind {
-        let lowercasedName = url.deletingPathExtension().lastPathComponent.lowercased()
-
-        if lowercasedName.hasSuffix(".ko") || lowercasedName.hasSuffix(".kor") || lowercasedName.hasSuffix(".kr") {
-            return .korean
-        }
-
-        if lowercasedName.hasSuffix(".original") || lowercasedName.hasSuffix(".en") || lowercasedName.hasSuffix(".eng") {
-            return .original
-        }
-
-        return .unknown
     }
 }
 

@@ -162,6 +162,15 @@ struct PlayerView: View {
             Spacer()
 
             Button {
+                importSubtitle()
+            } label: {
+                Label(L10n.string("subtitle.import"), systemImage: "text.badge.plus")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .disabled(player == nil)
+
+            Button {
                 // Placeholder until the AI subtitle pipeline exists.
             } label: {
                 Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
@@ -221,6 +230,29 @@ struct PlayerView: View {
         nextPlayer.play()
     }
 
+    private func importSubtitle() {
+        let panel = NSOpenPanel()
+        panel.title = L10n.string("subtitle.import_panel.title")
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = supportedSubtitleTypes
+
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+
+        let subtitle = SubtitleFile.manual(url: url)
+
+        if !detectedSubtitles.contains(where: { $0.url.path == subtitle.url.path }) {
+            detectedSubtitles.append(subtitle)
+        }
+
+        subtitleStatus = status(for: detectedSubtitles)
+        errorMessage = nil
+        showsSubtitlePanel = true
+    }
+
     private var subtitleStatusHint: String {
         guard player != nil else {
             return L10n.string("subtitle.status.hint")
@@ -271,6 +303,10 @@ struct PlayerView: View {
         }
 
         return types
+    }
+
+    private var supportedSubtitleTypes: [UTType] {
+        ["srt", "vtt", "smi"].compactMap { UTType(filenameExtension: $0) }
     }
 }
 

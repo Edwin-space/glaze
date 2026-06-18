@@ -134,6 +134,7 @@ scripts/
 - 같은 폴더의 sidecar 자막 파일 감지
 - 감지 패턴: `movie.srt`, `movie.vtt`, `movie.smi`, `movie.ko.srt`, `movie.ko.vtt`, `movie.ko.smi`, `movie.en.srt`, `movie.en.vtt`, `movie.en.smi`, `movie.original.srt`
 - 자막 상태 strip에 감지 결과 표시
+- 자막 패널에서 SRT/VTT/SMI 파일 수동 불러오기
 - 자막 생성은 사용자가 요청할 때만 시작한다는 UX 원칙 유지
 
 ### 자막 안내 UX 원칙

@@ -43,6 +43,8 @@
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
 | `subtitle.generate` | 자막 생성 | Generate Subtitles | 버튼 | 구현 |
+| `subtitle.import` | 자막 파일 불러오기 | Import Subtitle File | 버튼 | 구현 |
+| `subtitle.import_panel.title` | 자막 파일을 선택하세요 | Choose a subtitle file | 시스템 패널 | 구현 |
 | `subtitle.panel.toggle` | 자막 | Subtitles | 버튼 | 구현 |
 | `subtitle.panel.title` | AI 자막 준비 | AI Subtitle Prep | 패널 제목 | 구현 |
 | `subtitle.panel.subtitle` | 재생 전에 재사용 가능한 자막을 준비합니다. | Prepare reusable subtitles before playback. | 안내 | 구현 |
@@ -69,8 +71,8 @@
 
 ### 자막 파일 불러오기
 
-- 자막 파일 불러오기
-- SRT/VTT/SMI 파일 선택
+- 자막 파일 불러오기: 구현
+- SRT/VTT/SMI 파일 선택: 구현
 - 지원하지 않는 자막 형식입니다
 - 자막 파일을 읽을 수 없습니다
 

@@ -6,6 +6,8 @@
 "player.no_file" = "No video selected";
 "player.open_video" = "Open Video";
 "subtitle.generate" = "Generate Subtitles";
+"subtitle.import" = "Import Subtitle File";
+"subtitle.import_panel.title" = "Choose a subtitle file";
 "subtitle.panel.auto_detect" = "Auto detect";
 "subtitle.panel.language" = "Video language";
 "subtitle.panel.mode" = "Model mode";
