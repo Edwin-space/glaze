@@ -4,24 +4,35 @@ enum SubtitleParser {
     enum ParseError: Error {
         case unsupportedFormat
         case unreadableFile
+        case emptySubtitle
     }
 
     static func parse(url: URL) throws -> [SubtitleCue] {
         let fileExtension = url.pathExtension.lowercased()
+        guard supportedExtensions.contains(fileExtension) else {
+            throw ParseError.unsupportedFormat
+        }
+
         let content = try readTextFile(url: url)
 
-        switch fileExtension {
+        let cues = switch fileExtension {
         case "srt", "vtt":
-            return parseTimedText(content)
+            parseTimedText(content)
         case "smi":
-            return parseSMI(content)
+            parseSMI(content)
         default:
             throw ParseError.unsupportedFormat
         }
+
+        guard !cues.isEmpty else {
+            throw ParseError.emptySubtitle
+        }
+
+        return cues
     }
 
     private static func readTextFile(url: URL) throws -> String {
-        for encoding in [String.Encoding.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .isoLatin1] {
+        for encoding in textFileEncodings {
             if let content = try? String(contentsOf: url, encoding: encoding) {
                 return content
             }
@@ -99,6 +110,7 @@ enum SubtitleParser {
     }
 
     private static func parseSMI(_ content: String) -> [SubtitleCue] {
+        let content = content.removingSMIHeaderNoise()
         let pattern = #"(?is)<sync\s+start\s*=\s*"?(\d+)"?[^>]*>(.*?)(?=<sync\s+start\s*=|</body>|</sami>|$)"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return []
@@ -118,7 +130,7 @@ enum SubtitleParser {
                 continue
             }
 
-            let text = String(content[bodyRange]).cleanedSubtitleText()
+            let text = String(content[bodyRange]).preferredSMIText()
             guard !text.isEmpty else {
                 continue
             }
@@ -132,11 +144,75 @@ enum SubtitleParser {
             return SubtitleCue(startTime: entry.start, endTime: end, text: entry.text)
         }
     }
+
+    private static var supportedExtensions: Set<String> {
+        ["srt", "vtt", "smi"]
+    }
+
+    private static var textFileEncodings: [String.Encoding] {
+        [
+            .utf8,
+            .utf16,
+            .utf16LittleEndian,
+            .utf16BigEndian,
+            koreanEncoding(.EUC_KR),
+            koreanEncoding(.dosKorean),
+            .isoLatin1
+        ]
+    }
+
+    private static func koreanEncoding(_ encoding: CFStringEncodings) -> String.Encoding {
+        String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(encoding.rawValue)))
+    }
 }
 
 private extension String {
+    func removingSMIHeaderNoise() -> String {
+        replacingOccurrences(of: #"(?is)<head.*?</head>"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)<style.*?</style>"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)<script.*?</script>"#, with: "", options: .regularExpression)
+    }
+
+    func preferredSMIText() -> String {
+        let paragraphs = smiParagraphs()
+        guard !paragraphs.isEmpty else {
+            return cleanedSubtitleText()
+        }
+
+        let preferredParagraphs = paragraphs.filter { $0.className.isPreferredKoreanSMIClass }
+        let selectedParagraphs = preferredParagraphs.isEmpty ? paragraphs : preferredParagraphs
+
+        return selectedParagraphs
+            .map(\.text)
+            .map { $0.cleanedSubtitleText() }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+    }
+
+    func smiParagraphs() -> [(className: String, text: String)] {
+        let pattern = #"(?is)<p\s+class\s*=\s*"?([^"\s>]+)"?[^>]*>(.*?)(?=<p\s+class\s*=|$)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return []
+        }
+
+        let range = NSRange(startIndex..<endIndex, in: self)
+
+        return regex.matches(in: self, range: range).compactMap { match in
+            guard match.numberOfRanges >= 3,
+                  let classRange = Range(match.range(at: 1), in: self),
+                  let textRange = Range(match.range(at: 2), in: self)
+            else {
+                return nil
+            }
+
+            return (String(self[classRange]).lowercased(), String(self[textRange]))
+        }
+    }
+
     func cleanedSubtitleText() -> String {
         replacingOccurrences(of: #"(?i)<br\s*/?>"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)<style.*?</style>"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)<script.*?</script>"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: #"(?is)<[^>]+>"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: "&nbsp;", with: " ")
             .replacingOccurrences(of: "&amp;", with: "&")
@@ -146,5 +222,11 @@ private extension String {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
+    }
+}
+
+private extension String {
+    var isPreferredKoreanSMIClass: Bool {
+        contains("kr") || contains("ko") || contains("kor") || contains("korean") || contains("krcc")
     }
 }

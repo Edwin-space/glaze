@@ -43,12 +43,21 @@
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
 | `subtitle.generate` | 자막 생성 | Generate Subtitles | 버튼 | 구현 |
+| `subtitle.error.empty_file` | 표시할 수 있는 자막 구간이 없습니다. | This subtitle file has no readable cues. | 오류 | 구현 |
 | `subtitle.error.read_failed` | 자막 파일을 읽을 수 없습니다. | Could not read subtitle file. | 오류 | 구현 |
+| `subtitle.error.title` | 자막 문제 | Subtitle issue | 오류 | 구현 |
+| `subtitle.error.unsupported_format` | 아직 지원하지 않는 자막 형식입니다. | This subtitle format is not supported yet. | 오류 | 구현 |
 | `subtitle.import` | 자막 파일 불러오기 | Import Subtitle File | 버튼 | 구현 |
 | `subtitle.import_panel.title` | 자막 파일을 선택하세요 | Choose a subtitle file | 시스템 패널 | 구현 |
+| `subtitle.kind.korean` | 한국어 | Korean | 상태 | 구현 |
+| `subtitle.kind.original` | 원어 | Original | 상태 | 구현 |
+| `subtitle.kind.unknown` | 자막 | Subtitle | 상태 | 구현 |
 | `subtitle.panel.toggle` | 자막 | Subtitles | 버튼 | 구현 |
 | `subtitle.panel.title` | AI 자막 준비 | AI Subtitle Prep | 패널 제목 | 구현 |
 | `subtitle.panel.subtitle` | 재생 전에 재사용 가능한 자막을 준비합니다. | Prepare reusable subtitles before playback. | 안내 | 구현 |
+| `subtitle.panel.files` | 자막 파일 | Subtitle files | 패널 제목 | 구현 |
+| `subtitle.panel.files_count_format` | %d개 | %d files | 상태 | 구현 |
+| `subtitle.panel.files_empty` | 연결된 자막 파일이 없습니다. | No subtitle files connected yet. | 안내 | 구현 |
 | `subtitle.panel.language` | 영상 언어 | Video language | 설정 | 구현 |
 | `subtitle.panel.auto_detect` | 자동 감지 | Auto detect | 설정값 | 구현 |
 | `subtitle.panel.output` | 출력 | Output | 설정 | 구현 |
@@ -76,8 +85,10 @@
 
 - 자막 파일 불러오기: 구현
 - SRT/VTT/SMI 파일 선택: 구현
-- 지원하지 않는 자막 형식입니다
+- 지원하지 않는 자막 형식입니다: 구현
 - 자막 파일을 읽을 수 없습니다: 구현
+- 표시할 수 있는 자막 구간이 없습니다: 구현
+- 자막 파일 목록/선택 상태: 구현
 
 ### 자막 생성 요청
 

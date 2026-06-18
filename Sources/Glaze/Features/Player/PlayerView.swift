@@ -13,6 +13,7 @@ struct PlayerView: View {
     @State private var timeObserver: Any?
     @State private var observedPlayer: AVPlayer?
     @State private var selectedSubtitleName: String?
+    @State private var selectedSubtitlePath: String?
     @State private var showsSubtitlePanel = false
 
     var body: some View {
@@ -186,6 +187,12 @@ struct PlayerView: View {
                 panelRow(icon: "folder", titleKey: "subtitle.panel.storage", valueKey: "subtitle.panel.storage_ask")
             }
 
+            subtitleFileSection
+
+            if let errorMessage {
+                subtitleErrorCard(errorMessage)
+            }
+
             Spacer()
 
             Button {
@@ -209,6 +216,86 @@ struct PlayerView: View {
         .padding(GlazeSpacing.lg)
         .frame(width: 300)
         .background(GlazeColors.panelBackground)
+    }
+
+    private var subtitleFileSection: some View {
+        VStack(alignment: .leading, spacing: GlazeSpacing.sm) {
+            HStack {
+                Text(L10n.string("subtitle.panel.files"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                if !detectedSubtitles.isEmpty {
+                    Text(String(format: L10n.string("subtitle.panel.files_count_format"), detectedSubtitles.count))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if detectedSubtitles.isEmpty {
+                Text(L10n.string("subtitle.panel.files_empty"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(GlazeSpacing.md)
+                    .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
+            } else {
+                ScrollView {
+                    VStack(spacing: GlazeSpacing.xs) {
+                        ForEach(detectedSubtitles) { subtitle in
+                            Button {
+                                loadSubtitle(subtitle)
+                            } label: {
+                                HStack(spacing: GlazeSpacing.sm) {
+                                    Image(systemName: selectedSubtitlePath == subtitle.url.path ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selectedSubtitlePath == subtitle.url.path ? .green : .secondary)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(subtitle.displayName)
+                                            .font(.callout.weight(.medium))
+                                            .lineLimit(1)
+                                        Text(subtitleKindLabel(for: subtitle.kind))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(GlazeSpacing.sm)
+                            .background(
+                                selectedSubtitlePath == subtitle.url.path ? GlazeColors.subtlePanel : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 8)
+                            )
+                        }
+                    }
+                }
+                .frame(maxHeight: 180)
+            }
+        }
+    }
+
+    private func subtitleErrorCard(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: GlazeSpacing.sm) {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.string("subtitle.error.title"))
+                    .font(.caption.weight(.semibold))
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(GlazeSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private func panelRow(icon: String, titleKey: String, valueKey: String) -> some View {
@@ -258,6 +345,7 @@ struct PlayerView: View {
         subtitleCues = []
         activeSubtitleText = ""
         selectedSubtitleName = nil
+        selectedSubtitlePath = nil
         loadPreferredSubtitleIfAvailable()
         installTimeObserver(on: nextPlayer)
         nextPlayer.play()
@@ -356,14 +444,43 @@ struct PlayerView: View {
         do {
             subtitleCues = try SubtitleParser.parse(url: subtitle.url)
             selectedSubtitleName = subtitle.displayName
+            selectedSubtitlePath = subtitle.url.path
             activeSubtitleText = ""
             subtitleStatus = status(for: detectedSubtitles)
+            errorMessage = nil
         } catch {
             subtitleCues = []
             selectedSubtitleName = nil
+            selectedSubtitlePath = nil
             activeSubtitleText = ""
             subtitleStatus = status(for: detectedSubtitles)
-            errorMessage = L10n.string("subtitle.error.read_failed")
+            errorMessage = subtitleErrorMessage(for: error)
+        }
+    }
+
+    private func subtitleKindLabel(for kind: SubtitleFile.Kind) -> String {
+        switch kind {
+        case .korean:
+            L10n.string("subtitle.kind.korean")
+        case .original:
+            L10n.string("subtitle.kind.original")
+        case .unknown:
+            L10n.string("subtitle.kind.unknown")
+        }
+    }
+
+    private func subtitleErrorMessage(for error: Error) -> String {
+        guard let parseError = error as? SubtitleParser.ParseError else {
+            return L10n.string("subtitle.error.read_failed")
+        }
+
+        switch parseError {
+        case .unsupportedFormat:
+            return L10n.string("subtitle.error.unsupported_format")
+        case .unreadableFile:
+            return L10n.string("subtitle.error.read_failed")
+        case .emptySubtitle:
+            return L10n.string("subtitle.error.empty_file")
         }
     }
 
