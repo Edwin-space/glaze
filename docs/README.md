@@ -17,6 +17,7 @@
 - `07_mvp_scope_and_decisions.md`: MVP 포함/제외 범위와 개발 착수 전 의사결정
 - `08_brand_naming_strategy.md`: 글레이즈/Glaze 브랜드 네이밍과 제품명 체계
 - `09_monetization_feature_tiers.md`: 기능 구현 후 무료/유료/Pro 후보를 판단하기 위한 수익화 필터링 기준
+- `10_development_start_checklist.md`: macOS 앱 개발 착수 전 체크리스트와 초기 구현 단계
 
 ## 제품 한 줄 정의
 
