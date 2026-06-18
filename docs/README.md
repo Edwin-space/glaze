@@ -21,6 +21,7 @@
 - `11_ui_reference_design_direction.md`: 외부 UI 레퍼런스 기반 글레이즈 디자인 방향
 - `12_service_text_inventory.md`: 메뉴, 버튼, 알림, 상태, 오류 등 서비스 텍스트 인벤토리
 - `13_user_flows.md`: 핵심 사용자 플로우와 예외/FAQ 후보 정리
+- `14_working_principles.md`: 구현, 검증, 문서화, GitHub 반영을 유지하기 위한 작업 운영 원칙
 
 ## 제품 한 줄 정의
 
