@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Xcode / Swift
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Build outputs
+build/
+.build/
+
+# Temporary files
+*.tmp
+*.log
+
+# Local environment
+.env
+.env.*
