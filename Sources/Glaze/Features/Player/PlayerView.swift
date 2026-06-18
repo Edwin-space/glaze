@@ -7,6 +7,7 @@ struct PlayerView: View {
     @State private var currentFileName = L10n.string("player.no_file")
     @State private var errorMessage: String?
     @State private var subtitleStatus: SubtitleStatus = .noVideo
+    @State private var detectedSubtitles: [SubtitleFile] = []
     @State private var showsSubtitlePanel = false
 
     var body: some View {
@@ -110,7 +111,7 @@ struct PlayerView: View {
                 tint: subtitleStatus.tint
             )
 
-            Text(L10n.string("subtitle.status.hint"))
+            Text(subtitleStatusHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -153,7 +154,7 @@ struct PlayerView: View {
 
             VStack(alignment: .leading, spacing: GlazeSpacing.md) {
                 panelRow(icon: "waveform", titleKey: "subtitle.panel.language", valueKey: "subtitle.panel.auto_detect")
-                panelRow(icon: "captions.bubble", titleKey: "subtitle.panel.output", valueKey: "subtitle.panel.output_dual")
+                panelRow(icon: "captions.bubble", titleKey: "subtitle.panel.output", value: subtitlePanelOutputValue)
                 panelRow(icon: "speedometer", titleKey: "subtitle.panel.mode", valueKey: "subtitle.panel.mode_standard")
                 panelRow(icon: "folder", titleKey: "subtitle.panel.storage", valueKey: "subtitle.panel.storage_ask")
             }
@@ -175,6 +176,10 @@ struct PlayerView: View {
     }
 
     private func panelRow(icon: String, titleKey: String, valueKey: String) -> some View {
+        panelRow(icon: icon, titleKey: titleKey, value: L10n.string(valueKey))
+    }
+
+    private func panelRow(icon: String, titleKey: String, value: String) -> some View {
         HStack(spacing: GlazeSpacing.sm) {
             Image(systemName: icon)
                 .frame(width: 22)
@@ -184,7 +189,7 @@ struct PlayerView: View {
                 Text(L10n.string(titleKey))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(L10n.string(valueKey))
+                Text(value)
                     .font(.callout.weight(.medium))
             }
 
@@ -211,8 +216,43 @@ struct PlayerView: View {
         player = nextPlayer
         currentFileName = url.lastPathComponent
         errorMessage = nil
-        subtitleStatus = .readyToGenerate
+        detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
+        subtitleStatus = status(for: detectedSubtitles)
         nextPlayer.play()
+    }
+
+    private var subtitleStatusHint: String {
+        guard player != nil else {
+            return L10n.string("subtitle.status.hint")
+        }
+
+        guard !detectedSubtitles.isEmpty else {
+            return L10n.string("subtitle.status.generate_or_import_hint")
+        }
+
+        let names = detectedSubtitles.map(\.displayName).joined(separator: ", ")
+        return String(format: L10n.string("subtitle.status.detected_hint_format"), names)
+    }
+
+    private var subtitlePanelOutputValue: String {
+        guard !detectedSubtitles.isEmpty else {
+            return L10n.string("subtitle.panel.output_dual")
+        }
+
+        let hasKorean = detectedSubtitles.contains { $0.kind == .korean }
+        return hasKorean ? L10n.string("subtitle.panel.output_korean_available") : L10n.string("subtitle.panel.output_original_available")
+    }
+
+    private func status(for subtitles: [SubtitleFile]) -> SubtitleStatus {
+        guard !subtitles.isEmpty else {
+            return .readyToGenerate
+        }
+
+        if subtitles.contains(where: { $0.kind == .korean }) {
+            return .koreanSubtitleDetected
+        }
+
+        return .subtitleDetected
     }
 
     private var supportedVideoTypes: [UTType] {

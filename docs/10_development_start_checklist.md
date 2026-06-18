@@ -129,6 +129,13 @@ scripts/
 - 영상 파일과 같은 이름의 자막 파일 자동 감지 검토
 - 자막 없는 경우 안내 문구 설계
 
+### 진행 중 구현
+
+- 같은 폴더의 sidecar 자막 파일 감지
+- 감지 패턴: `movie.srt`, `movie.vtt`, `movie.ko.srt`, `movie.en.vtt`, `movie.original.srt`
+- 자막 상태 strip에 감지 결과 표시
+- 자막 생성은 사용자가 요청할 때만 시작한다는 UX 원칙 유지
+
 ### 자막 안내 UX 원칙
 
 - 단순 재생 시점에 저장 위치를 묻지 않는다.
