@@ -1,7 +1,7 @@
 import Foundation
 
 enum SubtitleSidecarDetector {
-    private static let supportedExtensions = ["srt", "vtt"]
+    private static let supportedExtensions = ["srt", "vtt", "smi"]
     private static let languageSuffixes = ["ko", "kor", "kr", "en", "eng", "original"]
 
     static func detect(for videoURL: URL) -> [SubtitleFile] {
