@@ -34,6 +34,7 @@
 "subtitle.status.hint" = "자막 생성은 사용자가 요청할 때만 시작됩니다.";
 "subtitle.status.detected_hint_format" = "감지됨: %@";
 "subtitle.status.generate_or_import_hint" = "같은 이름의 자막을 찾지 못했습니다. 필요할 때 생성하거나 불러올 수 있습니다.";
+"subtitle.status.hidden_hint_format" = "숨김: %@";
 "subtitle.status.korean_subtitle_detected" = "한국어 자막 감지됨";
 "subtitle.status.loaded_hint_format" = "표시 중: %@";
 "subtitle.status.no_subtitle" = "자막 없음";
@@ -41,3 +42,6 @@
 "subtitle.status.ready_to_generate" = "생성 가능";
 "subtitle.status.subtitle_loaded" = "자막 표시 중";
 "subtitle.status.subtitle_detected" = "자막 감지됨";
+"subtitle.visibility.hide" = "자막 숨기기";
+"subtitle.visibility.show" = "자막 보이기";
+"subtitle.visibility.toggle" = "자막 표시";

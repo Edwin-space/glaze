@@ -75,9 +75,13 @@
 | `subtitle.status.korean_subtitle_detected` | 한국어 자막 감지됨 | Korean subtitles found | 상태 | 구현 |
 | `subtitle.status.hint` | 자막 생성은 사용자가 요청할 때만 시작됩니다. | Subtitle generation starts only when you ask for it. | 안내 | 구현 |
 | `subtitle.status.generate_or_import_hint` | 같은 이름의 자막을 찾지 못했습니다. 필요할 때 생성하거나 불러올 수 있습니다. | No matching subtitles found. Generate subtitles or import a file when needed. | 안내 | 구현 |
+| `subtitle.status.hidden_hint_format` | 숨김: %@ | Hidden: %@ | 상태 | 구현 |
 | `subtitle.status.detected_hint_format` | 감지됨: %@ | Detected: %@ | 상태 | 구현 |
 | `subtitle.status.loaded_hint_format` | 표시 중: %@ | Showing: %@ | 상태 | 구현 |
 | `subtitle.status.subtitle_loaded` | 자막 표시 중 | Subtitles loaded | 상태 | 구현 |
+| `subtitle.visibility.hide` | 자막 숨기기 | Hide Subtitles | 버튼 | 구현 |
+| `subtitle.visibility.show` | 자막 보이기 | Show Subtitles | 버튼 | 구현 |
+| `subtitle.visibility.toggle` | 자막 표시 | Display subtitles | 설정 | 구현 |
 
 ## 앞으로 필요한 텍스트 그룹
 
@@ -89,6 +93,7 @@
 - 자막 파일을 읽을 수 없습니다: 구현
 - 표시할 수 있는 자막 구간이 없습니다: 구현
 - 자막 파일 목록/선택 상태: 구현
+- 자막 보이기/숨기기: 구현
 
 ### 자막 생성 요청
 

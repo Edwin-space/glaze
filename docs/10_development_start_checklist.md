@@ -136,6 +136,7 @@ scripts/
 - 자막 상태 strip에 감지 결과 표시
 - 자막 패널에서 SRT/VTT/SMI 파일 수동 불러오기
 - SRT/VTT/SMI 기본 파싱 및 영상 위 자막 오버레이 표시
+- 자막 상태 strip과 자막 패널에서 자막 표시/숨김 전환
 - SMI 레거시 인코딩 대응: UTF 계열, EUC-KR, CP949 계열, ISO Latin 1 순서로 읽기 시도
 - SMI 기본 정리: head/style/script 제거, `<P Class=...>` 구간 기반 한국어 클래스 우선 표시
 - 여러 자막 파일이 감지되거나 수동 추가된 경우 자막 패널에서 선택/전환

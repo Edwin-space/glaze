@@ -10,6 +10,7 @@ struct PlayerView: View {
     @State private var detectedSubtitles: [SubtitleFile] = []
     @State private var subtitleCues: [SubtitleCue] = []
     @State private var activeSubtitleText = ""
+    @State private var isSubtitleVisible = true
     @State private var timeObserver: Any?
     @State private var observedPlayer: AVPlayer?
     @State private var selectedSubtitleName: String?
@@ -88,7 +89,7 @@ struct PlayerView: View {
         VStack {
             Spacer()
 
-            if !activeSubtitleText.isEmpty {
+            if isSubtitleVisible, !activeSubtitleText.isEmpty {
                 Text(activeSubtitleText)
                     .font(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
@@ -147,6 +148,17 @@ struct PlayerView: View {
             Spacer()
 
             Button {
+                isSubtitleVisible.toggle()
+            } label: {
+                Label(
+                    L10n.string(isSubtitleVisible ? "subtitle.visibility.hide" : "subtitle.visibility.show"),
+                    systemImage: isSubtitleVisible ? "captions.bubble.fill" : "captions.bubble"
+                )
+            }
+            .buttonStyle(.bordered)
+            .disabled(subtitleCues.isEmpty)
+
+            Button {
                 showsSubtitlePanel = true
             } label: {
                 Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
@@ -188,6 +200,9 @@ struct PlayerView: View {
             }
 
             subtitleFileSection
+
+            Toggle(L10n.string("subtitle.visibility.toggle"), isOn: $isSubtitleVisible)
+                .disabled(subtitleCues.isEmpty)
 
             if let errorMessage {
                 subtitleErrorCard(errorMessage)
@@ -344,6 +359,7 @@ struct PlayerView: View {
         detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
         subtitleCues = []
         activeSubtitleText = ""
+        isSubtitleVisible = true
         selectedSubtitleName = nil
         selectedSubtitlePath = nil
         loadPreferredSubtitleIfAvailable()
@@ -380,6 +396,10 @@ struct PlayerView: View {
         }
 
         if let selectedSubtitleName {
+            if !isSubtitleVisible, !subtitleCues.isEmpty {
+                return String(format: L10n.string("subtitle.status.hidden_hint_format"), selectedSubtitleName)
+            }
+
             return String(format: L10n.string("subtitle.status.loaded_hint_format"), selectedSubtitleName)
         }
 
@@ -446,6 +466,7 @@ struct PlayerView: View {
             selectedSubtitleName = subtitle.displayName
             selectedSubtitlePath = subtitle.url.path
             activeSubtitleText = ""
+            isSubtitleVisible = true
             subtitleStatus = status(for: detectedSubtitles)
             errorMessage = nil
         } catch {
