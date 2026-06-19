@@ -186,6 +186,8 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - 앱 내부 미디어 정보 패널 추가: 컨테이너, AVKit 직접 재생 가능 여부, 트랙/코덱 인식 상태 확인
 - FFmpeg가 사용 가능한 환경에서 MKV/WebM/AVI 실패 시 MP4 캐시 remux 후 AVPlayer 재생 재시도
 - 검증 스크립트 `--remux` 옵션 추가
+- 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 개발 앱 번들 `Contents/Resources/Tools`로 복사하는 drop-in 구조 추가
+- 검증 스크립트가 프로젝트 `Tools`의 로컬 FFmpeg 도구를 우선 사용하도록 수정
 - App Store self-contained bundle, sandbox, 외부 코드 다운로드 제한 기준 확인
 - FFmpeg LGPL/GPL/nonfree 빌드 옵션 리스크 기준 확인
 

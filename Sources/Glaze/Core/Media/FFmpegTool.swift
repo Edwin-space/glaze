@@ -12,13 +12,7 @@ enum FFmpegTool {
     private static func candidateExecutableURLs(named toolName: String) -> [URL] {
         var candidates: [URL] = []
 
-        if let bundledURL = Bundle.main.url(forResource: toolName, withExtension: nil) {
-            candidates.append(bundledURL)
-        }
-
-        if let bundledURL = Bundle.main.url(forResource: toolName, withExtension: nil, subdirectory: "Tools") {
-            candidates.append(bundledURL)
-        }
+        candidates.append(contentsOf: bundledExecutableURLs(named: toolName))
 
         let pathCandidates = [
             "/opt/homebrew/bin/\(toolName)",
@@ -29,6 +23,27 @@ enum FFmpegTool {
         candidates.append(contentsOf: pathCandidates)
 
         return candidates.filter { FileManager.default.isExecutableFile(atPath: $0.path) }
+    }
+
+    private static func bundledExecutableURLs(named toolName: String) -> [URL] {
+        var candidates: [URL] = []
+
+        if let bundledURL = Bundle.main.url(forResource: toolName, withExtension: nil, subdirectory: "Tools") {
+            candidates.append(bundledURL)
+        }
+
+        if let resourceURL = Bundle.main.resourceURL {
+            candidates.append(resourceURL.appendingPathComponent("Tools/\(toolName)"))
+            candidates.append(resourceURL.appendingPathComponent(toolName))
+        }
+
+        candidates.append(Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Tools/\(toolName)"))
+
+        if let bundledURL = Bundle.main.url(forResource: toolName, withExtension: nil) {
+            candidates.append(bundledURL)
+        }
+
+        return candidates
     }
 }
 

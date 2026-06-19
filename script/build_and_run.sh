@@ -11,9 +11,11 @@ DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
+APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 RESOURCE_BUNDLE_NAME="Glaze_Glaze.bundle"
+LOCAL_TOOLS_DIR="$ROOT_DIR/Tools"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
@@ -23,12 +25,22 @@ BUILD_BINARY="$BUILD_DIR/$APP_NAME"
 BUILD_RESOURCE_BUNDLE="$BUILD_DIR/$RESOURCE_BUNDLE_NAME"
 
 rm -rf "$APP_BUNDLE"
-mkdir -p "$APP_MACOS"
+mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
 if [[ -d "$BUILD_RESOURCE_BUNDLE" ]]; then
   cp -R "$BUILD_RESOURCE_BUNDLE" "$APP_BUNDLE/$RESOURCE_BUNDLE_NAME"
+fi
+
+if [[ -d "$LOCAL_TOOLS_DIR" ]]; then
+  mkdir -p "$APP_RESOURCES/Tools"
+  for tool in ffmpeg ffprobe; do
+    if [[ -f "$LOCAL_TOOLS_DIR/$tool" ]]; then
+      cp "$LOCAL_TOOLS_DIR/$tool" "$APP_RESOURCES/Tools/$tool"
+      chmod +x "$APP_RESOURCES/Tools/$tool"
+    fi
+  done
 fi
 
 cat >"$INFO_PLIST" <<PLIST
@@ -60,6 +72,9 @@ case "$MODE" in
   run)
     open_app
     ;;
+  --bundle|bundle)
+    echo "$APP_BUNDLE"
+    ;;
   --debug|debug)
     lldb -- "$APP_BINARY"
     ;;
@@ -77,7 +92,7 @@ case "$MODE" in
     pgrep -x "$APP_NAME" >/dev/null
     ;;
   *)
-    echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
+    echo "usage: $0 [run|--bundle|--debug|--logs|--telemetry|--verify]" >&2
     exit 2
     ;;
 esac

@@ -113,6 +113,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - 이 패널은 사용자용 고급 설정이 아니라 개발 검증과 향후 고객지원/FAQ의 근거 데이터를 쌓기 위한 초기 도구다.
 - MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
+- 개발/검증 앱은 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`에 실행 파일이 있으면 앱 번들 `Contents/Resources/Tools`로 복사해 런타임에서 우선 감지한다.
 
 ## 샘플 세트 기준
 
@@ -228,6 +229,8 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 구현:
 
 - 앱 내부 `FFmpegTool` 추가: 번들 `Tools/ffmpeg`, 번들 루트 `ffmpeg`, `/opt/homebrew/bin/ffmpeg`, `/usr/local/bin/ffmpeg`, `/usr/bin/ffmpeg` 순서 탐색
+- 개발 앱 번들 스크립트가 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 `Contents/Resources/Tools`로 복사하도록 추가
+- 검증 스크립트가 시스템 PATH보다 프로젝트 `Tools`의 `ffmpeg`/`ffprobe`를 우선 사용하도록 수정
 - 앱 내부 `FFmpegRemuxer` 추가: `-map 0:v:0 -map 0:a? -c copy -movflags +faststart` 방식으로 MP4 캐시 생성
 - `AVPlayerItem` 실패 시 MKV/WebM/AVI는 remux를 1회 자동 시도
 - remux 성공 시 원본 파일명, 원본 sidecar 자막, 원본 재생목록을 유지하고 remux 캐시만 재생 URL로 사용
@@ -236,6 +239,7 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 남은 과제:
 
 - 현재 개발 환경에는 `ffmpeg`/`ffprobe`가 없어 실제 샘플 remux 결과는 아직 미검증
+- `Tools` 디렉터리는 번들 슬롯만 제공하며, 실제 바이너리는 LGPL-only 빌드 후보 확인 후 별도로 배치해야 함
 - FFmpeg LGPL-only 번들 후보 확보
 - ffprobe 기반 스트림 분석으로 remux 가능/불가능 사전 판단
 - AC3/FLAC/ASS/내장 자막 등 stream copy만으로 MP4 호환이 어려운 케이스 처리

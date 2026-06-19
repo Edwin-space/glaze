@@ -1,28 +1,49 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-print_tool_status() {
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+tool_path() {
   local tool="$1"
+  local local_tool="$ROOT_DIR/Tools/$tool"
+
+  if [[ -x "$local_tool" ]]; then
+    echo "$local_tool"
+    return
+  fi
 
   if command -v "$tool" >/dev/null 2>&1; then
-    printf "%-10s %s\n" "$tool:" "$(command -v "$tool")"
+    command -v "$tool"
+  fi
+}
+
+print_tool_status() {
+  local tool="$1"
+  local resolved_path
+  resolved_path="$(tool_path "$tool" || true)"
+
+  if [[ -n "$resolved_path" ]]; then
+    printf "%-10s %s\n" "$tool:" "$resolved_path"
   else
     printf "%-10s %s\n" "$tool:" "not installed"
   fi
 }
 
 print_ffmpeg_license_flags() {
-  if ! command -v ffmpeg >/dev/null 2>&1; then
+  local ffmpeg_path
+  ffmpeg_path="$(tool_path ffmpeg || true)"
+
+  if [[ -z "$ffmpeg_path" ]]; then
     echo "ffmpeg license flags: unavailable"
     return
   fi
 
   local version_line
-  version_line="$(ffmpeg -version 2>/dev/null | head -n 1 || true)"
+  version_line="$("$ffmpeg_path" -version 2>/dev/null | head -n 1 || true)"
   echo "ffmpeg version: ${version_line:-unknown}"
 
   local configuration
-  configuration="$(ffmpeg -version 2>/dev/null | sed -n 's/^configuration: //p' || true)"
+  configuration="$("$ffmpeg_path" -version 2>/dev/null | sed -n 's/^configuration: //p' || true)"
 
   if [[ -z "$configuration" ]]; then
     echo "ffmpeg license flags: configuration unavailable"
@@ -52,14 +73,16 @@ inspect_file_with_mdls() {
 
 inspect_file_with_ffprobe() {
   local file_path="$1"
+  local ffprobe_path
+  ffprobe_path="$(tool_path ffprobe || true)"
 
-  if ! command -v ffprobe >/dev/null 2>&1; then
+  if [[ -z "$ffprobe_path" ]]; then
     echo "  ffprobe: not installed"
     return
   fi
 
   echo "  ffprobe streams:"
-  ffprobe \
+  "$ffprobe_path" \
     -v error \
     -show_entries stream=index,codec_type,codec_name,profile,width,height,pix_fmt,channels,channel_layout:format=format_name,duration,bit_rate \
     -of default=noprint_wrappers=1 \
@@ -85,8 +108,10 @@ inspect_sample() {
 
 remux_sample_for_avkit() {
   local file_path="$1"
+  local ffmpeg_path
+  ffmpeg_path="$(tool_path ffmpeg || true)"
 
-  if ! command -v ffmpeg >/dev/null 2>&1; then
+  if [[ -z "$ffmpeg_path" ]]; then
     echo
     echo "remux: ffmpeg not installed"
     return
@@ -111,7 +136,7 @@ remux_sample_for_avkit() {
   echo "remux: $file_path"
   echo "  output: $output_path"
 
-  if ffmpeg \
+  if "$ffmpeg_path" \
     -y \
     -hide_banner \
     -loglevel error \
