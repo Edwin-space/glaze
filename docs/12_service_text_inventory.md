@@ -65,6 +65,7 @@
 | `player.drop_subtitle` | 같은 폴더의 영상은 재생목록에 함께 추가됩니다. | Videos in the same folder are added to the playlist. | 안내 | 구현 |
 | `player.error.compatibility_required` | 이 MKV 파일은 macOS 기본 재생으로 열리지 않습니다. FFmpeg/remux 호환성 처리가 필요합니다. | This MKV file cannot be opened by macOS playback yet. FFmpeg/remux compatibility handling is required. | 오류 | 구현 |
 | `player.error.compatibility_failed` | 호환성 재생 파일을 준비하지 못했습니다. FFmpeg 스트림 분석이 필요합니다. | Could not prepare a compatibility playback file. FFmpeg stream analysis is needed. | 오류 | 구현 |
+| `player.error.compatibility_transcode_failed` | 오디오 보정까지 시도했지만 호환성 재생 파일을 준비하지 못했습니다. | Could not prepare a compatibility playback file even after audio correction. | 오류 | 구현 |
 | `player.error.ffmpeg_unavailable` | MKV 호환성 처리를 위한 FFmpeg가 아직 설치되거나 번들되지 않았습니다. | FFmpeg is not installed or bundled yet for MKV compatibility handling. | 오류 | 구현 |
 | `player.error.no_playable_files` | 재생할 수 있는 영상 파일을 찾지 못했습니다. | No playable video files were found. | 오류 | 구현 |
 | `player.error.playback_failed` | 이 영상은 현재 재생할 수 없습니다. | This video cannot be played right now. | 오류 | 구현 |
@@ -73,7 +74,7 @@
 | `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |
 | `player.next_video` | 다음 영상 | Next Video | 버튼 | 구현 |
 | `player.status.buffering` | 재생 준비 중입니다. | Preparing playback. | 상태 | 구현 |
-| `player.status.preparing_compatibility` | MKV 호환성 재생 파일을 준비 중입니다. | Preparing an MKV compatibility playback file. | 상태 | 구현 |
+| `player.status.preparing_compatibility` | MKV 호환성 재생 파일을 준비 중입니다. 필요한 경우 오디오를 보정합니다. | Preparing an MKV compatibility playback file. Audio will be corrected if needed. | 상태 | 구현 |
 | `player.status.waiting` | 재생을 기다리는 중입니다. | Waiting to play. | 상태 | 구현 |
 | `playlist.panel.toggle` | 재생목록 | Playlist | 버튼 | 구현 |
 | `playlist.panel.title` | 재생목록 | Playlist | 패널 제목 | 구현 |

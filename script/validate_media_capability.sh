@@ -130,11 +130,12 @@ remux_sample_for_avkit() {
   base_name="$(basename "$file_path")"
   base_name="${base_name%.*}"
 
-  local output_path="$output_dir/$base_name.mp4"
+  local copy_output_path="$output_dir/$base_name-stream-copy.mp4"
+  local audio_output_path="$output_dir/$base_name-audio-aac.mp4"
 
   echo
   echo "remux: $file_path"
-  echo "  output: $output_path"
+  echo "  audio-aac output: $audio_output_path"
 
   if "$ffmpeg_path" \
     -y \
@@ -142,13 +143,36 @@ remux_sample_for_avkit() {
     -loglevel error \
     -i "$file_path" \
     -map 0:v:0 \
-    -map 0:a? \
-    -c copy \
+    -map 0:a:0? \
+    -sn \
+    -dn \
+    -c:v copy \
+    -c:a aac \
+    -b:a 192k \
+    -ac 2 \
     -movflags +faststart \
-    "$output_path"; then
-    echo "  result: remux succeeded"
+    "$audio_output_path"; then
+    echo "  result: audio-aac remux succeeded"
   else
-    echo "  result: remux failed"
+    echo "  result: audio-aac remux failed"
+    echo "  stream-copy output: $copy_output_path"
+
+    if "$ffmpeg_path" \
+      -y \
+      -hide_banner \
+      -loglevel error \
+      -i "$file_path" \
+      -map 0:v:0 \
+      -map 0:a? \
+      -sn \
+      -dn \
+      -c copy \
+      -movflags +faststart \
+      "$copy_output_path"; then
+      echo "  result: stream-copy remux succeeded"
+    else
+      echo "  result: stream-copy remux failed"
+    fi
   fi
 }
 

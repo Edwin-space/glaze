@@ -1337,7 +1337,10 @@ struct PlayerView: View {
         switch remuxError {
         case .toolUnavailable:
             return L10n.string("player.error.ffmpeg_unavailable")
-        case .failed:
+        case .failed(let failures):
+            if failures.contains(where: { $0.mode == .audioAAC }) {
+                return L10n.string("player.error.compatibility_transcode_failed")
+            }
             return L10n.string("player.error.compatibility_failed")
         }
     }

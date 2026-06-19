@@ -49,6 +49,7 @@
 "player.drop_subtitle" = "Videos in the same folder are added to the playlist.";
 "player.error.compatibility_required" = "This MKV file cannot be opened by macOS playback yet. FFmpeg/remux compatibility handling is required.";
 "player.error.compatibility_failed" = "Could not prepare a compatibility playback file. FFmpeg stream analysis is needed.";
+"player.error.compatibility_transcode_failed" = "Could not prepare a compatibility playback file even after audio correction.";
 "player.error.ffmpeg_unavailable" = "FFmpeg is not installed or bundled yet for MKV compatibility handling.";
 "player.error.no_playable_files" = "No playable video files were found.";
 "player.error.playback_failed" = "This video cannot be played right now.";
@@ -57,7 +58,7 @@
 "player.open_video" = "Open Video";
 "player.previous_video" = "Previous Video";
 "player.status.buffering" = "Preparing playback.";
-"player.status.preparing_compatibility" = "Preparing an MKV compatibility playback file.";
+"player.status.preparing_compatibility" = "Preparing an MKV compatibility playback file. Audio will be corrected if needed.";
 "player.status.waiting" = "Waiting to play.";
 "playlist.panel.count_format" = "%d videos";
 "playlist.panel.empty" = "No videos have been added to the playlist.";

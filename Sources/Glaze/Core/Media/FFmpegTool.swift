@@ -50,7 +50,17 @@ enum FFmpegTool {
 enum FFmpegRemuxer {
     enum RemuxError: Error {
         case toolUnavailable
-        case failed(String)
+        case failed([AttemptFailure])
+    }
+
+    struct AttemptFailure: Error {
+        let mode: Mode
+        let message: String
+    }
+
+    enum Mode: String {
+        case streamCopy = "stream-copy"
+        case audioAAC = "audio-aac"
     }
 
     static func remuxForAVPlayer(inputURL: URL) async throws -> URL {
@@ -58,33 +68,74 @@ enum FFmpegRemuxer {
             throw RemuxError.toolUnavailable
         }
 
-        let outputURL = try outputURL(for: inputURL)
-        if FileManager.default.fileExists(atPath: outputURL.path) {
-            return outputURL
+        var failures: [AttemptFailure] = []
+
+        for mode in [Mode.audioAAC, .streamCopy] {
+            let outputURL = try outputURL(for: inputURL, mode: mode)
+            if FileManager.default.fileExists(atPath: outputURL.path) {
+                return outputURL
+            }
+
+            try FileManager.default.createDirectory(
+                at: outputURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+
+            do {
+                try await run(
+                    ffmpegURL: ffmpegURL,
+                    arguments: arguments(inputURL: inputURL, outputURL: outputURL, mode: mode),
+                    mode: mode
+                )
+                return outputURL
+            } catch {
+                try? FileManager.default.removeItem(at: outputURL)
+                failures.append(AttemptFailure(mode: mode, message: remuxFailureMessage(from: error)))
+            }
         }
 
-        try FileManager.default.createDirectory(
-            at: outputURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
+        throw RemuxError.failed(failures)
+    }
 
-        let arguments = [
+    private static func arguments(inputURL: URL, outputURL: URL, mode: Mode) -> [String] {
+        let baseArguments = [
             "-y",
             "-hide_banner",
             "-loglevel", "error",
             "-i", inputURL.path,
             "-map", "0:v:0",
-            "-map", "0:a?",
-            "-c", "copy",
+        ]
+
+        let codecArguments: [String]
+        switch mode {
+        case .streamCopy:
+            codecArguments = [
+                "-map", "0:a?",
+                "-sn",
+                "-dn",
+                "-c", "copy"
+            ]
+        case .audioAAC:
+            codecArguments = [
+                "-map", "0:a:0?",
+                "-sn",
+                "-dn",
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-ac", "2"
+            ]
+        }
+
+        let outputArguments = [
             "-movflags", "+faststart",
             outputURL.path
         ]
 
-        try await run(ffmpegURL: ffmpegURL, arguments: arguments)
-        return outputURL
+        return baseArguments + codecArguments + outputArguments
     }
 
-    private static func run(ffmpegURL: URL, arguments: [String]) async throws {
+    private static func run(ffmpegURL: URL, arguments: [String], mode: Mode) async throws {
         try await withCheckedThrowingContinuation { continuation in
             let process = Process()
             let errorPipe = Pipe()
@@ -100,7 +151,7 @@ enum FFmpegRemuxer {
                 if process.terminationStatus == 0 {
                     continuation.resume()
                 } else {
-                    continuation.resume(throwing: RemuxError.failed(errorText))
+                    continuation.resume(throwing: AttemptFailure(mode: mode, message: errorText))
                 }
             }
 
@@ -112,7 +163,7 @@ enum FFmpegRemuxer {
         }
     }
 
-    private static func outputURL(for inputURL: URL) throws -> URL {
+    private static func outputURL(for inputURL: URL, mode: Mode) throws -> URL {
         let cacheRoot = try FileManager.default.url(
             for: .cachesDirectory,
             in: .userDomainMask,
@@ -124,7 +175,15 @@ enum FFmpegRemuxer {
 
         let baseName = inputURL.deletingPathExtension().lastPathComponent
         let hash = fnv1aHash(inputURL.path)
-        return cacheRoot.appendingPathComponent("\(baseName)-\(hash).mp4")
+        return cacheRoot.appendingPathComponent("\(baseName)-\(hash)-\(mode.rawValue).mp4")
+    }
+
+    private static func remuxFailureMessage(from error: Error) -> String {
+        if let failure = error as? AttemptFailure {
+            return failure.message
+        }
+
+        return error.localizedDescription
     }
 
     private static func fnv1aHash(_ value: String) -> String {

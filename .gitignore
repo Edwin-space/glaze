@@ -12,6 +12,11 @@ build/
 .build/
 dist/
 
+# Local FFmpeg validation binaries
+Tools/ffmpeg
+Tools/ffprobe
+Tools/FFMPEG_BUILD.txt
+
 # Temporary files
 *.tmp
 *.log

@@ -60,6 +60,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 확인 출처:
 
 - FFmpeg License and Legal Considerations: https://ffmpeg.org/legal.html
+- FFmpeg Download: https://ffmpeg.org/download.html
 
 검토 기준:
 
@@ -68,12 +69,14 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - `--enable-gpl` 또는 GPL 라이브러리 사용 여부를 반드시 확인한다.
 - `--enable-nonfree` 빌드는 배포 전략에서 매우 높은 리스크로 본다.
 - FFmpeg를 배포물에 포함하면 소스 제공, 빌드 방법, 고지, EULA 문구 등 준수 항목을 관리해야 한다.
+- FFmpeg 공식 프로젝트는 소스 코드를 제공하며, macOS 실행 파일은 제3자 빌드 링크로 안내한다. 따라서 App Store 후보 바이너리는 공식 소스 기반 자체 빌드 또는 출처/플래그가 검증된 빌드만 사용한다.
 
 글레이즈 적용:
 
 - App Store 후보 빌드는 `--enable-gpl`, `--enable-nonfree` 없는 LGPL 빌드만 검토한다.
 - GPL 기능이 필요하면 해당 기능은 웹 배포/Pro 후보로 분리한다.
 - About 화면, 웹 다운로드 페이지, EULA 또는 라이선스 문서에 FFmpeg 고지를 포함해야 한다.
+- 개발 검증은 공식 소스 tarball을 내려받아 `--disable-gpl`, `--disable-nonfree`로 빌드하는 `./script/build_lgpl_ffmpeg_tools.sh`를 우선 사용한다.
 
 ## 로컬 환경 확인
 
@@ -105,13 +108,15 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - `ffmpeg -version` 기준 GPL/nonfree 빌드 플래그 탐지
 - macOS `mdls` 기반 파일 타입/코덱 메타데이터 확인
 - `ffprobe`가 있을 경우 비디오/오디오/자막 스트림 정보 출력
-- `--remux` 옵션으로 FFmpeg stream copy 기반 MP4 임시 파일 생성 테스트
+- `--remux` 옵션으로 첫 번째 오디오 트랙을 AAC로 보정한 MP4 임시 파일 생성 테스트
+- AAC 보정 remux 실패 시 stream copy remux를 재시도
 
 앱 내부 진단:
 
 - 미디어 정보 패널에서 컨테이너, AVKit 직접 재생 가능 여부, 인식된 트랙과 코덱을 표시한다.
 - 이 패널은 사용자용 고급 설정이 아니라 개발 검증과 향후 고객지원/FAQ의 근거 데이터를 쌓기 위한 초기 도구다.
 - MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
+- 1차 remux는 비디오는 유지한 채 첫 번째 오디오 트랙을 AAC 192kbps stereo로 보정해 처리하고, 실패하면 비디오/오디오 stream copy로 재시도한다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
 - 개발/검증 앱은 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`에 실행 파일이 있으면 앱 번들 `Contents/Resources/Tools`로 복사해 런타임에서 우선 감지한다.
 
@@ -232,6 +237,8 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 - 개발 앱 번들 스크립트가 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 `Contents/Resources/Tools`로 복사하도록 추가
 - 검증 스크립트가 시스템 PATH보다 프로젝트 `Tools`의 `ffmpeg`/`ffprobe`를 우선 사용하도록 수정
 - 앱 내부 `FFmpegRemuxer` 추가: `-map 0:v:0 -map 0:a? -c copy -movflags +faststart` 방식으로 MP4 캐시 생성
+- `-c:v copy -c:a aac -b:a 192k -ac 2` 방식의 오디오 호환성 보정 remux를 우선 시도하고, 실패 시 stream copy 재시도
+- LGPL-only FFmpeg 로컬 빌드 스크립트 추가: `./script/build_lgpl_ffmpeg_tools.sh`
 - `AVPlayerItem` 실패 시 MKV/WebM/AVI는 remux를 1회 자동 시도
 - remux 성공 시 원본 파일명, 원본 sidecar 자막, 원본 재생목록을 유지하고 remux 캐시만 재생 URL로 사용
 - 검증 스크립트에 `--remux` 옵션 추가
@@ -240,6 +247,6 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 
 - 현재 개발 환경에는 `ffmpeg`/`ffprobe`가 없어 실제 샘플 remux 결과는 아직 미검증
 - `Tools` 디렉터리는 번들 슬롯만 제공하며, 실제 바이너리는 LGPL-only 빌드 후보 확인 후 별도로 배치해야 함
-- FFmpeg LGPL-only 번들 후보 확보
+- `./script/build_lgpl_ffmpeg_tools.sh`를 실행해 LGPL-only FFmpeg 로컬 빌드를 확보하고 실제 MKV 샘플을 검증
 - ffprobe 기반 스트림 분석으로 remux 가능/불가능 사전 판단
 - AC3/FLAC/ASS/내장 자막 등 stream copy만으로 MP4 호환이 어려운 케이스 처리

@@ -188,6 +188,8 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - 검증 스크립트 `--remux` 옵션 추가
 - 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 개발 앱 번들 `Contents/Resources/Tools`로 복사하는 drop-in 구조 추가
 - 검증 스크립트가 프로젝트 `Tools`의 로컬 FFmpeg 도구를 우선 사용하도록 수정
+- 공식 FFmpeg 소스를 `--disable-gpl`, `--disable-nonfree`로 빌드해 `Tools`에 배치하는 로컬 LGPL 빌드 스크립트 추가
+- MKV/WebM/AVI 실패 시 오디오 AAC 보정 remux를 우선 시도하고, 실패하면 stream copy remux를 재시도
 - App Store self-contained bundle, sandbox, 외부 코드 다운로드 제한 기준 확인
 - FFmpeg LGPL/GPL/nonfree 빌드 옵션 리스크 기준 확인
 
