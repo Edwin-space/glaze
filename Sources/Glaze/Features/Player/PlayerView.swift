@@ -121,7 +121,7 @@ struct PlayerView: View {
             )
 
             if let player {
-                VideoPlayer(player: player)
+                PlayerSurfaceView(player: player)
                 subtitleOverlay
             } else {
                 emptyState
