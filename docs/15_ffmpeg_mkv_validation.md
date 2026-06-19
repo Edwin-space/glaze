@@ -116,7 +116,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - 미디어 정보 패널에서 컨테이너, AVKit 직접 재생 가능 여부, 인식된 트랙과 코덱을 표시한다.
 - 이 패널은 사용자용 고급 설정이 아니라 개발 검증과 향후 고객지원/FAQ의 근거 데이터를 쌓기 위한 초기 도구다.
 - MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
-- 1차 remux는 비디오는 유지한 채 첫 번째 오디오 트랙을 AAC 192kbps stereo로 보정해 처리하고, 실패하면 비디오/오디오 stream copy로 재시도한다.
+- 첫 번째 오디오 트랙이 AVKit 후보 코덱이면 stream copy를 우선 적용하고, 필요할 때만 AAC 192kbps stereo 보정으로 재시도한다.
 - remux 전 `ffprobe`로 첫 번째 비디오 코덱을 확인하고, AVKit 재생 후보가 아닌 코덱은 음성만 자동 재생하지 않는다.
 - HEVC를 MP4로 remux할 때는 Apple AVKit 호환성을 위해 `-tag:v hvc1`을 적용한다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.

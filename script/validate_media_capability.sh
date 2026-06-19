@@ -134,6 +134,8 @@ remux_sample_for_avkit() {
   local audio_output_path="$output_dir/$base_name-audio-aac.mp4"
   local video_codec
   video_codec="$(inspect_primary_video_codec "$file_path")"
+  local audio_codec
+  audio_codec="$(inspect_primary_audio_codec "$file_path")"
   local video_tag_args=()
 
   if [[ "$video_codec" == "hevc" ]]; then
@@ -143,6 +145,26 @@ remux_sample_for_avkit() {
   echo
   echo "remux: $file_path"
   echo "  primary video codec: ${video_codec:-unknown}"
+  echo "  primary audio codec: ${audio_codec:-unknown}"
+
+  if is_avplayer_audio_candidate "$audio_codec"; then
+    remux_stream_copy "$ffmpeg_path" "$file_path" "$copy_output_path" "${video_tag_args[@]}" && return
+    remux_audio_aac "$ffmpeg_path" "$file_path" "$audio_output_path" "${video_tag_args[@]}" && return
+  else
+    remux_audio_aac "$ffmpeg_path" "$file_path" "$audio_output_path" "${video_tag_args[@]}" && return
+    remux_stream_copy "$ffmpeg_path" "$file_path" "$copy_output_path" "${video_tag_args[@]}" && return
+  fi
+
+  echo "  result: all remux attempts failed"
+}
+
+remux_audio_aac() {
+  local ffmpeg_path="$1"
+  local file_path="$2"
+  local audio_output_path="$3"
+  shift 3
+  local video_tag_args=("$@")
+
   echo "  audio-aac output: $audio_output_path"
 
   if "$ffmpeg_path" \
@@ -162,28 +184,52 @@ remux_sample_for_avkit() {
     -movflags +faststart \
     "$audio_output_path"; then
     echo "  result: audio-aac remux succeeded"
+    return 0
   else
     echo "  result: audio-aac remux failed"
-    echo "  stream-copy output: $copy_output_path"
-
-    if "$ffmpeg_path" \
-      -y \
-      -hide_banner \
-      -loglevel error \
-      -i "$file_path" \
-      -map 0:v:0 \
-      -map 0:a? \
-      -sn \
-      -dn \
-      -c copy \
-      "${video_tag_args[@]}" \
-      -movflags +faststart \
-      "$copy_output_path"; then
-      echo "  result: stream-copy remux succeeded"
-    else
-      echo "  result: stream-copy remux failed"
-    fi
+    return 1
   fi
+}
+
+remux_stream_copy() {
+  local ffmpeg_path="$1"
+  local file_path="$2"
+  local copy_output_path="$3"
+  shift 3
+  local video_tag_args=("$@")
+
+  echo "  stream-copy output: $copy_output_path"
+
+  if "$ffmpeg_path" \
+    -y \
+    -hide_banner \
+    -loglevel error \
+    -i "$file_path" \
+    -map 0:v:0 \
+    -map 0:a? \
+    -sn \
+    -dn \
+    -c copy \
+    "${video_tag_args[@]}" \
+    -movflags +faststart \
+    "$copy_output_path"; then
+    echo "  result: stream-copy remux succeeded"
+    return 0
+  else
+    echo "  result: stream-copy remux failed"
+    return 1
+  fi
+}
+
+is_avplayer_audio_candidate() {
+  case "${1:-}" in
+    aac|alac|mp3|ac3|eac3)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 inspect_primary_video_codec() {
@@ -198,6 +244,23 @@ inspect_primary_video_codec() {
   "$ffprobe_path" \
     -v error \
     -select_streams v:0 \
+    -show_entries stream=codec_name \
+    -of default=noprint_wrappers=1:nokey=1 \
+    "$file_path" 2>/dev/null | head -n 1 || true
+}
+
+inspect_primary_audio_codec() {
+  local file_path="$1"
+  local ffprobe_path
+  ffprobe_path="$(tool_path ffprobe || true)"
+
+  if [[ -z "$ffprobe_path" ]]; then
+    return
+  fi
+
+  "$ffprobe_path" \
+    -v error \
+    -select_streams a:0 \
     -show_entries stream=codec_name \
     -of default=noprint_wrappers=1:nokey=1 \
     "$file_path" 2>/dev/null | head -n 1 || true

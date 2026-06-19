@@ -48,7 +48,7 @@ enum FFmpegTool {
 }
 
 enum FFmpegRemuxer {
-    private static let cacheVersion = "v2"
+    private static let cacheVersion = "v3"
 
     enum RemuxError: Error {
         case toolUnavailable
@@ -72,6 +72,7 @@ enum FFmpegRemuxer {
         }
 
         let codecName = try await primaryVideoCodecName(inputURL: inputURL)
+        let audioCodecName = try await primaryAudioCodecName(inputURL: inputURL)
 
         if let codecName, !isAVPlayerCandidateVideoCodec(codecName) {
             throw RemuxError.unsupportedVideoCodec(codecName)
@@ -79,7 +80,7 @@ enum FFmpegRemuxer {
 
         var failures: [AttemptFailure] = []
 
-        for mode in [Mode.audioAAC, .streamCopy] {
+        for mode in preferredModes(forAudioCodec: audioCodecName) {
             let outputURL = try outputURL(for: inputURL, mode: mode)
             if FileManager.default.fileExists(atPath: outputURL.path) {
                 return outputURL
@@ -196,7 +197,23 @@ enum FFmpegRemuxer {
         return error.localizedDescription
     }
 
+    private static func preferredModes(forAudioCodec audioCodecName: String?) -> [Mode] {
+        if let audioCodecName, isAVPlayerCandidateAudioCodec(audioCodecName) {
+            return [.streamCopy, .audioAAC]
+        }
+
+        return [.audioAAC, .streamCopy]
+    }
+
     private static func primaryVideoCodecName(inputURL: URL) async throws -> String? {
+        try await primaryCodecName(inputURL: inputURL, streamSelector: "v:0")
+    }
+
+    private static func primaryAudioCodecName(inputURL: URL) async throws -> String? {
+        try await primaryCodecName(inputURL: inputURL, streamSelector: "a:0")
+    }
+
+    private static func primaryCodecName(inputURL: URL, streamSelector: String) async throws -> String? {
         guard let ffprobeURL = FFmpegTool.ffprobeURL else {
             return nil
         }
@@ -205,7 +222,7 @@ enum FFmpegRemuxer {
             executableURL: ffprobeURL,
             arguments: [
                 "-v", "error",
-                "-select_streams", "v:0",
+                "-select_streams", streamSelector,
                 "-show_entries", "stream=codec_name",
                 "-of", "default=noprint_wrappers=1:nokey=1",
                 inputURL.path
@@ -223,6 +240,16 @@ enum FFmpegRemuxer {
             "mpeg4",
             "prores",
             "mjpeg"
+        ].contains(codecName.lowercased())
+    }
+
+    private static func isAVPlayerCandidateAudioCodec(_ codecName: String) -> Bool {
+        [
+            "aac",
+            "alac",
+            "mp3",
+            "ac3",
+            "eac3"
         ].contains(codecName.lowercased())
     }
 

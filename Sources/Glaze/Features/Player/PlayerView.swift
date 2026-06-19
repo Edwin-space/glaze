@@ -93,7 +93,7 @@ struct PlayerView: View {
             if let errorMessage {
                 Text(errorMessage)
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(isPreparingCompatibilityPlayback ? Color.secondary : Color.red)
                     .lineLimit(1)
             }
 
