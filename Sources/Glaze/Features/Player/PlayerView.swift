@@ -873,6 +873,14 @@ struct PlayerView: View {
         inspectMedia(url)
     }
 
+    private var isCurrentContainerKnownCompatibilityRisk: Bool {
+        guard let currentVideoURL else {
+            return false
+        }
+
+        return ["mkv", "webm", "avi"].contains(currentVideoURL.pathExtension.lowercased())
+    }
+
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
         guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else {
             return false
@@ -1179,7 +1187,11 @@ struct PlayerView: View {
                         player.play()
                     }
                 case .failed:
-                    errorMessage = observedItem.error?.localizedDescription ?? L10n.string("player.error.playback_failed")
+                    errorMessage = playbackFailureMessage(for: observedItem.error)
+                    showsMediaPanel = true
+                    showsPlaylistPanel = false
+                    showsSubtitlePanel = false
+                    showsAssistantPanel = false
                 case .unknown:
                     break
                 @unknown default:
@@ -1245,6 +1257,14 @@ struct PlayerView: View {
         default:
             L10n.string("player.status.waiting")
         }
+    }
+
+    private func playbackFailureMessage(for error: Error?) -> String {
+        if isCurrentContainerKnownCompatibilityRisk {
+            return L10n.string("player.error.compatibility_required")
+        }
+
+        return error?.localizedDescription ?? L10n.string("player.error.playback_failed")
     }
 
     private var supportedVideoTypes: [UTType] {

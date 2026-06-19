@@ -63,6 +63,7 @@
 | `player.empty_subtitle` | 로컬 영상부터 시작합니다. 자막이 없으면 글레이즈가 준비를 도와드립니다. | Start with a local file. If subtitles are missing, Glaze will help prepare them. | 빈 화면 | 구현 |
 | `player.drop_hint` | 영상 또는 폴더를 놓으세요 | Drop a video or folder | 드래그앤드롭 | 구현 |
 | `player.drop_subtitle` | 같은 폴더의 영상은 재생목록에 함께 추가됩니다. | Videos in the same folder are added to the playlist. | 안내 | 구현 |
+| `player.error.compatibility_required` | 이 MKV 파일은 macOS 기본 재생으로 열리지 않습니다. FFmpeg/remux 호환성 처리가 필요합니다. | This MKV file cannot be opened by macOS playback yet. FFmpeg/remux compatibility handling is required. | 오류 | 구현 |
 | `player.error.no_playable_files` | 재생할 수 있는 영상 파일을 찾지 못했습니다. | No playable video files were found. | 오류 | 구현 |
 | `player.error.playback_failed` | 이 영상은 현재 재생할 수 없습니다. | This video cannot be played right now. | 오류 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
