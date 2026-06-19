@@ -291,6 +291,7 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 - `PlaybackEngineRouter`를 추가해 MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 포맷을 VLC/libVLC 네이티브 엔진 대상으로 분리한다.
 - `NativeVLCLibrary`가 앱 번들 `Contents/Resources/Tools/vlc`의 `libvlc.dylib`를 동적으로 열고, `NativeVLCPlayerView`가 AppKit `NSView`를 libVLC drawable로 제공한다.
 - 개발 번들 스크립트는 VLC dylib/plugin install name을 앱 내부 상대 경로로 보정하고 ad-hoc signing을 수행한다.
+- 공식 VLC arm64 DMG에서 런타임을 재현 설치하는 `./script/install_vlc_runtime.sh`를 제공한다.
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 향후 오디오/자막 추출 작업으로 재분류한다.
 
 검증:

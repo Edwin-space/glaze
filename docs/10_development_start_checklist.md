@@ -220,6 +220,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - SwiftUI/AppKit 재생 표면 분리
 - VLC/libVLC 기반 NSView 렌더러 연결
 - `./script/check_native_media_engine.sh`로 VLC 런타임 준비 상태 확인
+- 새 개발 환경에서는 `./script/install_vlc_runtime.sh`로 공식 VLC arm64 런타임을 `Tools/vlc`에 배치
 - 재생/일시정지/탐색/볼륨 제어를 공통 플레이어 상태로 연결
 - 다중 오디오 트랙, 내장 자막 트랙, ASS/SSA 자막 대응
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 오디오 추출 작업으로 재분류
