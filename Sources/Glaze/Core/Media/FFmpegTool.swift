@@ -48,6 +48,8 @@ enum FFmpegTool {
 }
 
 enum FFmpegRemuxer {
+    private static let cacheVersion = "v2"
+
     enum RemuxError: Error {
         case toolUnavailable
         case unsupportedVideoCodec(String)
@@ -69,8 +71,9 @@ enum FFmpegRemuxer {
             throw RemuxError.toolUnavailable
         }
 
-        if let codecName = try await primaryVideoCodecName(inputURL: inputURL),
-           !isAVPlayerCandidateVideoCodec(codecName) {
+        let codecName = try await primaryVideoCodecName(inputURL: inputURL)
+
+        if let codecName, !isAVPlayerCandidateVideoCodec(codecName) {
             throw RemuxError.unsupportedVideoCodec(codecName)
         }
 
@@ -90,7 +93,7 @@ enum FFmpegRemuxer {
             do {
                 try await run(
                     ffmpegURL: ffmpegURL,
-                    arguments: arguments(inputURL: inputURL, outputURL: outputURL, mode: mode),
+                    arguments: arguments(inputURL: inputURL, outputURL: outputURL, mode: mode, codecName: codecName),
                     mode: mode
                 )
                 return outputURL
@@ -103,7 +106,7 @@ enum FFmpegRemuxer {
         throw RemuxError.failed(failures)
     }
 
-    private static func arguments(inputURL: URL, outputURL: URL, mode: Mode) -> [String] {
+    private static func arguments(inputURL: URL, outputURL: URL, mode: Mode, codecName: String?) -> [String] {
         let baseArguments = [
             "-y",
             "-hide_banner",
@@ -133,12 +136,13 @@ enum FFmpegRemuxer {
             ]
         }
 
+        let videoTagArguments = codecName?.lowercased() == "hevc" ? ["-tag:v", "hvc1"] : []
         let outputArguments = [
             "-movflags", "+faststart",
             outputURL.path
         ]
 
-        return baseArguments + codecArguments + outputArguments
+        return baseArguments + codecArguments + videoTagArguments + outputArguments
     }
 
     private static func run(ffmpegURL: URL, arguments: [String], mode: Mode) async throws {
@@ -181,7 +185,7 @@ enum FFmpegRemuxer {
 
         let baseName = inputURL.deletingPathExtension().lastPathComponent
         let hash = fnv1aHash(inputURL.path)
-        return cacheRoot.appendingPathComponent("\(baseName)-\(hash)-\(mode.rawValue).mp4")
+        return cacheRoot.appendingPathComponent("\(baseName)-\(hash)-\(cacheVersion)-\(mode.rawValue).mp4")
     }
 
     private static func remuxFailureMessage(from error: Error) -> String {

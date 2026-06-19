@@ -132,9 +132,17 @@ remux_sample_for_avkit() {
 
   local copy_output_path="$output_dir/$base_name-stream-copy.mp4"
   local audio_output_path="$output_dir/$base_name-audio-aac.mp4"
+  local video_codec
+  video_codec="$(inspect_primary_video_codec "$file_path")"
+  local video_tag_args=()
+
+  if [[ "$video_codec" == "hevc" ]]; then
+    video_tag_args=(-tag:v hvc1)
+  fi
 
   echo
   echo "remux: $file_path"
+  echo "  primary video codec: ${video_codec:-unknown}"
   echo "  audio-aac output: $audio_output_path"
 
   if "$ffmpeg_path" \
@@ -150,6 +158,7 @@ remux_sample_for_avkit() {
     -c:a aac \
     -b:a 192k \
     -ac 2 \
+    "${video_tag_args[@]}" \
     -movflags +faststart \
     "$audio_output_path"; then
     echo "  result: audio-aac remux succeeded"
@@ -167,6 +176,7 @@ remux_sample_for_avkit() {
       -sn \
       -dn \
       -c copy \
+      "${video_tag_args[@]}" \
       -movflags +faststart \
       "$copy_output_path"; then
       echo "  result: stream-copy remux succeeded"
@@ -174,6 +184,23 @@ remux_sample_for_avkit() {
       echo "  result: stream-copy remux failed"
     fi
   fi
+}
+
+inspect_primary_video_codec() {
+  local file_path="$1"
+  local ffprobe_path
+  ffprobe_path="$(tool_path ffprobe || true)"
+
+  if [[ -z "$ffprobe_path" ]]; then
+    return
+  fi
+
+  "$ffprobe_path" \
+    -v error \
+    -select_streams v:0 \
+    -show_entries stream=codec_name \
+    -of default=noprint_wrappers=1:nokey=1 \
+    "$file_path" 2>/dev/null | head -n 1 || true
 }
 
 SHOULD_REMUX=0
