@@ -67,9 +67,12 @@
 | `player.error.compatibility_failed` | 호환성 재생 파일을 준비하지 못했습니다. FFmpeg 스트림 분석이 필요합니다. | Could not prepare a compatibility playback file. FFmpeg stream analysis is needed. | 오류 | 구현 |
 | `player.error.compatibility_transcode_failed` | 오디오 보정까지 시도했지만 호환성 재생 파일을 준비하지 못했습니다. | Could not prepare a compatibility playback file even after audio correction. | 오류 | 구현 |
 | `player.error.ffmpeg_unavailable` | MKV 호환성 처리를 위한 FFmpeg가 아직 설치되거나 번들되지 않았습니다. | FFmpeg is not installed or bundled yet for MKV compatibility handling. | 오류 | 구현 |
+| `player.error.native_engine_unavailable` | MKV 즉시 재생을 위한 네이티브 엔진 연결이 필요합니다. | Native engine integration is required for instant MKV playback. | 오류 | 구현 |
 | `player.error.no_playable_files` | 재생할 수 있는 영상 파일을 찾지 못했습니다. | No playable video files were found. | 오류 | 구현 |
 | `player.error.playback_failed` | 이 영상은 현재 재생할 수 없습니다. | This video cannot be played right now. | 오류 | 구현 |
 | `player.error.unsupported_video_codec` | 이 파일의 비디오 코덱은 현재 macOS 재생 호환성 처리로 표시할 수 없습니다. | This file's video codec cannot be shown by the current macOS compatibility path. | 오류 | 구현 |
+| `player.native_engine.title` | 네이티브 MKV 엔진 대상 | Native MKV engine target | 상태 | 구현 |
+| `player.native_engine.subtitle` | AVKit/remux 경로로는 충분히 빠르지 않아 MKV/WebM/AVI는 별도 재생 엔진으로 전환합니다. | The AVKit/remux path is not fast enough, so MKV/WebM/AVI will move to a dedicated playback engine. | 안내 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
 | `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |

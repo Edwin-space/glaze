@@ -51,9 +51,12 @@
 "player.error.compatibility_failed" = "Could not prepare a compatibility playback file. FFmpeg stream analysis is needed.";
 "player.error.compatibility_transcode_failed" = "Could not prepare a compatibility playback file even after audio correction.";
 "player.error.ffmpeg_unavailable" = "FFmpeg is not installed or bundled yet for MKV compatibility handling.";
+"player.error.native_engine_unavailable" = "Native engine integration is required for instant MKV playback.";
 "player.error.no_playable_files" = "No playable video files were found.";
 "player.error.playback_failed" = "This video cannot be played right now.";
 "player.error.unsupported_video_codec" = "This file's video codec cannot be shown by the current macOS compatibility path.";
+"player.native_engine.subtitle" = "The AVKit/remux path is not fast enough, so MKV/WebM/AVI will move to a dedicated playback engine.";
+"player.native_engine.title" = "Native MKV engine target";
 "player.no_file" = "No video selected";
 "player.next_video" = "Next Video";
 "player.open_video" = "Open Video";

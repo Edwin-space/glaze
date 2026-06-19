@@ -30,6 +30,7 @@
 
 - 로컬 영상 파일 재생
 - 주요 포맷 지원: mp4, mov, mkv, avi, webm 등
+- 재생 엔진 이원화: MP4/MOV는 AVKit, MKV/WebM/AVI는 네이티브 MKV 엔진
 - 재생, 일시정지, 탐색, 배속 조절
 - 전체화면, PIP
 - 오디오 트랙 선택

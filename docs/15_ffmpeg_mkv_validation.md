@@ -21,6 +21,7 @@
 - GPL 또는 nonfree 옵션이 필요한 고급 코덱 기능은 App Store 기본판에 넣지 않고 웹 배포/Pro 분리 후보로 관리한다.
 - 사용자의 실제 고해상도 MKV 샘플에서 AVKit 실패율이 높거나 다중 오디오/내장 자막/오디오 추출 UX가 부족하면 플레이어 엔진 보강을 진행한다.
 - AVKit에 맞춘 MP4 remux 후 재생은 호환성 보강용 임시 경로이며, 무비스트처럼 파일 등록 직후 즉시 화면을 띄우는 수준을 목표로 하면 직접 MKV 재생 엔진이 필요하다.
+- 2026-06-19 실제 테스트 기준, fragmented MP4 remux로도 첫 화면 지연이 제품 기준에 미달한다. MKV/WebM/AVI는 `libmpv` 기반 네이티브 엔진 경로로 전환한다.
 
 ## 제품 경쟁력 기준
 
@@ -42,6 +43,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 확인 출처:
 
 - Apple App Review Guidelines: https://developer.apple.com/app-store/review/guidelines/
+- mpv manual, client API / libmpv: https://mpv.io/manual/stable/#client-api
 
 검토 기준:
 
@@ -119,6 +121,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
 - 첫 번째 오디오 트랙이 AVKit 후보 코덱이면 stream copy를 우선 적용하고, 필요할 때만 AAC 192kbps stereo 보정으로 재시도한다.
 - stream copy remux는 fragmented MP4(`+empty_moov+default_base_moof+frag_keyframe`)로 생성하고, 초기 재생 조각이 만들어지면 전체 파일 완성을 기다리지 않고 AVPlayer 재생 URL로 넘긴다.
+- 단, remux 경로는 더 이상 MKV의 기본 자동 재생 경로로 보지 않는다. MKV/WebM/AVI는 네이티브 MKV 엔진 대상으로 라우팅하고, remux는 검증/비상 fallback/오디오 추출 후보로 남긴다.
 - remux 전 `ffprobe`로 첫 번째 비디오 코덱을 확인하고, AVKit 재생 후보가 아닌 코덱은 음성만 자동 재생하지 않는다.
 - HEVC를 MP4로 remux할 때는 Apple AVKit 호환성을 위해 `-tag:v hvc1`을 적용한다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
@@ -185,8 +188,8 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 |---|---|---|---|---|---|
 | AVKit 기본 재생 | 포함 | 무료 후보 | 높음 | 낮음 | 낮음 |
 | MP4/MOV 안정 재생 | 포함 | 무료 후보 | 높음 | 낮음 | 낮음 |
-| MKV 기본 열기 시도 | 검증 | 무료 후보 | 중간 | 중간 | 중간 |
-| FFmpeg 기반 고급 코덱 지원 | 검증 | Pro 후보 | 검토 필요 | 높음 | 중간~높음 |
+| MKV 네이티브 재생 | 검증 | 무료 후보 | 검토 필요 | 중간 | 중간 |
+| FFmpeg/remux fallback | 검증 | Pro 후보 | 검토 필요 | 높음 | 중간~높음 |
 | FFmpeg 기반 오디오 추출 | 검증 | 유료/Pro 후보 | 검토 필요 | 중간 | 중간 |
 | 내장 자막 트랙 추출 | 검증 | 유료 후보 | 검토 필요 | 중간 | 중간 |
 | 웹 배포판 고급 미디어 엔진 | 제외 | Pro 후보 | 낮음 | 높음 | 중간 |
@@ -273,3 +276,17 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 
 - 이 조치는 첫 화면 지연을 줄이는 완화책이지, 직접 MKV 재생 엔진을 대체하지 않는다.
 - 사용자 기대치가 무비스트, IINA, VLC에 맞춰져 있으므로 Player MVP 다음 기술 의사결정은 libmpv/VLC/libav 기반 직접 재생 경로 검토가 우선이다.
+
+### 2026-06-19 네이티브 엔진 전환 결정
+
+판단:
+
+- 사용자가 체감한 지연은 fragmented MP4 remux 이후에도 경쟁 플레이어 대비 부족하다.
+- MKV 파일은 전체 또는 일부 캐시를 먼저 준비하는 방식이 아니라 컨테이너를 직접 읽고 디코딩해야 한다.
+- macOS 고급 플레이어 생태계와 구현 공수를 기준으로 `libmpv`를 1순위 후보로 둔다.
+
+구현 방향:
+
+- `PlaybackEngineRouter`를 추가해 MP4/MOV는 AVKit, MKV/WebM/AVI는 네이티브 엔진 대상으로 분리한다.
+- 네이티브 엔진 미연결 상태에서는 느린 remux 자동 재시도를 실행하지 않고 즉시 엔진 필요 상태를 표시한다.
+- 다음 단계는 `libmpv` 헤더/동적 라이브러리 확보, SwiftPM 링크 설정, AppKit `NSView` 렌더러 연결이다.

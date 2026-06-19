@@ -32,6 +32,7 @@ struct PlayerView: View {
     @State private var compatibilityAttemptedPaths: Set<String> = []
     @State private var compatibilityTask: Task<Void, Never>?
     @State private var playbackSessionID = UUID()
+    @State private var activePlaybackEngine: PlaybackEngineKind = .none
 
     var body: some View {
         HStack(spacing: 0) {
@@ -103,7 +104,7 @@ struct PlayerView: View {
                 Label(L10n.string("media.panel.toggle"), systemImage: "info.circle")
             }
             .buttonStyle(.bordered)
-            .disabled(player == nil)
+            .disabled(currentVideoURL == nil)
 
             Button {
                 togglePanel(.subtitles)
@@ -130,7 +131,9 @@ struct PlayerView: View {
                 endPoint: .bottomTrailing
             )
 
-            if let player {
+            if activePlaybackEngine == .nativeMPV {
+                NativePlaybackSurfaceView()
+            } else if let player {
                 PlayerSurfaceView(player: player)
                 subtitleOverlay
             } else {
@@ -858,22 +861,29 @@ struct PlayerView: View {
     }
 
     private func loadVideo(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
-        loadVideo(originalURL: url, playbackURL: url, playlist: nextPlaylist, shouldStartPlayback: shouldStartPlayback)
+        switch PlaybackEngineRouter.preferredEngine(for: url) {
+        case .nativeMPV:
+            loadVideoWithNativeEngine(url, playlist: nextPlaylist)
+        case .avkit, .none:
+            loadVideo(originalURL: url, playbackURL: url, playlist: nextPlaylist, shouldStartPlayback: shouldStartPlayback)
+        }
     }
 
-    private func loadVideo(originalURL: URL, playbackURL: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
+    private func loadVideoWithNativeEngine(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem]) {
         beginNewPlaybackSession()
 
-        let item = AVPlayerItem(url: playbackURL)
-        let nextPlayer = AVPlayer(playerItem: item)
-        player = nextPlayer
+        player = nil
+        activePlaybackEngine = .nativeMPV
+        currentPlaybackURL = nil
+        prepareCurrentMediaState(originalURL: url, playlist: nextPlaylist)
+        errorMessage = L10n.string("player.error.native_engine_unavailable")
+    }
+
+    private func prepareCurrentMediaState(originalURL: URL, playlist nextPlaylist: [MediaPlaylistItem]) {
         playlist = nextPlaylist
         currentVideoURL = originalURL
-        currentPlaybackURL = playbackURL
         currentFileName = originalURL.lastPathComponent
-        errorMessage = nil
         mediaInspection = nil
-        isPreparingCompatibilityPlayback = false
         isInspectingMedia = true
         detectedSubtitles = SubtitleSidecarDetector.detect(for: originalURL)
         currentMediaAsset = mediaAsset(for: originalURL)
@@ -883,8 +893,22 @@ struct PlayerView: View {
         selectedSubtitleName = nil
         selectedSubtitlePath = nil
         loadPreferredSubtitleIfAvailable()
-        installPlaybackObservers(on: nextPlayer, item: item, shouldStartPlayback: shouldStartPlayback)
         inspectMedia(originalURL)
+    }
+
+    private func loadVideo(originalURL: URL, playbackURL: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
+        beginNewPlaybackSession()
+
+        let item = AVPlayerItem(url: playbackURL)
+        let nextPlayer = AVPlayer(playerItem: item)
+        player = nextPlayer
+        activePlaybackEngine = .avkit
+        currentVideoURL = originalURL
+        currentPlaybackURL = playbackURL
+        errorMessage = nil
+        isPreparingCompatibilityPlayback = false
+        prepareCurrentMediaState(originalURL: originalURL, playlist: nextPlaylist)
+        installPlaybackObservers(on: nextPlayer, item: item, shouldStartPlayback: shouldStartPlayback)
     }
 
     private func beginNewPlaybackSession() {
@@ -894,6 +918,7 @@ struct PlayerView: View {
         removeTimeObserver()
         player?.pause()
         player?.replaceCurrentItem(with: nil)
+        activePlaybackEngine = .none
         isPreparingCompatibilityPlayback = false
         activeSubtitleText = ""
     }
@@ -906,6 +931,7 @@ struct PlayerView: View {
         player?.replaceCurrentItem(with: nil)
         player = nil
         observedPlayer = nil
+        activePlaybackEngine = .none
         activeSubtitleText = ""
         isPreparingCompatibilityPlayback = false
     }
@@ -915,7 +941,7 @@ struct PlayerView: View {
             return false
         }
 
-        return ["mkv", "webm", "avi"].contains(currentVideoURL.pathExtension.lowercased())
+        return PlaybackEngineRouter.nativeEngineContainers.contains(currentVideoURL.pathExtension.lowercased())
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
