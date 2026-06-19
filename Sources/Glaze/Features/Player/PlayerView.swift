@@ -13,6 +13,8 @@ struct PlayerView: View {
     @State private var isSubtitleVisible = true
     @State private var timeObserver: Any?
     @State private var observedPlayer: AVPlayer?
+    @State private var itemStatusObserver: NSKeyValueObservation?
+    @State private var playerTimeControlObserver: NSKeyValueObservation?
     @State private var selectedSubtitleName: String?
     @State private var selectedSubtitlePath: String?
     @State private var showsSubtitlePanel = false
@@ -867,11 +869,8 @@ struct PlayerView: View {
         selectedSubtitleName = nil
         selectedSubtitlePath = nil
         loadPreferredSubtitleIfAvailable()
-        installTimeObserver(on: nextPlayer)
+        installPlaybackObservers(on: nextPlayer, item: item, shouldStartPlayback: shouldStartPlayback)
         inspectMedia(url)
-        if shouldStartPlayback {
-            nextPlayer.play()
-        }
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
@@ -1160,6 +1159,53 @@ struct PlayerView: View {
         loadVideo(playlist[currentPlaylistIndex + 1].url, playlist: playlist, shouldStartPlayback: true)
     }
 
+    private func installPlaybackObservers(on player: AVPlayer, item: AVPlayerItem, shouldStartPlayback: Bool) {
+        installTimeObserver(on: player)
+        installItemStatusObserver(on: item, player: player, shouldStartPlayback: shouldStartPlayback)
+        installTimeControlObserver(on: player)
+    }
+
+    private func installItemStatusObserver(on item: AVPlayerItem, player: AVPlayer, shouldStartPlayback: Bool) {
+        itemStatusObserver = item.observe(\.status, options: [.initial, .new]) { observedItem, _ in
+            Task { @MainActor in
+                guard player.currentItem === observedItem else {
+                    return
+                }
+
+                switch observedItem.status {
+                case .readyToPlay:
+                    errorMessage = nil
+                    if shouldStartPlayback {
+                        player.play()
+                    }
+                case .failed:
+                    errorMessage = observedItem.error?.localizedDescription ?? L10n.string("player.error.playback_failed")
+                case .unknown:
+                    break
+                @unknown default:
+                    errorMessage = L10n.string("player.error.playback_failed")
+                }
+            }
+        }
+    }
+
+    private func installTimeControlObserver(on player: AVPlayer) {
+        playerTimeControlObserver = player.observe(\.timeControlStatus, options: [.new]) { observedPlayer, _ in
+            Task { @MainActor in
+                guard self.player === observedPlayer else {
+                    return
+                }
+
+                if observedPlayer.timeControlStatus == .waitingToPlayAtSpecifiedRate,
+                   let reason = observedPlayer.reasonForWaitingToPlay {
+                    errorMessage = playbackWaitingMessage(for: reason)
+                } else if observedPlayer.timeControlStatus == .playing {
+                    errorMessage = nil
+                }
+            }
+        }
+    }
+
     private func installTimeObserver(on player: AVPlayer) {
         let interval = CMTime(seconds: 0.2, preferredTimescale: 600)
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
@@ -1171,6 +1217,11 @@ struct PlayerView: View {
     }
 
     private func removeTimeObserver() {
+        itemStatusObserver?.invalidate()
+        playerTimeControlObserver?.invalidate()
+        itemStatusObserver = nil
+        playerTimeControlObserver = nil
+
         if let timeObserver, let observedPlayer {
             observedPlayer.removeTimeObserver(timeObserver)
         }
@@ -1181,6 +1232,19 @@ struct PlayerView: View {
 
     private func activeCueText(at time: TimeInterval) -> String {
         subtitleCues.first { $0.contains(time) }?.text ?? ""
+    }
+
+    private func playbackWaitingMessage(for reason: AVPlayer.WaitingReason) -> String {
+        switch reason {
+        case .evaluatingBufferingRate:
+            L10n.string("player.status.buffering")
+        case .toMinimizeStalls:
+            L10n.string("player.status.waiting")
+        case .noItemToPlay:
+            L10n.string("player.error.playback_failed")
+        default:
+            L10n.string("player.status.waiting")
+        }
     }
 
     private var supportedVideoTypes: [UTType] {

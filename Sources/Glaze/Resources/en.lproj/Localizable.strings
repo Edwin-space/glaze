@@ -48,10 +48,13 @@
 "player.drop_hint" = "Drop a video or folder";
 "player.drop_subtitle" = "Videos in the same folder are added to the playlist.";
 "player.error.no_playable_files" = "No playable video files were found.";
+"player.error.playback_failed" = "This video cannot be played right now.";
 "player.no_file" = "No video selected";
 "player.next_video" = "Next Video";
 "player.open_video" = "Open Video";
 "player.previous_video" = "Previous Video";
+"player.status.buffering" = "Preparing playback.";
+"player.status.waiting" = "Waiting to play.";
 "playlist.panel.count_format" = "%d videos";
 "playlist.panel.empty" = "No videos have been added to the playlist.";
 "playlist.panel.title" = "Playlist";

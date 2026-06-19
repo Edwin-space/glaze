@@ -64,10 +64,13 @@
 | `player.drop_hint` | 영상 또는 폴더를 놓으세요 | Drop a video or folder | 드래그앤드롭 | 구현 |
 | `player.drop_subtitle` | 같은 폴더의 영상은 재생목록에 함께 추가됩니다. | Videos in the same folder are added to the playlist. | 안내 | 구현 |
 | `player.error.no_playable_files` | 재생할 수 있는 영상 파일을 찾지 못했습니다. | No playable video files were found. | 오류 | 구현 |
+| `player.error.playback_failed` | 이 영상은 현재 재생할 수 없습니다. | This video cannot be played right now. | 오류 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
 | `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |
 | `player.next_video` | 다음 영상 | Next Video | 버튼 | 구현 |
+| `player.status.buffering` | 재생 준비 중입니다. | Preparing playback. | 상태 | 구현 |
+| `player.status.waiting` | 재생을 기다리는 중입니다. | Waiting to play. | 상태 | 구현 |
 | `playlist.panel.toggle` | 재생목록 | Playlist | 버튼 | 구현 |
 | `playlist.panel.title` | 재생목록 | Playlist | 패널 제목 | 구현 |
 | `playlist.panel.count_format` | %d개 영상 | %d videos | 상태 | 구현 |
