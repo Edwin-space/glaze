@@ -48,7 +48,11 @@ enum FFmpegTool {
 }
 
 enum FFmpegRemuxer {
-    private static let cacheVersion = "v3"
+    private static let cacheVersion = "v4"
+    private static let progressiveReadyByteCount: UInt64 = 512 * 1024
+    private static let progressiveMinimumByteCount: UInt64 = 64 * 1024
+    private static let progressivePollInterval: UInt64 = 50_000_000
+    private static let progressiveStartupTimeout: UInt64 = 5_000_000_000
 
     enum RemuxError: Error {
         case toolUnavailable
@@ -82,7 +86,7 @@ enum FFmpegRemuxer {
 
         for mode in preferredModes(forAudioCodec: audioCodecName) {
             let outputURL = try outputURL(for: inputURL, mode: mode)
-            if FileManager.default.fileExists(atPath: outputURL.path) {
+            if isCompletedCache(outputURL) {
                 return outputURL
             }
 
@@ -92,14 +96,26 @@ enum FFmpegRemuxer {
             )
 
             do {
-                try await run(
-                    ffmpegURL: ffmpegURL,
-                    arguments: arguments(inputURL: inputURL, outputURL: outputURL, mode: mode, codecName: codecName),
-                    mode: mode
-                )
+                try removeStaleCacheIfNeeded(outputURL)
+                let arguments = arguments(inputURL: inputURL, outputURL: outputURL, mode: mode, codecName: codecName)
+
+                switch mode {
+                case .streamCopy:
+                    try await runProgressively(
+                        ffmpegURL: ffmpegURL,
+                        arguments: arguments,
+                        mode: mode,
+                        outputURL: outputURL
+                    )
+                case .audioAAC:
+                    try await run(ffmpegURL: ffmpegURL, arguments: arguments, mode: mode)
+                    markCompletedCache(outputURL)
+                }
+
                 return outputURL
             } catch {
                 try? FileManager.default.removeItem(at: outputURL)
+                try? FileManager.default.removeItem(at: completionMarkerURL(for: outputURL))
                 failures.append(AttemptFailure(mode: mode, message: remuxFailureMessage(from: error)))
             }
         }
@@ -138,10 +154,19 @@ enum FFmpegRemuxer {
         }
 
         let videoTagArguments = codecName?.lowercased() == "hevc" ? ["-tag:v", "hvc1"] : []
-        let outputArguments = [
-            "-movflags", "+faststart",
-            outputURL.path
-        ]
+        let outputArguments: [String]
+        switch mode {
+        case .streamCopy:
+            outputArguments = [
+                "-movflags", "+empty_moov+default_base_moof+frag_keyframe",
+                outputURL.path
+            ]
+        case .audioAAC:
+            outputArguments = [
+                "-movflags", "+faststart",
+                outputURL.path
+            ]
+        }
 
         return baseArguments + codecArguments + videoTagArguments + outputArguments
     }
@@ -172,6 +197,117 @@ enum FFmpegRemuxer {
                 continuation.resume(throwing: error)
             }
         }
+    }
+
+    private static func runProgressively(
+        ffmpegURL: URL,
+        arguments: [String],
+        mode: Mode,
+        outputURL: URL
+    ) async throws {
+        if let process = FFmpegProcessRegistry.shared.process(for: outputURL.path) {
+            try await waitForProgressiveOutput(outputURL: outputURL, process: process, mode: mode)
+            return
+        }
+
+        let process = Process()
+        let errorPipe = Pipe()
+        process.executableURL = ffmpegURL
+        process.arguments = arguments
+        process.standardError = errorPipe
+
+        process.terminationHandler = { process in
+            let isExposed = FFmpegProcessRegistry.shared.isExposed(outputPath: outputURL.path)
+
+            if process.terminationStatus == 0 {
+                markCompletedCache(outputURL)
+            } else if !isExposed {
+                _ = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                try? FileManager.default.removeItem(at: outputURL)
+                try? FileManager.default.removeItem(at: completionMarkerURL(for: outputURL))
+            }
+
+            FFmpegProcessRegistry.shared.remove(for: outputURL.path)
+        }
+
+        do {
+            try process.run()
+            FFmpegProcessRegistry.shared.set(process, for: outputURL.path)
+            try await waitForProgressiveOutput(outputURL: outputURL, process: process, mode: mode)
+        } catch {
+            process.terminate()
+            FFmpegProcessRegistry.shared.remove(for: outputURL.path)
+            try? FileManager.default.removeItem(at: outputURL)
+            try? FileManager.default.removeItem(at: completionMarkerURL(for: outputURL))
+            throw error
+        }
+    }
+
+    private static func waitForProgressiveOutput(outputURL: URL, process: Process, mode: Mode) async throws {
+        var waitedNanoseconds: UInt64 = 0
+
+        while true {
+            try Task.checkCancellation()
+
+            let byteCount = outputByteCount(outputURL)
+            if byteCount >= progressiveReadyByteCount {
+                FFmpegProcessRegistry.shared.markExposed(outputPath: outputURL.path)
+                return
+            }
+
+            if isCompletedCache(outputURL), byteCount > 0 {
+                return
+            }
+
+            if !process.isRunning {
+                if process.terminationStatus == 0, byteCount > 0 {
+                    markCompletedCache(outputURL)
+                    return
+                }
+
+                throw AttemptFailure(mode: mode, message: "FFmpeg ended before a playable fragment was ready.")
+            }
+
+            if waitedNanoseconds >= progressiveStartupTimeout, byteCount >= progressiveMinimumByteCount {
+                FFmpegProcessRegistry.shared.markExposed(outputPath: outputURL.path)
+                return
+            }
+
+            try await Task.sleep(nanoseconds: progressivePollInterval)
+            waitedNanoseconds += progressivePollInterval
+        }
+    }
+
+    private static func outputByteCount(_ outputURL: URL) -> UInt64 {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: outputURL.path)
+        return attributes?[.size] as? UInt64 ?? 0
+    }
+
+    private static func isCompletedCache(_ outputURL: URL) -> Bool {
+        FileManager.default.fileExists(atPath: outputURL.path)
+            && FileManager.default.fileExists(atPath: completionMarkerURL(for: outputURL).path)
+    }
+
+    private static func markCompletedCache(_ outputURL: URL) {
+        FileManager.default.createFile(
+            atPath: completionMarkerURL(for: outputURL).path,
+            contents: Data(),
+            attributes: nil
+        )
+    }
+
+    private static func removeStaleCacheIfNeeded(_ outputURL: URL) throws {
+        if FFmpegProcessRegistry.shared.process(for: outputURL.path) != nil {
+            return
+        }
+
+        if FileManager.default.fileExists(atPath: outputURL.path), !isCompletedCache(outputURL) {
+            try FileManager.default.removeItem(at: outputURL)
+        }
+    }
+
+    private static func completionMarkerURL(for outputURL: URL) -> URL {
+        outputURL.appendingPathExtension("complete")
     }
 
     private static func outputURL(for inputURL: URL, mode: Mode) throws -> URL {
@@ -292,5 +428,46 @@ enum FFmpegRemuxer {
             hash &*= 0x100000001b3
         }
         return String(hash, radix: 16)
+    }
+}
+
+final class FFmpegProcessRegistry: @unchecked Sendable {
+    static let shared = FFmpegProcessRegistry()
+
+    private let lock = NSLock()
+    private var processesByOutputPath: [String: Process] = [:]
+    private var exposedOutputPaths = Set<String>()
+
+    private init() {}
+
+    func process(for outputPath: String) -> Process? {
+        lock.lock()
+        defer { lock.unlock() }
+        return processesByOutputPath[outputPath]
+    }
+
+    func set(_ process: Process, for outputPath: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        processesByOutputPath[outputPath] = process
+    }
+
+    func remove(for outputPath: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        processesByOutputPath.removeValue(forKey: outputPath)
+        exposedOutputPaths.remove(outputPath)
+    }
+
+    func markExposed(outputPath: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        exposedOutputPaths.insert(outputPath)
+    }
+
+    func isExposed(outputPath: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return exposedOutputPaths.contains(outputPath)
     }
 }

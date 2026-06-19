@@ -190,6 +190,7 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - FFmpeg remux 전에 비디오 코덱을 확인해 AVKit 후보가 아닌 코덱은 음성만 자동 재생하지 않도록 차단
 - HEVC MP4 호환성 파일은 AVKit 표시 안정성을 위해 `hvc1` 비디오 태그를 적용
 - AAC/ALAC/MP3/AC3/EAC3 오디오 파일은 불필요한 오디오 재인코딩 없이 stream copy를 우선 적용해 초기 지연을 줄임
+- stream copy remux는 fragmented MP4를 생성하고, 재생 가능한 초기 조각이 준비되면 AVPlayer에 먼저 넘겨 첫 화면 지연을 줄임
 - 검증 스크립트 `--remux` 옵션 추가
 - 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 개발 앱 번들 `Contents/Resources/Tools`로 복사하는 drop-in 구조 추가
 - 검증 스크립트가 프로젝트 `Tools`의 로컬 FFmpeg 도구를 우선 사용하도록 수정
@@ -197,6 +198,12 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - MKV/WebM/AVI 실패 시 오디오 AAC 보정 remux를 우선 시도하고, 실패하면 stream copy remux를 재시도
 - App Store self-contained bundle, sandbox, 외부 코드 다운로드 제한 기준 확인
 - FFmpeg LGPL/GPL/nonfree 빌드 옵션 리스크 기준 확인
+
+### 현재 판단
+
+- AVKit + FFmpeg remux 캐시는 MKV 호환성을 빠르게 넓히는 임시 해법이다.
+- 사용자가 기대하는 무비스트급 즉시 재생은 MKV를 MP4로 먼저 준비하는 구조에서는 한계가 있다.
+- 경쟁력 있는 플레이어 품질을 위해서는 libmpv/VLC/libav 기반 직접 MKV 재생 엔진 검토를 다음 핵심 기술 과제로 둔다.
 
 ### 검증 항목
 

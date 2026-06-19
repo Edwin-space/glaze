@@ -211,7 +211,7 @@ remux_stream_copy() {
     -dn \
     -c copy \
     "${video_tag_args[@]}" \
-    -movflags +faststart \
+    -movflags +empty_moov+default_base_moof+frag_keyframe \
     "$copy_output_path"; then
     echo "  result: stream-copy remux succeeded"
     return 0

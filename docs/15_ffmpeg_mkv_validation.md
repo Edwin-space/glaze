@@ -20,6 +20,7 @@
 - FFmpeg를 앱에 포함할 경우 LGPL 준수 가능 빌드만 1차 후보로 둔다.
 - GPL 또는 nonfree 옵션이 필요한 고급 코덱 기능은 App Store 기본판에 넣지 않고 웹 배포/Pro 분리 후보로 관리한다.
 - 사용자의 실제 고해상도 MKV 샘플에서 AVKit 실패율이 높거나 다중 오디오/내장 자막/오디오 추출 UX가 부족하면 플레이어 엔진 보강을 진행한다.
+- AVKit에 맞춘 MP4 remux 후 재생은 호환성 보강용 임시 경로이며, 무비스트처럼 파일 등록 직후 즉시 화면을 띄우는 수준을 목표로 하면 직접 MKV 재생 엔진이 필요하다.
 
 ## 제품 경쟁력 기준
 
@@ -117,6 +118,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - 이 패널은 사용자용 고급 설정이 아니라 개발 검증과 향후 고객지원/FAQ의 근거 데이터를 쌓기 위한 초기 도구다.
 - MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
 - 첫 번째 오디오 트랙이 AVKit 후보 코덱이면 stream copy를 우선 적용하고, 필요할 때만 AAC 192kbps stereo 보정으로 재시도한다.
+- stream copy remux는 fragmented MP4(`+empty_moov+default_base_moof+frag_keyframe`)로 생성하고, 초기 재생 조각이 만들어지면 전체 파일 완성을 기다리지 않고 AVPlayer 재생 URL로 넘긴다.
 - remux 전 `ffprobe`로 첫 번째 비디오 코덱을 확인하고, AVKit 재생 후보가 아닌 코덱은 음성만 자동 재생하지 않는다.
 - HEVC를 MP4로 remux할 때는 Apple AVKit 호환성을 위해 `-tag:v hvc1`을 적용한다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
@@ -252,3 +254,22 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 - `./script/build_lgpl_ffmpeg_tools.sh`를 실행해 LGPL-only FFmpeg 로컬 빌드를 확보하고 실제 MKV 샘플을 검증
 - ffprobe 기반 스트림 분석으로 remux 가능/불가능 사전 판단
 - AC3/FLAC/ASS/내장 자막 등 stream copy만으로 MP4 호환이 어려운 케이스 처리
+
+### 2026-06-19 초기 지연 재검토
+
+관찰:
+
+- MKV 파일을 재생목록에서 선택하면 FFmpeg 호환성 준비 메시지 이후 영상 표시까지 체감 지연이 남는다.
+- 무비스트류 플레이어는 MKV를 직접 디코딩하므로 파일 등록 직후 화면 표시가 가능하다.
+- Glaze의 현 구조는 AVKit이 읽을 수 있는 MP4 캐시를 먼저 만들기 때문에 첫 실행 파일에서는 구조적 지연이 발생한다.
+
+단기 조치:
+
+- AAC/ALAC/MP3/AC3/EAC3처럼 AVKit 후보 오디오가 포함된 MKV는 stream copy를 우선한다.
+- stream copy 결과는 fragmented MP4로 만들고, 초기 조각이 준비되면 전체 파일 완성을 기다리지 않는다.
+- 완성되지 않은 캐시를 재사용하지 않도록 `.complete` 마커를 별도로 관리한다.
+
+제품 판단:
+
+- 이 조치는 첫 화면 지연을 줄이는 완화책이지, 직접 MKV 재생 엔진을 대체하지 않는다.
+- 사용자 기대치가 무비스트, IINA, VLC에 맞춰져 있으므로 Player MVP 다음 기술 의사결정은 libmpv/VLC/libav 기반 직접 재생 경로 검토가 우선이다.
