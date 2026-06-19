@@ -19,4 +19,9 @@ struct PlayerSurfaceView: NSViewRepresentable {
             view.player = player
         }
     }
+
+    static func dismantleNSView(_ nsView: AVPlayerView, coordinator: ()) {
+        nsView.player?.pause()
+        nsView.player = nil
+    }
 }

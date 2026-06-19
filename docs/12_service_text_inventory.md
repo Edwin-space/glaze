@@ -69,6 +69,7 @@
 | `player.error.ffmpeg_unavailable` | MKV 호환성 처리를 위한 FFmpeg가 아직 설치되거나 번들되지 않았습니다. | FFmpeg is not installed or bundled yet for MKV compatibility handling. | 오류 | 구현 |
 | `player.error.no_playable_files` | 재생할 수 있는 영상 파일을 찾지 못했습니다. | No playable video files were found. | 오류 | 구현 |
 | `player.error.playback_failed` | 이 영상은 현재 재생할 수 없습니다. | This video cannot be played right now. | 오류 | 구현 |
+| `player.error.unsupported_video_codec` | 이 파일의 비디오 코덱은 현재 macOS 재생 호환성 처리로 표시할 수 없습니다. | This file's video codec cannot be shown by the current macOS compatibility path. | 오류 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
 | `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |

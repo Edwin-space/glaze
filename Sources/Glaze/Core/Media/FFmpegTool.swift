@@ -50,6 +50,7 @@ enum FFmpegTool {
 enum FFmpegRemuxer {
     enum RemuxError: Error {
         case toolUnavailable
+        case unsupportedVideoCodec(String)
         case failed([AttemptFailure])
     }
 
@@ -66,6 +67,11 @@ enum FFmpegRemuxer {
     static func remuxForAVPlayer(inputURL: URL) async throws -> URL {
         guard let ffmpegURL = FFmpegTool.ffmpegURL else {
             throw RemuxError.toolUnavailable
+        }
+
+        if let codecName = try await primaryVideoCodecName(inputURL: inputURL),
+           !isAVPlayerCandidateVideoCodec(codecName) {
+            throw RemuxError.unsupportedVideoCodec(codecName)
         }
 
         var failures: [AttemptFailure] = []
@@ -184,6 +190,68 @@ enum FFmpegRemuxer {
         }
 
         return error.localizedDescription
+    }
+
+    private static func primaryVideoCodecName(inputURL: URL) async throws -> String? {
+        guard let ffprobeURL = FFmpegTool.ffprobeURL else {
+            return nil
+        }
+
+        let output = try await runForOutput(
+            executableURL: ffprobeURL,
+            arguments: [
+                "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=codec_name",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                inputURL.path
+            ]
+        )
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return output.isEmpty ? nil : output
+    }
+
+    private static func isAVPlayerCandidateVideoCodec(_ codecName: String) -> Bool {
+        [
+            "h264",
+            "hevc",
+            "mpeg4",
+            "prores",
+            "mjpeg"
+        ].contains(codecName.lowercased())
+    }
+
+    private static func runForOutput(executableURL: URL, arguments: [String]) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            let process = Process()
+            let outputPipe = Pipe()
+            let errorPipe = Pipe()
+            process.executableURL = executableURL
+            process.arguments = arguments
+            process.standardOutput = outputPipe
+            process.standardError = errorPipe
+
+            process.terminationHandler = { process in
+                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let outputText = String(data: outputData, encoding: .utf8) ?? ""
+                let errorText = String(data: errorData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+                if process.terminationStatus == 0 {
+                    continuation.resume(returning: outputText)
+                } else {
+                    continuation.resume(throwing: AttemptFailure(mode: .audioAAC, message: errorText))
+                }
+            }
+
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
     }
 
     private static func fnv1aHash(_ value: String) -> String {

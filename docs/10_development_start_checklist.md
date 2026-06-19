@@ -185,6 +185,9 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - 샘플 파일 검사용 스크립트 추가: `./script/validate_media_capability.sh`
 - 앱 내부 미디어 정보 패널 추가: 컨테이너, AVKit 직접 재생 가능 여부, 트랙/코덱 인식 상태 확인
 - FFmpeg가 사용 가능한 환경에서 MKV/WebM/AVI 실패 시 MP4 캐시 remux 후 AVPlayer 재생 재시도
+- 파일 전환/창 닫기 시 기존 AVPlayer와 호환성 준비 작업을 정리해 이전 음성이 남지 않도록 처리
+- 개발 실행 스크립트가 이전 Glaze 프로세스를 정리한 뒤 새 앱을 실행하도록 보강
+- FFmpeg remux 전에 비디오 코덱을 확인해 AVKit 후보가 아닌 코덱은 음성만 자동 재생하지 않도록 차단
 - 검증 스크립트 `--remux` 옵션 추가
 - 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 개발 앱 번들 `Contents/Resources/Tools`로 복사하는 drop-in 구조 추가
 - 검증 스크립트가 프로젝트 `Tools`의 로컬 FFmpeg 도구를 우선 사용하도록 수정

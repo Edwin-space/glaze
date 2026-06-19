@@ -117,6 +117,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - 이 패널은 사용자용 고급 설정이 아니라 개발 검증과 향후 고객지원/FAQ의 근거 데이터를 쌓기 위한 초기 도구다.
 - MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
 - 1차 remux는 비디오는 유지한 채 첫 번째 오디오 트랙을 AAC 192kbps stereo로 보정해 처리하고, 실패하면 비디오/오디오 stream copy로 재시도한다.
+- remux 전 `ffprobe`로 첫 번째 비디오 코덱을 확인하고, AVKit 재생 후보가 아닌 코덱은 음성만 자동 재생하지 않는다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
 - 개발/검증 앱은 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`에 실행 파일이 있으면 앱 번들 `Contents/Resources/Tools`로 복사해 런타임에서 우선 감지한다.
 

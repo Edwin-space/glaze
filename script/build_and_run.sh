@@ -18,6 +18,10 @@ RESOURCE_BUNDLE_NAME="Glaze_Glaze.bundle"
 LOCAL_TOOLS_DIR="$ROOT_DIR/Tools"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+sleep 0.2
+if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
+  pkill -9 -x "$APP_NAME" >/dev/null 2>&1 || true
+fi
 
 swift build
 BUILD_DIR="$(swift build --show-bin-path)"

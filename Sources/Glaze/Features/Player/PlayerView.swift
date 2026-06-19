@@ -30,6 +30,8 @@ struct PlayerView: View {
     @State private var isDropTargeted = false
     @State private var isPreparingCompatibilityPlayback = false
     @State private var compatibilityAttemptedPaths: Set<String> = []
+    @State private var compatibilityTask: Task<Void, Never>?
+    @State private var playbackSessionID = UUID()
 
     var body: some View {
         HStack(spacing: 0) {
@@ -69,6 +71,9 @@ struct PlayerView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in
             openVideo()
+        }
+        .onDisappear {
+            stopPlaybackForWindowClose()
         }
     }
 
@@ -857,7 +862,7 @@ struct PlayerView: View {
     }
 
     private func loadVideo(originalURL: URL, playbackURL: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
-        removeTimeObserver()
+        beginNewPlaybackSession()
 
         let item = AVPlayerItem(url: playbackURL)
         let nextPlayer = AVPlayer(playerItem: item)
@@ -880,6 +885,29 @@ struct PlayerView: View {
         loadPreferredSubtitleIfAvailable()
         installPlaybackObservers(on: nextPlayer, item: item, shouldStartPlayback: shouldStartPlayback)
         inspectMedia(originalURL)
+    }
+
+    private func beginNewPlaybackSession() {
+        playbackSessionID = UUID()
+        compatibilityTask?.cancel()
+        compatibilityTask = nil
+        removeTimeObserver()
+        player?.pause()
+        player?.replaceCurrentItem(with: nil)
+        isPreparingCompatibilityPlayback = false
+        activeSubtitleText = ""
+    }
+
+    private func stopPlaybackForWindowClose() {
+        compatibilityTask?.cancel()
+        compatibilityTask = nil
+        removeTimeObserver()
+        player?.pause()
+        player?.replaceCurrentItem(with: nil)
+        player = nil
+        observedPlayer = nil
+        activeSubtitleText = ""
+        isPreparingCompatibilityPlayback = false
     }
 
     private var isCurrentContainerKnownCompatibilityRisk: Bool {
@@ -1293,18 +1321,26 @@ struct PlayerView: View {
     }
 
     private func prepareCompatibilityPlayback(for originalURL: URL) {
+        let sessionID = playbackSessionID
         compatibilityAttemptedPaths.insert(originalURL.path)
         isPreparingCompatibilityPlayback = true
         errorMessage = L10n.string("player.status.preparing_compatibility")
 
-        Task {
+        compatibilityTask?.cancel()
+        compatibilityTask = Task {
             do {
                 let remuxedURL = try await FFmpegRemuxer.remuxForAVPlayer(inputURL: originalURL)
+                guard !Task.isCancelled else {
+                    return
+                }
+
                 await MainActor.run {
-                    guard currentVideoURL?.path == originalURL.path else {
+                    guard playbackSessionID == sessionID,
+                          currentVideoURL?.path == originalURL.path else {
                         return
                     }
 
+                    compatibilityTask = nil
                     loadVideo(
                         originalURL: originalURL,
                         playbackURL: remuxedURL,
@@ -1313,11 +1349,17 @@ struct PlayerView: View {
                     )
                 }
             } catch {
+                guard !Task.isCancelled else {
+                    return
+                }
+
                 await MainActor.run {
-                    guard currentVideoURL?.path == originalURL.path else {
+                    guard playbackSessionID == sessionID,
+                          currentVideoURL?.path == originalURL.path else {
                         return
                     }
 
+                    compatibilityTask = nil
                     isPreparingCompatibilityPlayback = false
                     errorMessage = compatibilityFailureMessage(for: error)
                     showsMediaPanel = true
@@ -1337,6 +1379,8 @@ struct PlayerView: View {
         switch remuxError {
         case .toolUnavailable:
             return L10n.string("player.error.ffmpeg_unavailable")
+        case .unsupportedVideoCodec:
+            return L10n.string("player.error.unsupported_video_codec")
         case .failed(let failures):
             if failures.contains(where: { $0.mode == .audioAAC }) {
                 return L10n.string("player.error.compatibility_transcode_failed")

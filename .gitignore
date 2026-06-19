@@ -10,6 +10,7 @@ DerivedData/
 # Build outputs
 build/
 .build/
+.swiftpm/
 dist/
 
 # Local FFmpeg validation binaries

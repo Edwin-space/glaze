@@ -1,7 +1,10 @@
+import AppKit
 import SwiftUI
 
 @main
 struct GlazeApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -15,5 +18,11 @@ struct GlazeApp: App {
                 .keyboardShortcut("o")
             }
         }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
     }
 }
