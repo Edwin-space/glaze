@@ -105,11 +105,14 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - `ffmpeg -version` 기준 GPL/nonfree 빌드 플래그 탐지
 - macOS `mdls` 기반 파일 타입/코덱 메타데이터 확인
 - `ffprobe`가 있을 경우 비디오/오디오/자막 스트림 정보 출력
+- `--remux` 옵션으로 FFmpeg stream copy 기반 MP4 임시 파일 생성 테스트
 
 앱 내부 진단:
 
 - 미디어 정보 패널에서 컨테이너, AVKit 직접 재생 가능 여부, 인식된 트랙과 코덱을 표시한다.
 - 이 패널은 사용자용 고급 설정이 아니라 개발 검증과 향후 고객지원/FAQ의 근거 데이터를 쌓기 위한 초기 도구다.
+- MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
+- FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
 
 ## 샘플 세트 기준
 
@@ -217,4 +220,22 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 
 - 앱은 MKV/WebM/AVI 실패 시 일반 `Cannot Open` 대신 FFmpeg/remux 호환성 처리 필요 안내를 표시한다.
 - 미디어 정보 패널을 자동으로 열어 컨테이너/트랙 인식 상태를 확인하게 한다.
+- 앱은 FFmpeg가 사용 가능한 환경에서 실패한 MKV를 MP4 캐시로 remux해 AVPlayer 재생을 재시도한다.
 - 다음 검증에서 `ffprobe`로 비디오/오디오/자막 스트림을 확인한다.
+
+### 2026-06-19 호환성 remux 경로 구현
+
+구현:
+
+- 앱 내부 `FFmpegTool` 추가: 번들 `Tools/ffmpeg`, 번들 루트 `ffmpeg`, `/opt/homebrew/bin/ffmpeg`, `/usr/local/bin/ffmpeg`, `/usr/bin/ffmpeg` 순서 탐색
+- 앱 내부 `FFmpegRemuxer` 추가: `-map 0:v:0 -map 0:a? -c copy -movflags +faststart` 방식으로 MP4 캐시 생성
+- `AVPlayerItem` 실패 시 MKV/WebM/AVI는 remux를 1회 자동 시도
+- remux 성공 시 원본 파일명, 원본 sidecar 자막, 원본 재생목록을 유지하고 remux 캐시만 재생 URL로 사용
+- 검증 스크립트에 `--remux` 옵션 추가
+
+남은 과제:
+
+- 현재 개발 환경에는 `ffmpeg`/`ffprobe`가 없어 실제 샘플 remux 결과는 아직 미검증
+- FFmpeg LGPL-only 번들 후보 확보
+- ffprobe 기반 스트림 분석으로 remux 가능/불가능 사전 판단
+- AC3/FLAC/ASS/내장 자막 등 stream copy만으로 MP4 호환이 어려운 케이스 처리

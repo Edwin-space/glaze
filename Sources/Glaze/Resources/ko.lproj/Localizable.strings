@@ -48,6 +48,8 @@
 "player.drop_hint" = "영상 또는 폴더를 놓으세요";
 "player.drop_subtitle" = "같은 폴더의 영상은 재생목록에 함께 추가됩니다.";
 "player.error.compatibility_required" = "이 MKV 파일은 macOS 기본 재생으로 열리지 않습니다. FFmpeg/remux 호환성 처리가 필요합니다.";
+"player.error.compatibility_failed" = "호환성 재생 파일을 준비하지 못했습니다. FFmpeg 스트림 분석이 필요합니다.";
+"player.error.ffmpeg_unavailable" = "MKV 호환성 처리를 위한 FFmpeg가 아직 설치되거나 번들되지 않았습니다.";
 "player.error.no_playable_files" = "재생할 수 있는 영상 파일을 찾지 못했습니다.";
 "player.error.playback_failed" = "이 영상은 현재 재생할 수 없습니다.";
 "player.no_file" = "선택된 영상 없음";
@@ -55,6 +57,7 @@
 "player.open_video" = "영상 열기";
 "player.previous_video" = "이전 영상";
 "player.status.buffering" = "재생 준비 중입니다.";
+"player.status.preparing_compatibility" = "MKV 호환성 재생 파일을 준비 중입니다.";
 "player.status.waiting" = "재생을 기다리는 중입니다.";
 "playlist.panel.count_format" = "%d개 영상";
 "playlist.panel.empty" = "재생목록에 추가된 영상이 없습니다.";

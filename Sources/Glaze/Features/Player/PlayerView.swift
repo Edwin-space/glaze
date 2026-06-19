@@ -22,11 +22,14 @@ struct PlayerView: View {
     @State private var mediaInspection: MediaInspection?
     @State private var isInspectingMedia = false
     @State private var currentVideoURL: URL?
+    @State private var currentPlaybackURL: URL?
     @State private var playlist: [MediaPlaylistItem] = []
     @State private var showsPlaylistPanel = false
     @State private var showsAssistantPanel = false
     @State private var currentMediaAsset: MediaAsset?
     @State private var isDropTargeted = false
+    @State private var isPreparingCompatibilityPlayback = false
+    @State private var compatibilityAttemptedPaths: Set<String> = []
 
     var body: some View {
         HStack(spacing: 0) {
@@ -850,19 +853,25 @@ struct PlayerView: View {
     }
 
     private func loadVideo(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
+        loadVideo(originalURL: url, playbackURL: url, playlist: nextPlaylist, shouldStartPlayback: shouldStartPlayback)
+    }
+
+    private func loadVideo(originalURL: URL, playbackURL: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
         removeTimeObserver()
 
-        let item = AVPlayerItem(url: url)
+        let item = AVPlayerItem(url: playbackURL)
         let nextPlayer = AVPlayer(playerItem: item)
         player = nextPlayer
         playlist = nextPlaylist
-        currentVideoURL = url
-        currentFileName = url.lastPathComponent
+        currentVideoURL = originalURL
+        currentPlaybackURL = playbackURL
+        currentFileName = originalURL.lastPathComponent
         errorMessage = nil
         mediaInspection = nil
+        isPreparingCompatibilityPlayback = false
         isInspectingMedia = true
-        detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
-        currentMediaAsset = mediaAsset(for: url)
+        detectedSubtitles = SubtitleSidecarDetector.detect(for: originalURL)
+        currentMediaAsset = mediaAsset(for: originalURL)
         subtitleCues = []
         activeSubtitleText = ""
         isSubtitleVisible = true
@@ -870,7 +879,7 @@ struct PlayerView: View {
         selectedSubtitlePath = nil
         loadPreferredSubtitleIfAvailable()
         installPlaybackObservers(on: nextPlayer, item: item, shouldStartPlayback: shouldStartPlayback)
-        inspectMedia(url)
+        inspectMedia(originalURL)
     }
 
     private var isCurrentContainerKnownCompatibilityRisk: Bool {
@@ -1187,11 +1196,7 @@ struct PlayerView: View {
                         player.play()
                     }
                 case .failed:
-                    errorMessage = playbackFailureMessage(for: observedItem.error)
-                    showsMediaPanel = true
-                    showsPlaylistPanel = false
-                    showsSubtitlePanel = false
-                    showsAssistantPanel = false
+                    handlePlaybackFailure(error: observedItem.error)
                 case .unknown:
                     break
                 @unknown default:
@@ -1265,6 +1270,76 @@ struct PlayerView: View {
         }
 
         return error?.localizedDescription ?? L10n.string("player.error.playback_failed")
+    }
+
+    private func handlePlaybackFailure(error: Error?) {
+        guard let currentVideoURL else {
+            errorMessage = playbackFailureMessage(for: error)
+            return
+        }
+
+        if isCurrentContainerKnownCompatibilityRisk,
+           currentPlaybackURL?.path == currentVideoURL.path,
+           !compatibilityAttemptedPaths.contains(currentVideoURL.path) {
+            prepareCompatibilityPlayback(for: currentVideoURL)
+            return
+        }
+
+        errorMessage = playbackFailureMessage(for: error)
+        showsMediaPanel = true
+        showsPlaylistPanel = false
+        showsSubtitlePanel = false
+        showsAssistantPanel = false
+    }
+
+    private func prepareCompatibilityPlayback(for originalURL: URL) {
+        compatibilityAttemptedPaths.insert(originalURL.path)
+        isPreparingCompatibilityPlayback = true
+        errorMessage = L10n.string("player.status.preparing_compatibility")
+
+        Task {
+            do {
+                let remuxedURL = try await FFmpegRemuxer.remuxForAVPlayer(inputURL: originalURL)
+                await MainActor.run {
+                    guard currentVideoURL?.path == originalURL.path else {
+                        return
+                    }
+
+                    loadVideo(
+                        originalURL: originalURL,
+                        playbackURL: remuxedURL,
+                        playlist: playlist,
+                        shouldStartPlayback: true
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    guard currentVideoURL?.path == originalURL.path else {
+                        return
+                    }
+
+                    isPreparingCompatibilityPlayback = false
+                    errorMessage = compatibilityFailureMessage(for: error)
+                    showsMediaPanel = true
+                    showsPlaylistPanel = false
+                    showsSubtitlePanel = false
+                    showsAssistantPanel = false
+                }
+            }
+        }
+    }
+
+    private func compatibilityFailureMessage(for error: Error) -> String {
+        guard let remuxError = error as? FFmpegRemuxer.RemuxError else {
+            return L10n.string("player.error.compatibility_failed")
+        }
+
+        switch remuxError {
+        case .toolUnavailable:
+            return L10n.string("player.error.ffmpeg_unavailable")
+        case .failed:
+            return L10n.string("player.error.compatibility_failed")
+        }
     }
 
     private var supportedVideoTypes: [UTType] {

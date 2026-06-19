@@ -83,6 +83,57 @@ inspect_sample() {
   inspect_file_with_ffprobe "$file_path"
 }
 
+remux_sample_for_avkit() {
+  local file_path="$1"
+
+  if ! command -v ffmpeg >/dev/null 2>&1; then
+    echo
+    echo "remux: ffmpeg not installed"
+    return
+  fi
+
+  if [[ ! -f "$file_path" ]]; then
+    echo
+    echo "remux: file not found: $file_path"
+    return
+  fi
+
+  local output_dir="${TMPDIR:-/tmp}/glaze-remux-validation"
+  mkdir -p "$output_dir"
+
+  local base_name
+  base_name="$(basename "$file_path")"
+  base_name="${base_name%.*}"
+
+  local output_path="$output_dir/$base_name.mp4"
+
+  echo
+  echo "remux: $file_path"
+  echo "  output: $output_path"
+
+  if ffmpeg \
+    -y \
+    -hide_banner \
+    -loglevel error \
+    -i "$file_path" \
+    -map 0:v:0 \
+    -map 0:a? \
+    -c copy \
+    -movflags +faststart \
+    "$output_path"; then
+    echo "  result: remux succeeded"
+  else
+    echo "  result: remux failed"
+  fi
+}
+
+SHOULD_REMUX=0
+
+if [[ "${1:-}" == "--remux" ]]; then
+  SHOULD_REMUX=1
+  shift
+fi
+
 echo "Glaze media capability validation"
 echo
 print_tool_status "ffmpeg"
@@ -93,10 +144,13 @@ print_ffmpeg_license_flags
 if [[ "$#" -eq 0 ]]; then
   echo
   echo "No sample files were provided."
-  echo "Usage: $0 <sample-video-1> [sample-video-2 ...]"
+  echo "Usage: $0 [--remux] <sample-video-1> [sample-video-2 ...]"
   exit 0
 fi
 
 for sample_path in "$@"; do
   inspect_sample "$sample_path"
+  if [[ "$SHOULD_REMUX" -eq 1 ]]; then
+    remux_sample_for_avkit "$sample_path"
+  fi
 done
