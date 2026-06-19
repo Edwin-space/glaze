@@ -36,6 +36,13 @@
 | 키 | 한국어 | 영어 | 유형 | 상태 |
 |---|---|---|---|---|
 | `app.name` | 글레이즈 | Glaze | 브랜드 | 확정 |
+| `assistant.panel.toggle` | AI 미디어 | AI Media | 버튼 | 구현 |
+| `assistant.panel.title` | AI 미디어 어시스턴트 | AI Media Assistant | 패널 제목 | 구현 |
+| `assistant.panel.subtitle` | 작품 정보, 자막 준비, 파일 정리를 한 곳에서 관리합니다. | Manage title info, subtitle readiness, and file organization in one place. | 안내 | 구현 |
+| `assistant.bubble.title` | AI 미디어 | AI Media | 상태 | 구현 |
+| `assistant.action.match_metadata` | 작품 정보 찾기 | Find Title Info | 버튼 후보 | 구현 |
+| `assistant.action.prepare_subtitles` | 자막 준비 | Prepare Subtitles | 버튼 후보 | 구현 |
+| `assistant.action.write_metadata` | 파일 정보에 반영 | Write Metadata | 버튼 후보 | 구현 |
 | `command.open_video` | 영상 열기... | Open Video... | 메뉴 | 구현 |
 | `open_panel.title` | 영상을 선택하세요 | Choose a video | 시스템 패널 | 구현 |
 | `media.panel.toggle` | 정보 | Info | 버튼 | 구현 |

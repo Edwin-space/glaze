@@ -22,6 +22,8 @@ struct PlayerView: View {
     @State private var currentVideoURL: URL?
     @State private var playlist: [MediaPlaylistItem] = []
     @State private var showsPlaylistPanel = false
+    @State private var showsAssistantPanel = false
+    @State private var currentMediaAsset: MediaAsset?
     @State private var isDropTargeted = false
 
     var body: some View {
@@ -42,6 +44,10 @@ struct PlayerView: View {
 
             if showsPlaylistPanel {
                 playlistPanel
+            }
+
+            if showsAssistantPanel {
+                assistantPanel
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -126,6 +132,8 @@ struct PlayerView: View {
             if isDropTargeted {
                 dropTargetOverlay
             }
+
+            assistantBubble
         }
     }
 
@@ -150,6 +158,15 @@ struct PlayerView: View {
                     isDisabled: !canPlayNext
                 ) {
                     playNextPlaylistItem()
+                }
+
+                iconButton(
+                    key: "assistant.panel.toggle",
+                    systemImage: "sparkles",
+                    isActive: showsAssistantPanel,
+                    isDisabled: player == nil
+                ) {
+                    togglePanel(.assistant)
                 }
 
                 iconButton(
@@ -228,6 +245,42 @@ struct PlayerView: View {
             .foregroundStyle(.white)
         }
         .padding(GlazeSpacing.xl)
+    }
+
+    private var assistantBubble: some View {
+        VStack {
+            Spacer()
+
+            HStack {
+                Spacer()
+
+                Button {
+                    togglePanel(.assistant)
+                } label: {
+                    HStack(spacing: GlazeSpacing.sm) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 16, weight: .semibold))
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(L10n.string("assistant.bubble.title"))
+                                .font(.caption.weight(.semibold))
+                            Text(assistantBubbleSubtitle)
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.72))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, GlazeSpacing.md)
+                    .padding(.vertical, GlazeSpacing.sm)
+                    .background(.black.opacity(0.58), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+                .disabled(player == nil)
+                .opacity(player == nil ? 0.42 : 1)
+            }
+            .padding(GlazeSpacing.lg)
+        }
     }
 
     private var subtitleOverlay: some View {
@@ -444,6 +497,59 @@ struct PlayerView: View {
         }
         .padding(GlazeSpacing.lg)
         .frame(width: 300)
+        .background(GlazeColors.panelBackground)
+    }
+
+    private var assistantPanel: some View {
+        VStack(alignment: .leading, spacing: GlazeSpacing.lg) {
+            HStack {
+                VStack(alignment: .leading, spacing: GlazeSpacing.xs) {
+                    Text(L10n.string("assistant.panel.title"))
+                        .font(.headline)
+                    Text(L10n.string("assistant.panel.subtitle"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button {
+                    showsAssistantPanel = false
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+            }
+
+            if let currentMediaAsset {
+                VStack(alignment: .leading, spacing: GlazeSpacing.md) {
+                    Text(currentMediaAsset.displayTitle)
+                        .font(.title3.weight(.semibold))
+                        .lineLimit(2)
+
+                    panelRow(icon: "sparkles.tv", titleKey: "assistant.metadata.status", value: L10n.string(currentMediaAsset.metadata.matchStatus.labelKey))
+                    panelRow(icon: "captions.bubble", titleKey: "assistant.subtitle.status", value: L10n.string(currentMediaAsset.subtitleReadiness.labelKey))
+                    panelRow(icon: "externaldrive", titleKey: "assistant.media.source", value: L10n.string(currentMediaAsset.source.labelKey))
+                }
+
+                VStack(alignment: .leading, spacing: GlazeSpacing.sm) {
+                    assistantActionRow(icon: "magnifyingglass", titleKey: "assistant.action.match_metadata", subtitleKey: "assistant.action.match_metadata_hint")
+                    assistantActionRow(icon: "text.badge.checkmark", titleKey: "assistant.action.prepare_subtitles", subtitleKey: "assistant.action.prepare_subtitles_hint")
+                    assistantActionRow(icon: "square.and.pencil", titleKey: "assistant.action.write_metadata", subtitleKey: "assistant.action.write_metadata_hint")
+                }
+            } else {
+                Text(L10n.string("assistant.panel.empty"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(GlazeSpacing.md)
+                    .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            Spacer()
+        }
+        .padding(GlazeSpacing.lg)
+        .frame(width: 340)
         .background(GlazeColors.panelBackground)
     }
 
@@ -674,6 +780,27 @@ struct PlayerView: View {
         .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
     }
 
+    private func assistantActionRow(icon: String, titleKey: String, subtitleKey: String) -> some View {
+        HStack(alignment: .top, spacing: GlazeSpacing.sm) {
+            Image(systemName: icon)
+                .frame(width: 24)
+                .foregroundStyle(GlazeColors.accent)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.string(titleKey))
+                    .font(.callout.weight(.medium))
+                Text(L10n.string(subtitleKey))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+        }
+        .padding(GlazeSpacing.md)
+        .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
+    }
+
     private func iconButton(
         key: String,
         systemImage: String,
@@ -733,6 +860,7 @@ struct PlayerView: View {
         mediaInspection = nil
         isInspectingMedia = true
         detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
+        currentMediaAsset = mediaAsset(for: url)
         subtitleCues = []
         activeSubtitleText = ""
         isSubtitleVisible = true
@@ -784,6 +912,7 @@ struct PlayerView: View {
         }
 
         loadSubtitle(subtitle)
+        currentMediaAsset?.subtitleReadiness = .externalLoaded
         errorMessage = nil
         showsSubtitlePanel = true
     }
@@ -945,6 +1074,7 @@ struct PlayerView: View {
         case media
         case playlist
         case subtitles
+        case assistant
     }
 
     private func togglePanel(_ panel: PlayerPanel) {
@@ -953,19 +1083,41 @@ struct PlayerView: View {
             showsMediaPanel.toggle()
             showsPlaylistPanel = false
             showsSubtitlePanel = false
+            showsAssistantPanel = false
         case .playlist:
             showsPlaylistPanel.toggle()
             showsMediaPanel = false
             showsSubtitlePanel = false
+            showsAssistantPanel = false
         case .subtitles:
             showsSubtitlePanel.toggle()
             showsMediaPanel = false
             showsPlaylistPanel = false
+            showsAssistantPanel = false
+        case .assistant:
+            showsAssistantPanel.toggle()
+            showsMediaPanel = false
+            showsPlaylistPanel = false
+            showsSubtitlePanel = false
         }
     }
 
     private var playlistSummary: String {
         String(format: L10n.string("playlist.panel.count_format"), playlist.count)
+    }
+
+    private var assistantBubbleSubtitle: String {
+        guard let currentMediaAsset else {
+            return L10n.string("assistant.bubble.empty")
+        }
+
+        return L10n.string(currentMediaAsset.subtitleReadiness.labelKey)
+    }
+
+    private func mediaAsset(for url: URL) -> MediaAsset {
+        var asset = MediaAsset(fileURL: url)
+        asset.subtitleReadiness = detectedSubtitles.isEmpty ? .missing : .externalLoaded
+        return asset
     }
 
     private var currentPlaylistIndex: Int? {
