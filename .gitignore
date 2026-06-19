@@ -17,6 +17,8 @@ dist/
 Tools/ffmpeg
 Tools/ffprobe
 Tools/FFMPEG_BUILD.txt
+Tools/mpv/
+Tools/vlc/
 
 # Temporary files
 *.tmp

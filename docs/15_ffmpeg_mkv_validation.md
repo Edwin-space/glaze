@@ -21,7 +21,7 @@
 - GPL 또는 nonfree 옵션이 필요한 고급 코덱 기능은 App Store 기본판에 넣지 않고 웹 배포/Pro 분리 후보로 관리한다.
 - 사용자의 실제 고해상도 MKV 샘플에서 AVKit 실패율이 높거나 다중 오디오/내장 자막/오디오 추출 UX가 부족하면 플레이어 엔진 보강을 진행한다.
 - AVKit에 맞춘 MP4 remux 후 재생은 호환성 보강용 임시 경로이며, 무비스트처럼 파일 등록 직후 즉시 화면을 띄우는 수준을 목표로 하면 직접 MKV 재생 엔진이 필요하다.
-- 2026-06-19 실제 테스트 기준, fragmented MP4 remux로도 첫 화면 지연이 제품 기준에 미달한다. MKV/WebM/AVI는 `libmpv` 기반 네이티브 엔진 경로로 전환한다.
+- 2026-06-19 실제 테스트 기준, fragmented MP4 remux로도 첫 화면 지연이 제품 기준에 미달한다. 테스트 빌드는 VLC/libVLC 기반 네이티브 엔진 경로로 전환한다.
 
 ## 제품 경쟁력 기준
 
@@ -121,7 +121,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - MKV/WebM/AVI 재생 실패 시 FFmpeg가 설치 또는 번들되어 있으면 MP4 캐시로 remux 후 AVPlayer 재생을 재시도한다.
 - 첫 번째 오디오 트랙이 AVKit 후보 코덱이면 stream copy를 우선 적용하고, 필요할 때만 AAC 192kbps stereo 보정으로 재시도한다.
 - stream copy remux는 fragmented MP4(`+empty_moov+default_base_moof+frag_keyframe`)로 생성하고, 초기 재생 조각이 만들어지면 전체 파일 완성을 기다리지 않고 AVPlayer 재생 URL로 넘긴다.
-- 단, remux 경로는 더 이상 MKV의 기본 자동 재생 경로로 보지 않는다. MKV/WebM/AVI는 네이티브 MKV 엔진 대상으로 라우팅하고, remux는 검증/비상 fallback/오디오 추출 후보로 남긴다.
+- 단, remux 경로는 더 이상 MKV의 기본 자동 재생 경로로 보지 않는다. 주요 로컬 영상 포맷은 VLC/libVLC 네이티브 엔진 대상으로 라우팅하고, remux는 검증/비상 fallback/오디오 추출 후보로 남긴다.
 - remux 전 `ffprobe`로 첫 번째 비디오 코덱을 확인하고, AVKit 재생 후보가 아닌 코덱은 음성만 자동 재생하지 않는다.
 - HEVC를 MP4로 remux할 때는 Apple AVKit 호환성을 위해 `-tag:v hvc1`을 적용한다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
@@ -283,10 +283,21 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 
 - 사용자가 체감한 지연은 fragmented MP4 remux 이후에도 경쟁 플레이어 대비 부족하다.
 - MKV 파일은 전체 또는 일부 캐시를 먼저 준비하는 방식이 아니라 컨테이너를 직접 읽고 디코딩해야 한다.
-- macOS 고급 플레이어 생태계와 구현 공수를 기준으로 `libmpv`를 1순위 후보로 둔다.
+- IINA 번들에서 분리한 `libmpv` 경로는 `libplacebo` ABI mismatch로 테스트 빌드에 부적합했다.
+- 오늘 테스트 빌드는 VLC 3.0.21 arm64의 `libvlc`/`libvlccore`/plugins/share 런타임을 번들링해 직접 재생 경로를 제공한다.
 
 구현 방향:
 
-- `PlaybackEngineRouter`를 추가해 MP4/MOV는 AVKit, MKV/WebM/AVI는 네이티브 엔진 대상으로 분리한다.
-- 네이티브 엔진 미연결 상태에서는 느린 remux 자동 재시도를 실행하지 않고 즉시 엔진 필요 상태를 표시한다.
-- 다음 단계는 `libmpv` 헤더/동적 라이브러리 확보, SwiftPM 링크 설정, AppKit `NSView` 렌더러 연결이다.
+- `PlaybackEngineRouter`를 추가해 MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 포맷을 VLC/libVLC 네이티브 엔진 대상으로 분리한다.
+- `NativeVLCLibrary`가 앱 번들 `Contents/Resources/Tools/vlc`의 `libvlc.dylib`를 동적으로 열고, `NativeVLCPlayerView`가 AppKit `NSView`를 libVLC drawable로 제공한다.
+- 개발 번들 스크립트는 VLC dylib/plugin install name을 앱 내부 상대 경로로 보정하고 ad-hoc signing을 수행한다.
+- FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 향후 오디오/자막 추출 작업으로 재분류한다.
+
+검증:
+
+- `swift build` 성공.
+- `./script/build_and_run.sh --bundle` 성공.
+- `./script/check_native_media_engine.sh` 기준 `libvlc`, `libvlccore`, 339개 plugin dylib, `plugins.dat`, `share` 리소스 확인.
+- 실제 `Sample.mkv` 실행 시 첫 화면 표시 확인.
+- 재생목록에서 같은 폴더의 장편 MKV로 전환 후 새 영상 표시 확인.
+- 창 닫기 시 앱 프로세스 종료 확인.

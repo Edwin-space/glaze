@@ -196,8 +196,8 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - 검증 스크립트가 프로젝트 `Tools`의 로컬 FFmpeg 도구를 우선 사용하도록 수정
 - 공식 FFmpeg 소스를 `--disable-gpl`, `--disable-nonfree`로 빌드해 `Tools`에 배치하는 로컬 LGPL 빌드 스크립트 추가
 - MKV/WebM/AVI 실패 시 오디오 AAC 보정 remux를 우선 시도하고, 실패하면 stream copy remux를 재시도
-- MKV/WebM/AVI를 AVKit/remux 자동 재시도에서 분리해 네이티브 MKV 엔진 대상으로 즉시 라우팅
-- 네이티브 엔진 미연결 상태에서는 느린 remux 준비 대신 엔진 연결 필요 상태를 즉시 표시
+- MKV/WebM/AVI를 AVKit/remux 자동 재시도에서 분리해 네이티브 엔진 대상으로 즉시 라우팅
+- VLC/libVLC 런타임을 개발 앱 번들에 포함해 주요 로컬 영상 포맷을 remux 없이 직접 재생
 - App Store self-contained bundle, sandbox, 외부 코드 다운로드 제한 기준 확인
 - FFmpeg LGPL/GPL/nonfree 빌드 옵션 리스크 기준 확인
 
@@ -205,21 +205,21 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 
 - AVKit + FFmpeg remux 캐시는 MKV 호환성을 빠르게 넓히는 임시 해법이다.
 - 사용자가 기대하는 무비스트급 즉시 재생은 MKV를 MP4로 먼저 준비하는 구조에서는 한계가 있다.
-- 경쟁력 있는 플레이어 품질을 위해서는 libmpv 기반 직접 MKV 재생 엔진을 1순위 기술 과제로 둔다.
-- IINA가 mpv 기반으로 macOS 고급 플레이어 경험을 제공하므로, Glaze도 `libmpv` 내장 렌더러를 우선 검토한다.
+- 오늘 테스트 빌드는 VLC/libVLC 기반 직접 재생 경로를 우선 채택한다.
+- App Store 최종 배포 전에는 VLC/libVLC 라이선스/서명/샌드박스 전략을 별도 검증한다.
 
 ### Phase 3B. 네이티브 MKV 엔진
 
 ### 목표
 
-MKV/WebM/AVI 파일을 MP4 캐시로 먼저 변환하지 않고, 파일 선택 직후 직접 디코딩해 재생을 시작한다.
+MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변환하지 않고, 파일 선택 직후 직접 디코딩해 재생을 시작한다.
 
 ### 포함 기능
 
-- 재생 엔진 라우터: MP4/MOV는 AVKit, MKV/WebM/AVI는 네이티브 엔진
+- 재생 엔진 라우터: 주요 로컬 영상 포맷은 VLC/libVLC 네이티브 엔진 우선, AVKit은 fallback
 - SwiftUI/AppKit 재생 표면 분리
-- libmpv 기반 NSView 렌더러 검토
-- `./script/check_native_media_engine.sh`로 mpv/libmpv 개발 파일 준비 상태 확인
+- VLC/libVLC 기반 NSView 렌더러 연결
+- `./script/check_native_media_engine.sh`로 VLC 런타임 준비 상태 확인
 - 재생/일시정지/탐색/볼륨 제어를 공통 플레이어 상태로 연결
 - 다중 오디오 트랙, 내장 자막 트랙, ASS/SSA 자막 대응
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 오디오 추출 작업으로 재분류
@@ -232,7 +232,9 @@ MKV/WebM/AVI 파일을 MP4 캐시로 먼저 변환하지 않고, 파일 선택 �
 
 ### 검증 항목
 
-- MKV 재생 가능 여부
+- MKV 재생 가능 여부: `Sample.mkv` 첫 화면 표시 확인
+- 재생목록 전환: 샘플 MKV에서 장편 MKV로 전환 후 새 영상 표시 확인
+- 종료: 창 닫기 시 앱 종료와 플레이어 release 확인
 - 4K/HDR 샘플 재생 안정성
 - 다중 오디오 트랙 처리
 - 내장 자막 트랙 처리

@@ -12,6 +12,7 @@ APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
+APP_FRAMEWORKS="$APP_CONTENTS/Frameworks"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 RESOURCE_BUNDLE_NAME="Glaze_Glaze.bundle"
@@ -29,7 +30,7 @@ BUILD_BINARY="$BUILD_DIR/$APP_NAME"
 BUILD_RESOURCE_BUNDLE="$BUILD_DIR/$RESOURCE_BUNDLE_NAME"
 
 rm -rf "$APP_BUNDLE"
-mkdir -p "$APP_MACOS" "$APP_RESOURCES"
+mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$APP_FRAMEWORKS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
@@ -45,6 +46,22 @@ if [[ -d "$LOCAL_TOOLS_DIR" ]]; then
       chmod +x "$APP_RESOURCES/Tools/$tool"
     fi
   done
+
+  if [[ -d "$LOCAL_TOOLS_DIR/vlc" ]]; then
+    cp -R "$LOCAL_TOOLS_DIR/vlc" "$APP_RESOURCES/Tools/vlc"
+
+    while IFS= read -r dylib_path; do
+      dylib_name="$(basename "$dylib_path")"
+      install_name_tool -id "@loader_path/$dylib_name" "$dylib_path" 2>/dev/null || true
+      install_name_tool -change "@rpath/libvlccore.dylib" "@loader_path/libvlccore.dylib" "$dylib_path" 2>/dev/null || true
+      codesign --force --sign - "$dylib_path" >/dev/null 2>&1 || true
+    done < <(find "$APP_RESOURCES/Tools/vlc/lib" -maxdepth 1 -type f -name "*.dylib")
+
+    while IFS= read -r plugin_path; do
+      install_name_tool -change "@rpath/libvlccore.dylib" "@loader_path/../lib/libvlccore.dylib" "$plugin_path" 2>/dev/null || true
+      codesign --force --sign - "$plugin_path" >/dev/null 2>&1 || true
+    done < <(find "$APP_RESOURCES/Tools/vlc/plugins" -type f -name "*.dylib")
+  fi
 fi
 
 cat >"$INFO_PLIST" <<PLIST
@@ -62,6 +79,34 @@ cat >"$INFO_PLIST" <<PLIST
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MIN_SYSTEM_VERSION</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Video</string>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>public.movie</string>
+        <string>public.video</string>
+        <string>public.audiovisual-content</string>
+        <string>org.matroska.mkv</string>
+        <string>io.mpv.mkv</string>
+      </array>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>mkv</string>
+        <string>mp4</string>
+        <string>mov</string>
+        <string>avi</string>
+        <string>webm</string>
+        <string>m4v</string>
+      </array>
+    </dict>
+  </array>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
 </dict>

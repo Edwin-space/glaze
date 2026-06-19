@@ -3,49 +3,54 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-candidate_prefixes=(
-  "$ROOT_DIR/Tools/mpv"
-  "/opt/homebrew"
-  "/usr/local"
-)
-
 echo "Glaze native media engine check"
 echo
 
-if command -v mpv >/dev/null 2>&1; then
-  echo "mpv cli: $(command -v mpv)"
+runtime_dir="$ROOT_DIR/Tools/vlc"
+libvlc="$runtime_dir/lib/libvlc.dylib"
+libvlccore="$runtime_dir/lib/libvlccore.dylib"
+plugins_dir="$runtime_dir/plugins"
+plugins_cache="$plugins_dir/plugins.dat"
+share_dir="$runtime_dir/share"
+
+echo "VLC runtime: $runtime_dir"
+
+if [[ -f "$libvlc" ]]; then
+  echo "libvlc: $libvlc"
 else
-  echo "mpv cli: not installed"
+  echo "libvlc: missing"
 fi
 
-found_header=0
-found_library=0
+if [[ -f "$libvlccore" ]]; then
+  echo "libvlccore: $libvlccore"
+else
+  echo "libvlccore: missing"
+fi
 
-for prefix in "${candidate_prefixes[@]}"; do
-  header="$prefix/include/mpv/client.h"
-  render_header="$prefix/include/mpv/render.h"
-  library="$prefix/lib/libmpv.dylib"
+if [[ -d "$plugins_dir" ]]; then
+  echo "plugins: $(find "$plugins_dir" -type f -name '*.dylib' | wc -l | tr -d ' ') dylibs"
+else
+  echo "plugins: missing"
+fi
 
-  if [[ -f "$header" ]]; then
-    echo "libmpv client header: $header"
-    found_header=1
-  fi
+if [[ -f "$plugins_cache" ]]; then
+  echo "plugins cache: $plugins_cache"
+else
+  echo "plugins cache: missing"
+fi
 
-  if [[ -f "$render_header" ]]; then
-    echo "libmpv render header: $render_header"
-  fi
-
-  if [[ -f "$library" ]]; then
-    echo "libmpv library: $library"
-    found_library=1
-  fi
-done
+if [[ -d "$share_dir" ]]; then
+  echo "share: $share_dir"
+else
+  echo "share: missing"
+fi
 
 echo
 
-if [[ "$found_header" -eq 1 && "$found_library" -eq 1 ]]; then
-  echo "result: libmpv development files are available"
+if [[ -f "$libvlc" && -f "$libvlccore" && -d "$plugins_dir" && -f "$plugins_cache" && -d "$share_dir" ]]; then
+  echo "result: bundled VLC runtime is available"
 else
-  echo "result: libmpv development files are not available yet"
-  echo "next: prepare a distributable libmpv build before wiring the embedded renderer"
+  echo "result: bundled VLC runtime is incomplete"
+  echo "next: copy VLC.app/Contents/MacOS/lib, plugins, and share into Tools/vlc"
+  exit 1
 fi

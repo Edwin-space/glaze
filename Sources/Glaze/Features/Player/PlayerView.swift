@@ -73,6 +73,18 @@ struct PlayerView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in
             openVideo()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openMediaURL)) { notification in
+            guard let url = notification.object as? URL else {
+                return
+            }
+
+            openMedia(from: url)
+        }
+        .onAppear {
+            if let url = PendingOpenMediaURLs.consumeFirst() {
+                openMedia(from: url)
+            }
+        }
         .onDisappear {
             stopPlaybackForWindowClose()
         }
@@ -131,8 +143,9 @@ struct PlayerView: View {
                 endPoint: .bottomTrailing
             )
 
-            if activePlaybackEngine == .nativeMPV {
-                NativePlaybackSurfaceView()
+            if activePlaybackEngine == .nativeVLC, let currentVideoURL {
+                NativeVLCSurfaceView(url: currentVideoURL)
+                subtitleOverlay
             } else if let player {
                 PlayerSurfaceView(player: player)
                 subtitleOverlay
@@ -862,7 +875,7 @@ struct PlayerView: View {
 
     private func loadVideo(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
         switch PlaybackEngineRouter.preferredEngine(for: url) {
-        case .nativeMPV:
+        case .nativeVLC:
             loadVideoWithNativeEngine(url, playlist: nextPlaylist)
         case .avkit, .none:
             loadVideo(originalURL: url, playbackURL: url, playlist: nextPlaylist, shouldStartPlayback: shouldStartPlayback)
@@ -873,10 +886,10 @@ struct PlayerView: View {
         beginNewPlaybackSession()
 
         player = nil
-        activePlaybackEngine = .nativeMPV
+        activePlaybackEngine = .nativeVLC
         currentPlaybackURL = nil
         prepareCurrentMediaState(originalURL: url, playlist: nextPlaylist)
-        errorMessage = L10n.string("player.error.native_engine_unavailable")
+        errorMessage = nil
     }
 
     private func prepareCurrentMediaState(originalURL: URL, playlist nextPlaylist: [MediaPlaylistItem]) {
