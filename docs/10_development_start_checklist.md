@@ -169,12 +169,13 @@ scripts/
 
 ### 목표
 
-AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위를 확인한다.
+AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위를 확인하고, 경쟁 플레이어에서 기본으로 기대되는 코덱/컨테이너 대응을 Glaze의 초기 품질 기준으로 끌어올린다.
 
 ### 진행 중 구현
 
 - FFmpeg/MKV 검증 계획 문서화: `docs/15_ffmpeg_mkv_validation.md`
 - 샘플 파일 검사용 스크립트 추가: `./script/validate_media_capability.sh`
+- 앱 내부 미디어 정보 패널 추가: 컨테이너, AVKit 직접 재생 가능 여부, 트랙/코덱 인식 상태 확인
 - App Store self-contained bundle, sandbox, 외부 코드 다운로드 제한 기준 확인
 - FFmpeg LGPL/GPL/nonfree 빌드 옵션 리스크 기준 확인
 
@@ -183,6 +184,8 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - MKV 재생 가능 여부
 - 4K/HDR 샘플 재생 안정성
 - 다중 오디오 트랙 처리
+- 내장 자막 트랙 처리
+- AVKit 직접 재생, remux, FFmpeg 보조 처리 필요 여부 구분
 - 오디오 추출 필요성
 - FFmpeg 라이선스
 - App Store 배포 영향

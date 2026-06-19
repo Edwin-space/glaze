@@ -156,8 +156,9 @@ Submarine Player 대비 차별화 축:
 ## 기술 방향
 
 - 앱: SwiftUI
-- 영상 재생: AVFoundation / AVKit
-- 고급 코덱 보완: Player MVP 이후 FFmpeg 빠른 검증
+- 영상 재생: AVFoundation / AVKit 우선, 경쟁 플레이어 기본 코덱 대응은 필수 품질 기준
+- 고급 코덱 보완: Player MVP 직후 FFmpeg 호환성 레이어 빠른 검증
+- MKV/고해상도 대응: 사용자 확보를 위한 기본 경쟁력으로 관리
 - 음성 인식: Whisper 계열 온디바이스 모델 검토
 - 모델 실행: Core ML, Metal, Neural Engine 활용
 - 데이터 저장: SQLite 또는 Core Data
@@ -165,6 +166,8 @@ Submarine Player 대비 차별화 축:
 - 작업 큐: 앱 내부 persistent job queue
 
 배포는 App Store를 목표로 하되, App Store 정책상 제공하기 어려운 고급 기능은 웹 배포 또는 별도 프리미엄 제품군으로 분리하는 방식을 검토한다.
+
+글레이즈의 차별점은 AI 자막 준비 경험이지만, 사용자는 영상 플레이어로서 기본 포맷과 코덱 대응을 먼저 기대한다. 따라서 무비스트, IINA, VLC류 플레이어에서 기본적으로 기대되는 MKV, 고해상도, 다중 오디오, 내장 자막 대응은 후순위 부가기능이 아니라 초기 경쟁력 검증 항목으로 둔다.
 
 ## 장기 포지션
 

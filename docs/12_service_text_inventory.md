@@ -38,6 +38,20 @@
 | `app.name` | 글레이즈 | Glaze | 브랜드 | 확정 |
 | `command.open_video` | 영상 열기... | Open Video... | 메뉴 | 구현 |
 | `open_panel.title` | 영상을 선택하세요 | Choose a video | 시스템 패널 | 구현 |
+| `media.panel.toggle` | 정보 | Info | 버튼 | 구현 |
+| `media.panel.title` | 미디어 정보 | Media Info | 패널 제목 | 구현 |
+| `media.panel.subtitle` | 컨테이너, 코덱, 트랙 인식 상태를 확인합니다. | Check container, codec, and track recognition. | 안내 | 구현 |
+| `media.panel.inspecting` | 미디어 정보 확인 중 | Inspecting media details | 상태 | 구현 |
+| `media.panel.empty` | 영상을 열면 미디어 정보를 확인할 수 있습니다. | Open a video to inspect media details. | 안내 | 구현 |
+| `media.panel.container` | 컨테이너 | Container | 상태 | 구현 |
+| `media.panel.duration` | 길이 | Duration | 상태 | 구현 |
+| `media.panel.avkit` | macOS 재생 | macOS playback | 상태 | 구현 |
+| `media.panel.avkit_playable` | 직접 재생 가능 | Direct playback available | 상태 | 구현 |
+| `media.panel.avkit_not_playable` | 직접 재생 어려움 | Direct playback limited | 상태 | 구현 |
+| `media.panel.avkit_unknown` | 확인 필요 | Needs review | 상태 | 구현 |
+| `media.panel.tracks` | 트랙 | Tracks | 패널 제목 | 구현 |
+| `media.panel.tracks_empty` | 인식된 트랙이 없습니다. | No recognized tracks. | 안내 | 구현 |
+| `media.error.title` | 미디어 정보 문제 | Media info issue | 오류 | 구현 |
 | `player.empty_title` | 영상을 열어 자막 준비를 시작하세요 | Open a video to prepare subtitles | 빈 화면 | 구현 |
 | `player.empty_subtitle` | 로컬 영상부터 시작합니다. 자막이 없으면 글레이즈가 준비를 도와드립니다. | Start with a local file. If subtitles are missing, Glaze will help prepare them. | 빈 화면 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
@@ -84,6 +98,14 @@
 | `subtitle.visibility.toggle` | 자막 표시 | Display subtitles | 설정 | 구현 |
 
 ## 앞으로 필요한 텍스트 그룹
+
+### 미디어 호환성
+
+- 미디어 정보: 구현
+- 컨테이너/코덱/트랙 인식 상태: 구현
+- macOS 직접 재생 가능 여부: 구현
+- MKV 파일 재생 제한 안내: 후보
+- FFmpeg 보조 처리 필요 안내: 후보
 
 ### 자막 파일 불러오기
 

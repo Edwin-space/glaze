@@ -16,6 +16,10 @@ struct PlayerView: View {
     @State private var selectedSubtitleName: String?
     @State private var selectedSubtitlePath: String?
     @State private var showsSubtitlePanel = false
+    @State private var showsMediaPanel = false
+    @State private var mediaInspection: MediaInspection?
+    @State private var isInspectingMedia = false
+    @State private var currentVideoURL: URL?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -27,6 +31,10 @@ struct PlayerView: View {
 
             if showsSubtitlePanel {
                 subtitlePanel
+            }
+
+            if showsMediaPanel {
+                mediaPanel
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -56,7 +64,21 @@ struct PlayerView: View {
             }
 
             Button {
+                showsMediaPanel.toggle()
+                if showsMediaPanel {
+                    showsSubtitlePanel = false
+                }
+            } label: {
+                Label(L10n.string("media.panel.toggle"), systemImage: "info.circle")
+            }
+            .buttonStyle(.bordered)
+            .disabled(player == nil)
+
+            Button {
                 showsSubtitlePanel.toggle()
+                if showsSubtitlePanel {
+                    showsMediaPanel = false
+                }
             } label: {
                 Label(L10n.string("subtitle.panel.toggle"), systemImage: "captions.bubble")
             }
@@ -233,6 +255,129 @@ struct PlayerView: View {
         .background(GlazeColors.panelBackground)
     }
 
+    private var mediaPanel: some View {
+        VStack(alignment: .leading, spacing: GlazeSpacing.lg) {
+            HStack {
+                VStack(alignment: .leading, spacing: GlazeSpacing.xs) {
+                    Text(L10n.string("media.panel.title"))
+                        .font(.headline)
+                    Text(L10n.string("media.panel.subtitle"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button {
+                    showsMediaPanel = false
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+            }
+
+            if isInspectingMedia {
+                HStack(spacing: GlazeSpacing.sm) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(L10n.string("media.panel.inspecting"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let mediaInspection {
+                mediaSummary(mediaInspection)
+                mediaTrackSection(mediaInspection)
+
+                if let errorMessage = mediaInspection.errorMessage {
+                    mediaIssueCard(errorMessage)
+                }
+            } else {
+                Text(L10n.string("media.panel.empty"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(GlazeSpacing.md)
+                    .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            Spacer()
+        }
+        .padding(GlazeSpacing.lg)
+        .frame(width: 320)
+        .background(GlazeColors.panelBackground)
+    }
+
+    private func mediaSummary(_ inspection: MediaInspection) -> some View {
+        VStack(alignment: .leading, spacing: GlazeSpacing.md) {
+            panelRow(icon: "shippingbox", titleKey: "media.panel.container", value: inspection.containerHint.isEmpty ? "-" : inspection.containerHint)
+            panelRow(icon: "clock", titleKey: "media.panel.duration", value: inspection.duration)
+            panelRow(icon: "play.rectangle", titleKey: "media.panel.avkit", value: avKitSupportText(for: inspection.isPlayable))
+        }
+    }
+
+    private func mediaTrackSection(_ inspection: MediaInspection) -> some View {
+        VStack(alignment: .leading, spacing: GlazeSpacing.sm) {
+            Text(L10n.string("media.panel.tracks"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if inspection.tracks.isEmpty {
+                Text(L10n.string("media.panel.tracks_empty"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(GlazeSpacing.md)
+                    .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
+            } else {
+                ScrollView {
+                    VStack(spacing: GlazeSpacing.xs) {
+                        ForEach(inspection.tracks) { track in
+                            HStack(alignment: .top, spacing: GlazeSpacing.sm) {
+                                Image(systemName: mediaTrackIcon(for: track.title))
+                                    .frame(width: 22)
+                                    .foregroundStyle(.secondary)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(track.title) · \(track.codec)")
+                                        .font(.callout.weight(.medium))
+                                        .lineLimit(1)
+                                    Text(track.detail)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(GlazeSpacing.sm)
+                            .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
+                        }
+                    }
+                }
+                .frame(maxHeight: 220)
+            }
+        }
+    }
+
+    private func mediaIssueCard(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: GlazeSpacing.sm) {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.string("media.error.title"))
+                    .font(.caption.weight(.semibold))
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(GlazeSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+    }
+
     private var subtitleFileSection: some View {
         VStack(alignment: .leading, spacing: GlazeSpacing.sm) {
             HStack {
@@ -354,8 +499,11 @@ struct PlayerView: View {
         let item = AVPlayerItem(url: url)
         let nextPlayer = AVPlayer(playerItem: item)
         player = nextPlayer
+        currentVideoURL = url
         currentFileName = url.lastPathComponent
         errorMessage = nil
+        mediaInspection = nil
+        isInspectingMedia = true
         detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
         subtitleCues = []
         activeSubtitleText = ""
@@ -364,6 +512,7 @@ struct PlayerView: View {
         selectedSubtitlePath = nil
         loadPreferredSubtitleIfAvailable()
         installTimeObserver(on: nextPlayer)
+        inspectMedia(url)
         nextPlayer.play()
     }
 
@@ -502,6 +651,44 @@ struct PlayerView: View {
             return L10n.string("subtitle.error.read_failed")
         case .emptySubtitle:
             return L10n.string("subtitle.error.empty_file")
+        }
+    }
+
+    private func inspectMedia(_ url: URL) {
+        Task {
+            let inspection = await MediaInspector.inspect(url: url)
+            await MainActor.run {
+                guard currentVideoURL == url else {
+                    return
+                }
+
+                mediaInspection = inspection
+                isInspectingMedia = false
+            }
+        }
+    }
+
+    private func avKitSupportText(for isPlayable: Bool?) -> String {
+        switch isPlayable {
+        case .some(true):
+            L10n.string("media.panel.avkit_playable")
+        case .some(false):
+            L10n.string("media.panel.avkit_not_playable")
+        case .none:
+            L10n.string("media.panel.avkit_unknown")
+        }
+    }
+
+    private func mediaTrackIcon(for title: String) -> String {
+        switch title {
+        case "Video":
+            "film"
+        case "Audio":
+            "waveform"
+        case "Subtitle", "Text", "Closed Caption":
+            "captions.bubble"
+        default:
+            "questionmark.circle"
         }
     }
 
