@@ -17,8 +17,17 @@
 "media.panel.tracks_empty" = "No recognized tracks.";
 "player.empty_title" = "Open a video to prepare subtitles";
 "player.empty_subtitle" = "Start with a local file. If subtitles are missing, Glaze will help prepare them.";
+"player.drop_hint" = "Drop a video or folder";
+"player.drop_subtitle" = "Videos in the same folder are added to the playlist.";
+"player.error.no_playable_files" = "No playable video files were found.";
 "player.no_file" = "No video selected";
+"player.next_video" = "Next Video";
 "player.open_video" = "Open Video";
+"player.previous_video" = "Previous Video";
+"playlist.panel.count_format" = "%d videos";
+"playlist.panel.empty" = "No videos have been added to the playlist.";
+"playlist.panel.title" = "Playlist";
+"playlist.panel.toggle" = "Playlist";
 "subtitle.generate" = "Generate Subtitles";
 "subtitle.error.empty_file" = "This subtitle file has no readable cues.";
 "subtitle.error.read_failed" = "Could not read subtitle file.";

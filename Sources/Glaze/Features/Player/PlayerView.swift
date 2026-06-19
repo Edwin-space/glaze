@@ -20,6 +20,9 @@ struct PlayerView: View {
     @State private var mediaInspection: MediaInspection?
     @State private var isInspectingMedia = false
     @State private var currentVideoURL: URL?
+    @State private var playlist: [MediaPlaylistItem] = []
+    @State private var showsPlaylistPanel = false
+    @State private var isDropTargeted = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -36,8 +39,23 @@ struct PlayerView: View {
             if showsMediaPanel {
                 mediaPanel
             }
+
+            if showsPlaylistPanel {
+                playlistPanel
+            }
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+            handleDrop(providers)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { notification in
+            guard let endedItem = notification.object as? AVPlayerItem,
+                  endedItem === player?.currentItem else {
+                return
+            }
+
+            playNextPlaylistItem()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in
             openVideo()
         }
@@ -64,10 +82,7 @@ struct PlayerView: View {
             }
 
             Button {
-                showsMediaPanel.toggle()
-                if showsMediaPanel {
-                    showsSubtitlePanel = false
-                }
+                togglePanel(.media)
             } label: {
                 Label(L10n.string("media.panel.toggle"), systemImage: "info.circle")
             }
@@ -75,10 +90,7 @@ struct PlayerView: View {
             .disabled(player == nil)
 
             Button {
-                showsSubtitlePanel.toggle()
-                if showsSubtitlePanel {
-                    showsMediaPanel = false
-                }
+                togglePanel(.subtitles)
             } label: {
                 Label(L10n.string("subtitle.panel.toggle"), systemImage: "captions.bubble")
             }
@@ -96,7 +108,11 @@ struct PlayerView: View {
 
     private var videoSurface: some View {
         ZStack {
-            GlazeColors.playerBackground
+            LinearGradient(
+                colors: [.black, Color(nsColor: .windowBackgroundColor).opacity(0.92), .black],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
             if let player {
                 VideoPlayer(player: player)
@@ -104,7 +120,114 @@ struct PlayerView: View {
             } else {
                 emptyState
             }
+
+            playerChrome
+
+            if isDropTargeted {
+                dropTargetOverlay
+            }
         }
+    }
+
+    private var playerChrome: some View {
+        VStack {
+            HStack(spacing: GlazeSpacing.sm) {
+                Spacer()
+
+                iconButton(
+                    key: "player.previous_video",
+                    systemImage: "backward.end",
+                    isActive: false,
+                    isDisabled: !canPlayPrevious
+                ) {
+                    playPreviousPlaylistItem()
+                }
+
+                iconButton(
+                    key: "player.next_video",
+                    systemImage: "forward.end",
+                    isActive: false,
+                    isDisabled: !canPlayNext
+                ) {
+                    playNextPlaylistItem()
+                }
+
+                iconButton(
+                    key: "media.panel.toggle",
+                    systemImage: "info.circle",
+                    isActive: showsMediaPanel,
+                    isDisabled: player == nil
+                ) {
+                    togglePanel(.media)
+                }
+
+                iconButton(
+                    key: "playlist.panel.toggle",
+                    systemImage: "list.bullet",
+                    isActive: showsPlaylistPanel,
+                    isDisabled: playlist.isEmpty
+                ) {
+                    togglePanel(.playlist)
+                }
+
+                iconButton(
+                    key: "subtitle.panel.toggle",
+                    systemImage: "captions.bubble",
+                    isActive: showsSubtitlePanel,
+                    isDisabled: false
+                ) {
+                    togglePanel(.subtitles)
+                }
+
+                iconButton(
+                    key: isSubtitleVisible ? "subtitle.visibility.hide" : "subtitle.visibility.show",
+                    systemImage: isSubtitleVisible ? "captions.bubble.fill" : "captions.bubble",
+                    isActive: isSubtitleVisible && !subtitleCues.isEmpty,
+                    isDisabled: subtitleCues.isEmpty
+                ) {
+                    isSubtitleVisible.toggle()
+                }
+
+                iconButton(
+                    key: "player.open_video",
+                    systemImage: "folder",
+                    isActive: false,
+                    isDisabled: false
+                ) {
+                    openVideo()
+                }
+            }
+            .padding(GlazeSpacing.md)
+            .background(
+                LinearGradient(
+                    colors: [.black.opacity(0.52), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+
+            Spacer()
+        }
+    }
+
+    private var dropTargetOverlay: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(GlazeColors.accent, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+                .background(.black.opacity(0.36), in: RoundedRectangle(cornerRadius: 12))
+
+            VStack(spacing: GlazeSpacing.sm) {
+                Image(systemName: "arrow.down.doc")
+                    .font(.system(size: 34, weight: .medium))
+                Text(L10n.string("player.drop_hint"))
+                    .font(.headline)
+                Text(L10n.string("player.drop_subtitle"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(.white)
+        }
+        .padding(GlazeSpacing.xl)
     }
 
     private var subtitleOverlay: some View {
@@ -150,6 +273,10 @@ struct PlayerView: View {
                 Label(L10n.string("player.open_video"), systemImage: "folder")
             }
             .keyboardShortcut(.defaultAction)
+
+            Text(L10n.string("player.drop_subtitle"))
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .padding()
     }
@@ -249,6 +376,71 @@ struct PlayerView: View {
             }
             .buttonStyle(.borderedProminent)
             .disabled(player == nil)
+        }
+        .padding(GlazeSpacing.lg)
+        .frame(width: 300)
+        .background(GlazeColors.panelBackground)
+    }
+
+    private var playlistPanel: some View {
+        VStack(alignment: .leading, spacing: GlazeSpacing.lg) {
+            HStack {
+                VStack(alignment: .leading, spacing: GlazeSpacing.xs) {
+                    Text(L10n.string("playlist.panel.title"))
+                        .font(.headline)
+                    Text(playlistSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button {
+                    showsPlaylistPanel = false
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+            }
+
+            if playlist.isEmpty {
+                Text(L10n.string("playlist.panel.empty"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(GlazeSpacing.md)
+                    .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
+            } else {
+                ScrollView {
+                    VStack(spacing: GlazeSpacing.xs) {
+                        ForEach(playlist) { item in
+                            Button {
+                                loadVideo(item.url, playlist: playlist, shouldStartPlayback: true)
+                            } label: {
+                                HStack(spacing: GlazeSpacing.sm) {
+                                    Image(systemName: currentVideoURL?.path == item.url.path ? "play.circle.fill" : "film")
+                                        .foregroundStyle(currentVideoURL?.path == item.url.path ? GlazeColors.accent : .secondary)
+
+                                    Text(item.displayName)
+                                        .font(.callout.weight(.medium))
+                                        .lineLimit(1)
+
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(GlazeSpacing.sm)
+                            .background(
+                                currentVideoURL?.path == item.url.path ? GlazeColors.subtlePanel : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 8)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer()
         }
         .padding(GlazeSpacing.lg)
         .frame(width: 300)
@@ -482,23 +674,59 @@ struct PlayerView: View {
         .background(GlazeColors.subtlePanel, in: RoundedRectangle(cornerRadius: 8))
     }
 
+    private func iconButton(
+        key: String,
+        systemImage: String,
+        isActive: Bool,
+        isDisabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .frame(width: 30, height: 30)
+                .foregroundStyle(isActive ? .white : .white.opacity(0.72))
+                .background(isActive ? GlazeColors.accent.opacity(0.82) : .black.opacity(0.36), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.35 : 1)
+        .help(L10n.string(key))
+    }
+
     private func openVideo() {
         let panel = NSOpenPanel()
         panel.title = L10n.string("open_panel.title")
         panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
+        panel.canChooseDirectories = true
         panel.canChooseFiles = true
-        panel.allowedContentTypes = supportedVideoTypes
+        panel.allowedContentTypes = supportedVideoTypes + [.folder]
 
         guard panel.runModal() == .OK, let url = panel.url else {
             return
         }
 
+        openMedia(from: url)
+    }
+
+    private func openMedia(from url: URL) {
+        let nextPlaylist = MediaPlaylistBuilder.playlist(for: url)
+        guard let firstItem = nextPlaylist.first else {
+            errorMessage = L10n.string("player.error.no_playable_files")
+            return
+        }
+
+        loadVideo(firstItem.url, playlist: nextPlaylist, shouldStartPlayback: true)
+        showsPlaylistPanel = nextPlaylist.count > 1
+    }
+
+    private func loadVideo(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
         removeTimeObserver()
 
         let item = AVPlayerItem(url: url)
         let nextPlayer = AVPlayer(playerItem: item)
         player = nextPlayer
+        playlist = nextPlaylist
         currentVideoURL = url
         currentFileName = url.lastPathComponent
         errorMessage = nil
@@ -513,7 +741,28 @@ struct PlayerView: View {
         loadPreferredSubtitleIfAvailable()
         installTimeObserver(on: nextPlayer)
         inspectMedia(url)
-        nextPlayer.play()
+        if shouldStartPlayback {
+            nextPlayer.play()
+        }
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else {
+            return false
+        }
+
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
+            guard let data,
+                  let url = URL(dataRepresentation: data, relativeTo: nil) else {
+                return
+            }
+
+            Task { @MainActor in
+                openMedia(from: url)
+            }
+        }
+
+        return true
     }
 
     private func importSubtitle() {
@@ -690,6 +939,73 @@ struct PlayerView: View {
         default:
             "questionmark.circle"
         }
+    }
+
+    private enum PlayerPanel {
+        case media
+        case playlist
+        case subtitles
+    }
+
+    private func togglePanel(_ panel: PlayerPanel) {
+        switch panel {
+        case .media:
+            showsMediaPanel.toggle()
+            showsPlaylistPanel = false
+            showsSubtitlePanel = false
+        case .playlist:
+            showsPlaylistPanel.toggle()
+            showsMediaPanel = false
+            showsSubtitlePanel = false
+        case .subtitles:
+            showsSubtitlePanel.toggle()
+            showsMediaPanel = false
+            showsPlaylistPanel = false
+        }
+    }
+
+    private var playlistSummary: String {
+        String(format: L10n.string("playlist.panel.count_format"), playlist.count)
+    }
+
+    private var currentPlaylistIndex: Int? {
+        guard let currentVideoURL else {
+            return nil
+        }
+
+        return playlist.firstIndex { $0.url.path == currentVideoURL.path }
+    }
+
+    private var canPlayPrevious: Bool {
+        guard let currentPlaylistIndex else {
+            return false
+        }
+
+        return currentPlaylistIndex > 0
+    }
+
+    private var canPlayNext: Bool {
+        guard let currentPlaylistIndex else {
+            return false
+        }
+
+        return currentPlaylistIndex < playlist.count - 1
+    }
+
+    private func playPreviousPlaylistItem() {
+        guard let currentPlaylistIndex, currentPlaylistIndex > 0 else {
+            return
+        }
+
+        loadVideo(playlist[currentPlaylistIndex - 1].url, playlist: playlist, shouldStartPlayback: true)
+    }
+
+    private func playNextPlaylistItem() {
+        guard let currentPlaylistIndex, currentPlaylistIndex < playlist.count - 1 else {
+            return
+        }
+
+        loadVideo(playlist[currentPlaylistIndex + 1].url, playlist: playlist, shouldStartPlayback: true)
     }
 
     private func installTimeObserver(on player: AVPlayer) {

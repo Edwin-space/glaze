@@ -54,8 +54,17 @@
 | `media.error.title` | 미디어 정보 문제 | Media info issue | 오류 | 구현 |
 | `player.empty_title` | 영상을 열어 자막 준비를 시작하세요 | Open a video to prepare subtitles | 빈 화면 | 구현 |
 | `player.empty_subtitle` | 로컬 영상부터 시작합니다. 자막이 없으면 글레이즈가 준비를 도와드립니다. | Start with a local file. If subtitles are missing, Glaze will help prepare them. | 빈 화면 | 구현 |
+| `player.drop_hint` | 영상 또는 폴더를 놓으세요 | Drop a video or folder | 드래그앤드롭 | 구현 |
+| `player.drop_subtitle` | 같은 폴더의 영상은 재생목록에 함께 추가됩니다. | Videos in the same folder are added to the playlist. | 안내 | 구현 |
+| `player.error.no_playable_files` | 재생할 수 있는 영상 파일을 찾지 못했습니다. | No playable video files were found. | 오류 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
+| `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |
+| `player.next_video` | 다음 영상 | Next Video | 버튼 | 구현 |
+| `playlist.panel.toggle` | 재생목록 | Playlist | 버튼 | 구현 |
+| `playlist.panel.title` | 재생목록 | Playlist | 패널 제목 | 구현 |
+| `playlist.panel.count_format` | %d개 영상 | %d videos | 상태 | 구현 |
+| `playlist.panel.empty` | 재생목록에 추가된 영상이 없습니다. | No videos have been added to the playlist. | 안내 | 구현 |
 | `subtitle.generate` | 자막 생성 | Generate Subtitles | 버튼 | 구현 |
 | `subtitle.error.empty_file` | 표시할 수 있는 자막 구간이 없습니다. | This subtitle file has no readable cues. | 오류 | 구현 |
 | `subtitle.error.read_failed` | 자막 파일을 읽을 수 없습니다. | Could not read subtitle file. | 오류 | 구현 |
@@ -106,6 +115,13 @@
 - macOS 직접 재생 가능 여부: 구현
 - MKV 파일 재생 제한 안내: 후보
 - FFmpeg 보조 처리 필요 안내: 후보
+
+### 재생목록
+
+- 영상/폴더 드래그앤드롭 안내: 구현
+- 같은 폴더 영상 자동 추가 안내: 구현
+- 이전/다음 영상 전환: 구현
+- 재생목록 패널/개수/비어 있음 상태: 구현
 
 ### 자막 파일 불러오기
 
