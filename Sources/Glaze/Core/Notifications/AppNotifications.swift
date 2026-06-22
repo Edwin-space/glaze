@@ -21,4 +21,8 @@ enum PendingOpenMediaURLs {
 
         return urls.removeFirst()
     }
+
+    static func contains(_ url: URL) -> Bool {
+        urls.contains { $0.standardizedFileURL == url.standardizedFileURL }
+    }
 }

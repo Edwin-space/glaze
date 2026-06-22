@@ -55,7 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             PendingOpenMediaURLs.append(url)
             try? await Task.sleep(nanoseconds: 400_000_000)
-            NotificationCenter.default.post(name: .openMediaURL, object: url)
+            if PendingOpenMediaURLs.contains(url) {
+                NotificationCenter.default.post(name: .openMediaURL, object: url)
+            }
         }
     }
 }

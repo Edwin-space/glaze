@@ -81,6 +81,7 @@ struct PlayerView: View {
             openMedia(from: url)
         }
         .onAppear {
+            NativeVLCLibrary.prewarm()
             if let url = PendingOpenMediaURLs.consumeFirst() {
                 openMedia(from: url)
             }
@@ -865,7 +866,7 @@ struct PlayerView: View {
     }
 
     private func openMedia(from url: URL) {
-        let nextPlaylist = MediaPlaylistBuilder.playlist(for: url)
+        let nextPlaylist = MediaPlaylistBuilder.initialPlaylist(for: url)
         guard let firstItem = nextPlaylist.first else {
             errorMessage = L10n.string("player.error.no_playable_files")
             return
@@ -873,6 +874,7 @@ struct PlayerView: View {
 
         loadVideo(firstItem.url, playlist: nextPlaylist, shouldStartPlayback: true)
         showsPlaylistPanel = nextPlaylist.count > 1
+        expandPlaylistInBackground(for: url, currentItem: firstItem.url)
     }
 
     private func loadVideo(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
@@ -894,6 +896,28 @@ struct PlayerView: View {
         mediaInspection = MediaInspector.lightweightInspection(url: url, isPlayable: nil)
         isInspectingMedia = false
         errorMessage = nil
+    }
+
+    private func expandPlaylistInBackground(for sourceURL: URL, currentItem: URL) {
+        guard !MediaPlaylistBuilder.isDirectory(sourceURL) else {
+            return
+        }
+
+        Task {
+            let expandedPlaylist = await Task.detached(priority: .utility) {
+                MediaPlaylistBuilder.playlist(for: sourceURL)
+            }.value
+
+            await MainActor.run {
+                guard currentVideoURL?.standardizedFileURL == currentItem.standardizedFileURL,
+                      expandedPlaylist.count > playlist.count else {
+                    return
+                }
+
+                playlist = expandedPlaylist
+                showsPlaylistPanel = expandedPlaylist.count > 1
+            }
+        }
     }
 
     private func prepareCurrentMediaState(originalURL: URL, playlist nextPlaylist: [MediaPlaylistItem]) {

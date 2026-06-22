@@ -26,7 +26,6 @@ final class NativeVLCPlayerView: NSView {
     var onFailure: ((String) -> Void)?
 
     private var library: NativeVLCLibrary?
-    private var instance: NativeVLCLibrary.InstanceHandle?
     private var player: NativeVLCLibrary.MediaPlayerHandle?
     private var loadedURL: URL?
     private var securityScopedURL: URL?
@@ -64,7 +63,7 @@ final class NativeVLCPlayerView: NSView {
             return
         }
 
-        guard let instance = library.makeInstance() else {
+        guard let instance = library.sharedPlaybackInstance() else {
             loadedURL = nil
             releasePlaybackResources()
             onFailure?("Unable to create libVLC instance")
@@ -81,10 +80,18 @@ final class NativeVLCPlayerView: NSView {
             return
         }
 
+        [
+            ":file-caching=100",
+            ":network-caching=300",
+            ":no-sub-autodetect-file",
+            ":avcodec-fast"
+        ].forEach { option in
+            option.withCString { library.addMediaOption(media, $0) }
+        }
+
         guard let player = library.newPlayerFromMedia(media) else {
             loadedURL = nil
             library.releaseMedia(media)
-            library.releaseInstance(instance)
             releasePlaybackResources()
             onFailure?("Unable to create libVLC media player")
             assertionFailure("Unable to create libVLC media player")
@@ -96,7 +103,6 @@ final class NativeVLCPlayerView: NSView {
         _ = library.play(player)
 
         self.library = library
-        self.instance = instance
         self.player = player
     }
 
@@ -112,10 +118,6 @@ final class NativeVLCPlayerView: NSView {
                 self.player = nil
             }
 
-            if let instance {
-                library.releaseInstance(instance)
-                self.instance = nil
-            }
         }
 
         if let securityScopedURL {

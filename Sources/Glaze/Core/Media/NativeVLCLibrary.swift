@@ -28,6 +28,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
     typealias ReleaseInstance = @convention(c) (InstanceHandle?) -> Void
     typealias NewMediaPath = @convention(c) (InstanceHandle?, UnsafePointer<CChar>?) -> MediaHandle?
     typealias ReleaseMedia = @convention(c) (MediaHandle?) -> Void
+    typealias AddMediaOption = @convention(c) (MediaHandle?, UnsafePointer<CChar>?) -> Void
     typealias NewPlayerFromMedia = @convention(c) (MediaHandle?) -> MediaPlayerHandle?
     typealias SetNSObject = @convention(c) (MediaPlayerHandle?, UnsafeMutableRawPointer?) -> Void
     typealias Play = @convention(c) (MediaPlayerHandle?) -> Int32
@@ -46,12 +47,21 @@ final class NativeVLCLibrary: @unchecked Sendable {
         return library
     }
 
+    static func prewarm() {
+        guard let library = try? shared() else {
+            return
+        }
+
+        _ = library.sharedPlaybackInstance()
+    }
+
     let runtimeURL: URL
     let pluginsURL: URL
     let newInstance: NewInstance
     let releaseInstance: ReleaseInstance
     let newMediaPath: NewMediaPath
     let releaseMedia: ReleaseMedia
+    let addMediaOption: AddMediaOption
     let newPlayerFromMedia: NewPlayerFromMedia
     let setNSObject: SetNSObject
     let play: Play
@@ -60,6 +70,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
 
     private let coreHandle: UnsafeMutableRawPointer
     private let libraryHandle: UnsafeMutableRawPointer
+    private var playbackInstance: InstanceHandle?
 
     private init() throws {
         runtimeURL = try Self.resolveRuntimeURL()
@@ -85,6 +96,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
         releaseInstance = try Self.loadSymbol("libvlc_release", from: libraryHandle)
         newMediaPath = try Self.loadSymbol("libvlc_media_new_path", from: libraryHandle)
         releaseMedia = try Self.loadSymbol("libvlc_media_release", from: libraryHandle)
+        addMediaOption = try Self.loadSymbol("libvlc_media_add_option", from: libraryHandle)
         newPlayerFromMedia = try Self.loadSymbol("libvlc_media_player_new_from_media", from: libraryHandle)
         setNSObject = try Self.loadSymbol("libvlc_media_player_set_nsobject", from: libraryHandle)
         play = try Self.loadSymbol("libvlc_media_player_play", from: libraryHandle)
@@ -92,16 +104,25 @@ final class NativeVLCLibrary: @unchecked Sendable {
         releasePlayer = try Self.loadSymbol("libvlc_media_player_release", from: libraryHandle)
     }
 
-    func makeInstance() -> InstanceHandle? {
+    func sharedPlaybackInstance() -> InstanceHandle? {
+        if let playbackInstance {
+            return playbackInstance
+        }
+
         let args = [
             "--no-video-title-show",
             "--quiet",
-            "--avcodec-hw=any"
+            "--avcodec-hw=any",
+            "--no-sub-autodetect-file",
+            "--file-caching=100",
+            "--network-caching=300"
         ]
 
-        return args.withCStringArray { pointer in
+        let instance = args.withCStringArray { pointer in
             newInstance(Int32(args.count), pointer)
         }
+        playbackInstance = instance
+        return instance
     }
 
     private static func resolveRuntimeURL() throws -> URL {

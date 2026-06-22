@@ -25,6 +25,14 @@ enum MediaPlaylistBuilder {
         "webm"
     ]
 
+    static func initialPlaylist(for url: URL) -> [MediaPlaylistItem] {
+        guard !isDirectory(url), isVideoFile(url) else {
+            return playlist(for: url)
+        }
+
+        return [MediaPlaylistItem(url: url)]
+    }
+
     static func playlist(for url: URL) -> [MediaPlaylistItem] {
         if isDirectory(url) {
             return videoFiles(in: url).map(MediaPlaylistItem.init(url:))
@@ -72,7 +80,7 @@ enum MediaPlaylistBuilder {
             }
     }
 
-    private static func isDirectory(_ url: URL) -> Bool {
+    static func isDirectory(_ url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
     }
 
