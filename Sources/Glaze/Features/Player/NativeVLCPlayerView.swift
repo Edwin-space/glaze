@@ -47,7 +47,7 @@ final class NativeVLCPlayerView: NSView {
             return
         }
 
-        stopPlayback()
+        stopCurrentMedia()
         loadedURL = url
         if url.startAccessingSecurityScopedResource() {
             securityScopedURL = url
@@ -71,10 +71,17 @@ final class NativeVLCPlayerView: NSView {
             return
         }
 
+        guard let player = reusablePlayer(using: library, instance: instance) else {
+            loadedURL = nil
+            releaseSecurityScopedURL()
+            onFailure?("Unable to create libVLC media player")
+            assertionFailure("Unable to create libVLC media player")
+            return
+        }
+
         guard let media = url.path.withCString({ library.newMediaPath(instance, $0) }) else {
             loadedURL = nil
-            library.releaseInstance(instance)
-            releasePlaybackResources()
+            releaseSecurityScopedURL()
             onFailure?("Unable to create libVLC media")
             assertionFailure("Unable to create libVLC media")
             return
@@ -89,43 +96,61 @@ final class NativeVLCPlayerView: NSView {
             option.withCString { library.addMediaOption(media, $0) }
         }
 
-        guard let player = library.newPlayerFromMedia(media) else {
-            loadedURL = nil
-            library.releaseMedia(media)
-            releasePlaybackResources()
-            onFailure?("Unable to create libVLC media player")
-            assertionFailure("Unable to create libVLC media player")
-            return
-        }
-
+        library.setMedia(player, media)
         library.releaseMedia(media)
-        library.setNSObject(player, Unmanaged.passUnretained(self).toOpaque())
         _ = library.play(player)
 
         self.library = library
-        self.player = player
     }
 
     func stopPlayback() {
         releasePlaybackResources()
     }
 
+    private func reusablePlayer(using library: NativeVLCLibrary, instance: NativeVLCLibrary.InstanceHandle) -> NativeVLCLibrary.MediaPlayerHandle? {
+        if let player {
+            return player
+        }
+
+        guard let player = library.newPlayer(instance) else {
+            return nil
+        }
+
+        library.setNSObject(player, Unmanaged.passUnretained(self).toOpaque())
+        self.player = player
+        return player
+    }
+
+    private func stopCurrentMedia() {
+        if let library, let player {
+            library.stop(player)
+            library.setMedia(player, nil)
+        }
+
+        releaseSecurityScopedURL()
+        loadedURL = nil
+    }
+
     private func releasePlaybackResources() {
         if let library {
             if let player {
                 library.stop(player)
+                library.setMedia(player, nil)
                 library.releasePlayer(player)
                 self.player = nil
             }
 
         }
 
+        releaseSecurityScopedURL()
+        loadedURL = nil
+        self.library = nil
+    }
+
+    private func releaseSecurityScopedURL() {
         if let securityScopedURL {
             securityScopedURL.stopAccessingSecurityScopedResource()
             self.securityScopedURL = nil
         }
-
-        loadedURL = nil
-        self.library = nil
     }
 }

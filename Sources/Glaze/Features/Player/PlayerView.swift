@@ -873,7 +873,7 @@ struct PlayerView: View {
         }
 
         loadVideo(firstItem.url, playlist: nextPlaylist, shouldStartPlayback: true)
-        showsPlaylistPanel = nextPlaylist.count > 1
+        showsPlaylistPanel = MediaPlaylistBuilder.isDirectory(url) && nextPlaylist.count > 1
         expandPlaylistInBackground(for: url, currentItem: firstItem.url)
     }
 
@@ -915,7 +915,6 @@ struct PlayerView: View {
                 }
 
                 playlist = expandedPlaylist
-                showsPlaylistPanel = expandedPlaylist.count > 1
             }
         }
     }

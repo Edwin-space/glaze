@@ -29,7 +29,9 @@ final class NativeVLCLibrary: @unchecked Sendable {
     typealias NewMediaPath = @convention(c) (InstanceHandle?, UnsafePointer<CChar>?) -> MediaHandle?
     typealias ReleaseMedia = @convention(c) (MediaHandle?) -> Void
     typealias AddMediaOption = @convention(c) (MediaHandle?, UnsafePointer<CChar>?) -> Void
+    typealias NewPlayer = @convention(c) (InstanceHandle?) -> MediaPlayerHandle?
     typealias NewPlayerFromMedia = @convention(c) (MediaHandle?) -> MediaPlayerHandle?
+    typealias SetMedia = @convention(c) (MediaPlayerHandle?, MediaHandle?) -> Void
     typealias SetNSObject = @convention(c) (MediaPlayerHandle?, UnsafeMutableRawPointer?) -> Void
     typealias Play = @convention(c) (MediaPlayerHandle?) -> Int32
     typealias Stop = @convention(c) (MediaPlayerHandle?) -> Void
@@ -62,7 +64,9 @@ final class NativeVLCLibrary: @unchecked Sendable {
     let newMediaPath: NewMediaPath
     let releaseMedia: ReleaseMedia
     let addMediaOption: AddMediaOption
+    let newPlayer: NewPlayer
     let newPlayerFromMedia: NewPlayerFromMedia
+    let setMedia: SetMedia
     let setNSObject: SetNSObject
     let play: Play
     let stop: Stop
@@ -97,7 +101,9 @@ final class NativeVLCLibrary: @unchecked Sendable {
         newMediaPath = try Self.loadSymbol("libvlc_media_new_path", from: libraryHandle)
         releaseMedia = try Self.loadSymbol("libvlc_media_release", from: libraryHandle)
         addMediaOption = try Self.loadSymbol("libvlc_media_add_option", from: libraryHandle)
+        newPlayer = try Self.loadSymbol("libvlc_media_player_new", from: libraryHandle)
         newPlayerFromMedia = try Self.loadSymbol("libvlc_media_player_new_from_media", from: libraryHandle)
+        setMedia = try Self.loadSymbol("libvlc_media_player_set_media", from: libraryHandle)
         setNSObject = try Self.loadSymbol("libvlc_media_player_set_nsobject", from: libraryHandle)
         play = try Self.loadSymbol("libvlc_media_player_play", from: libraryHandle)
         stop = try Self.loadSymbol("libvlc_media_player_stop", from: libraryHandle)
