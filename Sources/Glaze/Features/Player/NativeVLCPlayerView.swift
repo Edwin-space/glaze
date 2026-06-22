@@ -29,6 +29,7 @@ final class NativeVLCPlayerView: NSView {
     private var instance: NativeVLCLibrary.InstanceHandle?
     private var player: NativeVLCLibrary.MediaPlayerHandle?
     private var loadedURL: URL?
+    private var securityScopedURL: URL?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -49,18 +50,23 @@ final class NativeVLCPlayerView: NSView {
 
         stopPlayback()
         loadedURL = url
+        if url.startAccessingSecurityScopedResource() {
+            securityScopedURL = url
+        }
 
         let library: NativeVLCLibrary
         do {
             library = try NativeVLCLibrary.shared()
         } catch {
             loadedURL = nil
+            releasePlaybackResources()
             onFailure?(error.localizedDescription)
             return
         }
 
         guard let instance = library.makeInstance() else {
             loadedURL = nil
+            releasePlaybackResources()
             onFailure?("Unable to create libVLC instance")
             assertionFailure("Unable to create libVLC instance")
             return
@@ -69,6 +75,7 @@ final class NativeVLCPlayerView: NSView {
         guard let media = url.path.withCString({ library.newMediaPath(instance, $0) }) else {
             loadedURL = nil
             library.releaseInstance(instance)
+            releasePlaybackResources()
             onFailure?("Unable to create libVLC media")
             assertionFailure("Unable to create libVLC media")
             return
@@ -78,6 +85,7 @@ final class NativeVLCPlayerView: NSView {
             loadedURL = nil
             library.releaseMedia(media)
             library.releaseInstance(instance)
+            releasePlaybackResources()
             onFailure?("Unable to create libVLC media player")
             assertionFailure("Unable to create libVLC media player")
             return
@@ -97,21 +105,25 @@ final class NativeVLCPlayerView: NSView {
     }
 
     private func releasePlaybackResources() {
-        guard let library else {
-            return
+        if let library {
+            if let player {
+                library.stop(player)
+                library.releasePlayer(player)
+                self.player = nil
+            }
+
+            if let instance {
+                library.releaseInstance(instance)
+                self.instance = nil
+            }
         }
 
-        if let player {
-            library.stop(player)
-            library.releasePlayer(player)
-            self.player = nil
+        if let securityScopedURL {
+            securityScopedURL.stopAccessingSecurityScopedResource()
+            self.securityScopedURL = nil
         }
 
-        if let instance {
-            library.releaseInstance(instance)
-            self.instance = nil
-        }
-
+        loadedURL = nil
         self.library = nil
     }
 }

@@ -19,6 +19,17 @@ struct MediaTrackInspection: Identifiable {
 }
 
 enum MediaInspector {
+    static func lightweightInspection(url: URL, isPlayable: Bool? = nil) -> MediaInspection {
+        MediaInspection(
+            fileName: url.lastPathComponent,
+            containerHint: url.pathExtension.uppercased(),
+            duration: "-",
+            isPlayable: isPlayable,
+            tracks: [],
+            errorMessage: nil
+        )
+    }
+
     static func inspect(url: URL) async -> MediaInspection {
         let asset = AVURLAsset(url: url)
 

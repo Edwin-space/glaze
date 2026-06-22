@@ -891,6 +891,8 @@ struct PlayerView: View {
         activePlaybackEngine = .nativeVLC
         currentPlaybackURL = nil
         prepareCurrentMediaState(originalURL: url, playlist: nextPlaylist)
+        mediaInspection = MediaInspector.lightweightInspection(url: url, isPlayable: nil)
+        isInspectingMedia = false
         errorMessage = nil
     }
 
@@ -908,7 +910,12 @@ struct PlayerView: View {
         selectedSubtitleName = nil
         selectedSubtitlePath = nil
         loadPreferredSubtitleIfAvailable()
-        inspectMedia(originalURL)
+        if activePlaybackEngine == .nativeVLC {
+            mediaInspection = MediaInspector.lightweightInspection(url: originalURL, isPlayable: nil)
+            isInspectingMedia = false
+        } else {
+            inspectMedia(originalURL)
+        }
     }
 
     private func loadVideo(originalURL: URL, playbackURL: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
