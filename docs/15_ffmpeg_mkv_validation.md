@@ -290,6 +290,8 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 
 - `PlaybackEngineRouter`를 추가해 MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 포맷을 VLC/libVLC 네이티브 엔진 대상으로 분리한다.
 - `NativeVLCLibrary`가 앱 번들 `Contents/Resources/Tools/vlc`의 `libvlc.dylib`를 동적으로 열고, `NativeVLCPlayerView`가 AppKit `NSView`를 libVLC drawable로 제공한다.
+- Xcode/SwiftPM 직접 실행 시에는 `#filePath` 기반 소스 체크아웃 루트에서 `Tools/vlc`를 찾아 앱 번들 밖 실행도 지원한다.
+- VLC 런타임 누락 또는 `dlopen` 실패는 `fatalError`로 앱을 종료하지 않고 플레이어 오류 메시지로 전달한다.
 - 개발 번들 스크립트는 VLC dylib/plugin install name을 앱 내부 상대 경로로 보정하고 ad-hoc signing을 수행한다.
 - 공식 VLC arm64 DMG에서 런타임을 재현 설치하는 `./script/install_vlc_runtime.sh`를 제공한다.
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 향후 오디오/자막 추출 작업으로 재분류한다.
@@ -299,6 +301,7 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 - `swift build` 성공.
 - `./script/build_and_run.sh --bundle` 성공.
 - `./script/check_native_media_engine.sh` 기준 `libvlc`, `libvlccore`, 339개 plugin dylib, `plugins.dat`, `share` 리소스 확인.
+- `.build/debug/Glaze`를 `/private/tmp` 작업 디렉터리에서 실행해 Xcode/SwiftPM 방식의 앱 번들 밖 런타임 탐색 확인.
 - 실제 `Sample.mkv` 실행 시 첫 화면 표시 확인.
 - 재생목록에서 같은 폴더의 장편 MKV로 전환 후 새 영상 표시 확인.
 - 창 닫기 시 앱 프로세스 종료 확인.

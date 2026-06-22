@@ -221,6 +221,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - VLC/libVLC 기반 NSView 렌더러 연결
 - `./script/check_native_media_engine.sh`로 VLC 런타임 준비 상태 확인
 - 새 개발 환경에서는 `./script/install_vlc_runtime.sh`로 공식 VLC arm64 런타임을 `Tools/vlc`에 배치
+- Xcode/SwiftPM 직접 실행처럼 앱 번들 밖에서 실행되는 경우에도 소스 체크아웃의 `Tools/vlc`를 탐색
 - 재생/일시정지/탐색/볼륨 제어를 공통 플레이어 상태로 연결
 - 다중 오디오 트랙, 내장 자막 트랙, ASS/SSA 자막 대응
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 오디오 추출 작업으로 재분류
@@ -236,6 +237,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - MKV 재생 가능 여부: `Sample.mkv` 첫 화면 표시 확인
 - 재생목록 전환: 샘플 MKV에서 장편 MKV로 전환 후 새 영상 표시 확인
 - 종료: 창 닫기 시 앱 종료와 플레이어 release 확인
+- Xcode 직접 실행 런타임 탐색: `.build/debug/Glaze`를 프로젝트 외부 작업 디렉터리에서 실행해 fatal crash 없이 프로세스 유지 확인
 - 4K/HDR 샘플 재생 안정성
 - 다중 오디오 트랙 처리
 - 내장 자막 트랙 처리

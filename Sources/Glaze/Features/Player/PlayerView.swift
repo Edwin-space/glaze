@@ -144,7 +144,9 @@ struct PlayerView: View {
             )
 
             if activePlaybackEngine == .nativeVLC, let currentVideoURL {
-                NativeVLCSurfaceView(url: currentVideoURL)
+                NativeVLCSurfaceView(url: currentVideoURL) { message in
+                    errorMessage = "\(L10n.string("player.error.native_engine_unavailable")) \(message)"
+                }
                 subtitleOverlay
             } else if let player {
                 PlayerSurfaceView(player: player)

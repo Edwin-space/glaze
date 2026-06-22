@@ -3,14 +3,17 @@ import SwiftUI
 
 struct NativeVLCSurfaceView: NSViewRepresentable {
     let url: URL
+    let onFailure: (String) -> Void
 
     func makeNSView(context: Context) -> NativeVLCPlayerView {
         let view = NativeVLCPlayerView()
+        view.onFailure = onFailure
         view.load(url)
         return view
     }
 
     func updateNSView(_ view: NativeVLCPlayerView, context: Context) {
+        view.onFailure = onFailure
         view.load(url)
     }
 
@@ -20,6 +23,9 @@ struct NativeVLCSurfaceView: NSViewRepresentable {
 }
 
 final class NativeVLCPlayerView: NSView {
+    var onFailure: ((String) -> Void)?
+
+    private var library: NativeVLCLibrary?
     private var instance: NativeVLCLibrary.InstanceHandle?
     private var player: NativeVLCLibrary.MediaPlayerHandle?
     private var loadedURL: URL?
@@ -44,21 +50,35 @@ final class NativeVLCPlayerView: NSView {
         stopPlayback()
         loadedURL = url
 
-        let library = NativeVLCLibrary.shared
+        let library: NativeVLCLibrary
+        do {
+            library = try NativeVLCLibrary.shared()
+        } catch {
+            loadedURL = nil
+            onFailure?(error.localizedDescription)
+            return
+        }
+
         guard let instance = library.makeInstance() else {
+            loadedURL = nil
+            onFailure?("Unable to create libVLC instance")
             assertionFailure("Unable to create libVLC instance")
             return
         }
 
         guard let media = url.path.withCString({ library.newMediaPath(instance, $0) }) else {
+            loadedURL = nil
             library.releaseInstance(instance)
+            onFailure?("Unable to create libVLC media")
             assertionFailure("Unable to create libVLC media")
             return
         }
 
         guard let player = library.newPlayerFromMedia(media) else {
+            loadedURL = nil
             library.releaseMedia(media)
             library.releaseInstance(instance)
+            onFailure?("Unable to create libVLC media player")
             assertionFailure("Unable to create libVLC media player")
             return
         }
@@ -67,6 +87,7 @@ final class NativeVLCPlayerView: NSView {
         library.setNSObject(player, Unmanaged.passUnretained(self).toOpaque())
         _ = library.play(player)
 
+        self.library = library
         self.instance = instance
         self.player = player
     }
@@ -76,7 +97,9 @@ final class NativeVLCPlayerView: NSView {
     }
 
     private func releasePlaybackResources() {
-        let library = NativeVLCLibrary.shared
+        guard let library else {
+            return
+        }
 
         if let player {
             library.stop(player)
@@ -88,5 +111,7 @@ final class NativeVLCPlayerView: NSView {
             library.releaseInstance(instance)
             self.instance = nil
         }
+
+        self.library = nil
     }
 }

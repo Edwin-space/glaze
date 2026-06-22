@@ -1,6 +1,24 @@
 import Darwin
 import Foundation
 
+enum NativeVLCError: LocalizedError {
+    case runtimeMissing([URL])
+    case libraryUnavailable(String)
+    case symbolMissing(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .runtimeMissing(let candidates):
+            return "Bundled VLC runtime is missing. candidates: \(candidates.map(\.path).joined(separator: ", "))"
+        case .libraryUnavailable(let message):
+            return message
+        case .symbolMissing(let name):
+            return "Missing libVLC symbol: \(name)"
+        }
+    }
+}
+
+@MainActor
 final class NativeVLCLibrary: @unchecked Sendable {
     typealias InstanceHandle = OpaquePointer
     typealias MediaHandle = OpaquePointer
@@ -16,7 +34,17 @@ final class NativeVLCLibrary: @unchecked Sendable {
     typealias Stop = @convention(c) (MediaPlayerHandle?) -> Void
     typealias ReleasePlayer = @convention(c) (MediaPlayerHandle?) -> Void
 
-    static let shared = NativeVLCLibrary()
+    private static var cachedLibrary: NativeVLCLibrary?
+
+    static func shared() throws -> NativeVLCLibrary {
+        if let cachedLibrary {
+            return cachedLibrary
+        }
+
+        let library = try NativeVLCLibrary()
+        cachedLibrary = library
+        return library
+    }
 
     let runtimeURL: URL
     let pluginsURL: URL
@@ -33,8 +61,8 @@ final class NativeVLCLibrary: @unchecked Sendable {
     private let coreHandle: UnsafeMutableRawPointer
     private let libraryHandle: UnsafeMutableRawPointer
 
-    private init() {
-        runtimeURL = Self.resolveRuntimeURL()
+    private init() throws {
+        runtimeURL = try Self.resolveRuntimeURL()
         pluginsURL = runtimeURL.appendingPathComponent("plugins")
 
         let libraryURL = runtimeURL.appendingPathComponent("lib/libvlc.dylib")
@@ -44,24 +72,24 @@ final class NativeVLCLibrary: @unchecked Sendable {
         setenv("VLC_DATA_PATH", runtimeURL.appendingPathComponent("share").path, 1)
 
         guard let coreHandle = dlopen(coreURL.path, RTLD_NOW | RTLD_GLOBAL) else {
-            fatalError("libvlccore.dylib is not available: \(Self.dlErrorMessage())")
+            throw NativeVLCError.libraryUnavailable("libvlccore.dylib is not available: \(Self.dlErrorMessage())")
         }
         self.coreHandle = coreHandle
 
         guard let libraryHandle = dlopen(libraryURL.path, RTLD_NOW | RTLD_GLOBAL) else {
-            fatalError("libvlc.dylib is not available: \(Self.dlErrorMessage())")
+            throw NativeVLCError.libraryUnavailable("libvlc.dylib is not available: \(Self.dlErrorMessage())")
         }
         self.libraryHandle = libraryHandle
 
-        newInstance = Self.loadSymbol("libvlc_new", from: libraryHandle)
-        releaseInstance = Self.loadSymbol("libvlc_release", from: libraryHandle)
-        newMediaPath = Self.loadSymbol("libvlc_media_new_path", from: libraryHandle)
-        releaseMedia = Self.loadSymbol("libvlc_media_release", from: libraryHandle)
-        newPlayerFromMedia = Self.loadSymbol("libvlc_media_player_new_from_media", from: libraryHandle)
-        setNSObject = Self.loadSymbol("libvlc_media_player_set_nsobject", from: libraryHandle)
-        play = Self.loadSymbol("libvlc_media_player_play", from: libraryHandle)
-        stop = Self.loadSymbol("libvlc_media_player_stop", from: libraryHandle)
-        releasePlayer = Self.loadSymbol("libvlc_media_player_release", from: libraryHandle)
+        newInstance = try Self.loadSymbol("libvlc_new", from: libraryHandle)
+        releaseInstance = try Self.loadSymbol("libvlc_release", from: libraryHandle)
+        newMediaPath = try Self.loadSymbol("libvlc_media_new_path", from: libraryHandle)
+        releaseMedia = try Self.loadSymbol("libvlc_media_release", from: libraryHandle)
+        newPlayerFromMedia = try Self.loadSymbol("libvlc_media_player_new_from_media", from: libraryHandle)
+        setNSObject = try Self.loadSymbol("libvlc_media_player_set_nsobject", from: libraryHandle)
+        play = try Self.loadSymbol("libvlc_media_player_play", from: libraryHandle)
+        stop = try Self.loadSymbol("libvlc_media_player_stop", from: libraryHandle)
+        releasePlayer = try Self.loadSymbol("libvlc_media_player_release", from: libraryHandle)
     }
 
     func makeInstance() -> InstanceHandle? {
@@ -76,11 +104,12 @@ final class NativeVLCLibrary: @unchecked Sendable {
         }
     }
 
-    private static func resolveRuntimeURL() -> URL {
+    private static func resolveRuntimeURL() throws -> URL {
         let candidates = [
             Bundle.main.resourceURL?.appendingPathComponent("Tools/vlc"),
             Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Tools/vlc"),
             executableRelativeResourcesURL().appendingPathComponent("Tools/vlc"),
+            sourceCheckoutRuntimeURL(),
             URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("Tools/vlc")
         ].compactMap { $0 }
 
@@ -88,7 +117,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
             return candidate
         }
 
-        fatalError("Bundled VLC runtime is missing. candidates: \(candidates.map(\.path).joined(separator: ", "))")
+        throw NativeVLCError.runtimeMissing(candidates)
     }
 
     private static func executableRelativeResourcesURL() -> URL {
@@ -99,9 +128,19 @@ final class NativeVLCLibrary: @unchecked Sendable {
             .appendingPathComponent("Resources")
     }
 
-    private static func loadSymbol<T>(_ name: String, from handle: UnsafeMutableRawPointer) -> T {
+    private static func sourceCheckoutRuntimeURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Tools/vlc")
+    }
+
+    private static func loadSymbol<T>(_ name: String, from handle: UnsafeMutableRawPointer) throws -> T {
         guard let symbol = dlsym(handle, name) else {
-            fatalError("Missing libVLC symbol: \(name)")
+            throw NativeVLCError.symbolMissing(name)
         }
 
         return unsafeBitCast(symbol, to: T.self)
