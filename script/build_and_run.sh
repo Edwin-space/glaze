@@ -29,7 +29,16 @@ else
   exit 1
 fi
 
+# Regenerate whenever project.yml changed OR any source file is newer than the
+# generated project — xcodegen snapshots file references at generation time, so
+# adding/removing a .swift file needs a regenerate too, not just editing project.yml.
+NEEDS_REGENERATE=0
 if [[ ! -d "$XCODEPROJ" ]] || [[ "$PROJECT_SPEC" -nt "$XCODEPROJ/project.pbxproj" ]]; then
+  NEEDS_REGENERATE=1
+elif find "$ROOT_DIR/Sources/GlazeMac" -newer "$XCODEPROJ/project.pbxproj" -print -quit 2>/dev/null | grep -q .; then
+  NEEDS_REGENERATE=1
+fi
+if [[ "$NEEDS_REGENERATE" -eq 1 ]]; then
   (cd "$ROOT_DIR" && "$XCODEGEN_BIN" generate)
 fi
 

@@ -152,10 +152,26 @@ struct PlayerView: View {
     private var videoSurface: some View {
         ZStack {
             LinearGradient(
-                colors: [GlazeColors.playerBackground, Color(white: 0.1), GlazeColors.playerBackground],
+                colors: [GlazeColors.kiln, GlazeColors.kiln2, GlazeColors.kiln],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+            .overlay {
+                RadialGradient(
+                    colors: [GlazeColors.glaze.opacity(0.22), .clear],
+                    center: UnitPoint(x: 0.18, y: 0.1),
+                    startRadius: 0,
+                    endRadius: 620
+                )
+            }
+            .overlay {
+                RadialGradient(
+                    colors: [GlazeColors.celadon.opacity(0.12), .clear],
+                    center: UnitPoint(x: 0.86, y: 0.94),
+                    startRadius: 0,
+                    endRadius: 520
+                )
+            }
 
             if playback.activePlaybackEngine == .nativeVLC, let currentVideoURL = playback.currentVideoURL {
                 NativeVLCSurfaceView(url: currentVideoURL) { message in
@@ -341,36 +357,38 @@ struct PlayerView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "play.fill")
-                .font(.system(size: 32, weight: .regular))
-                .foregroundStyle(.secondary)
-                .frame(width: 88, height: 88)
-                .glassEffect(in: Circle())
+        VStack(spacing: 30) {
+            VesselSignatureView()
 
-            VStack(spacing: 6) {
+            VStack(spacing: 9) {
                 Text(L10n.string("player.empty_title"))
-                    .font(.system(.title2, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(GlazeColors.porcelain)
 
                 Text(L10n.string("player.empty_subtitle"))
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 15))
+                    .foregroundStyle(GlazeColors.ash)
             }
+            .frame(maxWidth: 440)
+            .multilineTextAlignment(.center)
 
             Button {
                 openVideo()
             } label: {
                 Label(L10n.string("player.open_video"), systemImage: "folder")
+                    .font(.system(size: 14, weight: .semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
             }
             .buttonStyle(.glassProminent)
+            .controlSize(.large)
             .keyboardShortcut(.defaultAction)
 
             Text(L10n.string("player.drop_subtitle"))
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(GlazeColors.ash.opacity(0.7))
         }
-        .padding()
+        .padding(40)
     }
 
     private var subtitleStatusStrip: some View {

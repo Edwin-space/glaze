@@ -54,11 +54,11 @@ enum SubtitleStatus {
         case .noSubtitle:
             GlazeColors.warning
         case .subtitleDetected:
-            GlazeColors.positive
+            GlazeColors.celadon
         case .koreanSubtitleDetected:
-            GlazeColors.positive
+            GlazeColors.celadon
         case .subtitleLoaded:
-            GlazeColors.positive
+            GlazeColors.celadon
         case .readyToGenerate:
             GlazeColors.accent
         case .generating:
