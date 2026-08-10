@@ -11,6 +11,7 @@ struct GlazeApp: App {
             ContentView()
                 .frame(minWidth: 960, minHeight: 620)
         }
+        .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(L10n.string("command.open_video")) {

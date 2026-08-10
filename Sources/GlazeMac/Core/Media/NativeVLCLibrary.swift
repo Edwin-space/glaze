@@ -34,6 +34,13 @@ final class NativeVLCLibrary: @unchecked Sendable {
     typealias SetMedia = @convention(c) (MediaPlayerHandle?, MediaHandle?) -> Void
     typealias SetNSObject = @convention(c) (MediaPlayerHandle?, UnsafeMutableRawPointer?) -> Void
     typealias Play = @convention(c) (MediaPlayerHandle?) -> Int32
+    typealias SetPause = @convention(c) (MediaPlayerHandle?, Int32) -> Void
+    typealias IsPlaying = @convention(c) (MediaPlayerHandle?) -> Int32
+    typealias GetTime = @convention(c) (MediaPlayerHandle?) -> Int64
+    typealias SetTime = @convention(c) (MediaPlayerHandle?, Int64) -> Int32
+    typealias GetLength = @convention(c) (MediaPlayerHandle?) -> Int64
+    typealias GetVolume = @convention(c) (MediaPlayerHandle?) -> Int32
+    typealias SetVolume = @convention(c) (MediaPlayerHandle?, Int32) -> Int32
     typealias Stop = @convention(c) (MediaPlayerHandle?) -> Void
     typealias ReleasePlayer = @convention(c) (MediaPlayerHandle?) -> Void
 
@@ -69,6 +76,13 @@ final class NativeVLCLibrary: @unchecked Sendable {
     let setMedia: SetMedia
     let setNSObject: SetNSObject
     let play: Play
+    let setPause: SetPause
+    let isPlaying: IsPlaying
+    let getTime: GetTime
+    let setTime: SetTime
+    let getLength: GetLength
+    let getVolume: GetVolume
+    let setVolume: SetVolume
     let stop: Stop
     let releasePlayer: ReleasePlayer
 
@@ -106,6 +120,13 @@ final class NativeVLCLibrary: @unchecked Sendable {
         setMedia = try Self.loadSymbol("libvlc_media_player_set_media", from: libraryHandle)
         setNSObject = try Self.loadSymbol("libvlc_media_player_set_nsobject", from: libraryHandle)
         play = try Self.loadSymbol("libvlc_media_player_play", from: libraryHandle)
+        setPause = try Self.loadSymbol("libvlc_media_player_set_pause", from: libraryHandle)
+        isPlaying = try Self.loadSymbol("libvlc_media_player_is_playing", from: libraryHandle)
+        getTime = try Self.loadSymbol("libvlc_media_player_get_time", from: libraryHandle)
+        setTime = try Self.loadSymbol("libvlc_media_player_set_time", from: libraryHandle)
+        getLength = try Self.loadSymbol("libvlc_media_player_get_length", from: libraryHandle)
+        getVolume = try Self.loadSymbol("libvlc_audio_get_volume", from: libraryHandle)
+        setVolume = try Self.loadSymbol("libvlc_audio_set_volume", from: libraryHandle)
         stop = try Self.loadSymbol("libvlc_media_player_stop", from: libraryHandle)
         releasePlayer = try Self.loadSymbol("libvlc_media_player_release", from: libraryHandle)
     }

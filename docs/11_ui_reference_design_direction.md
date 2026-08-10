@@ -123,14 +123,16 @@ Figma Community의 media player, video player, music player 템플릿은 분위�
 
 ## 플레이어 크롬 기준
 
-플레이어 내부에 별도 헤더나 아이콘 도구막대를 만들지 않는다. 파일명, 자막, 보조 패널, 영상 열기는 macOS 창 툴바에 통합하고, 영상 내부에는 현재 영상과 직접 관련된 문맥 액션만 둔다.
+영상은 창의 주 콘텐츠 레이어로 가장자리까지 확장한다. 파일 열기와 Inspector 진입은 macOS 창 툴바에 두고, 재생·탐색·자막·볼륨처럼 영상과 직접 관계된 조작만 영상 위 Liquid Glass 기능 레이어에 둔다.
 
 설계 원칙:
 
 - 영상 감상을 방해하지 않도록 창 툴바를 1차 탐색 체계로 사용한다.
 - 반복 액션은 SF Symbols와 표준 `Button`/`Menu`로 제공하고 도움말을 붙인다.
-- 기능 패널은 플레이어 우측에서 열리되 한 번에 하나만 표시한다.
+- 기능 패널은 SwiftUI 네이티브 `inspector`로 열며 한 번에 하나만 표시한다.
 - 패널을 열어도 창 전체 폭이 늘어나지 않고 기존 영상 영역 안에서 공간을 나눠 쓴다.
+- 재생 중 포인터가 멈추면 transport controls가 자동으로 물러나 영상에 집중할 수 있어야 한다.
+- Space 재생/일시정지, 더블클릭 전체 화면처럼 Mac 사용자가 기대하는 입력을 지원한다.
 - 빈 화면과 드래그 상태는 사용자가 바로 파일을 놓을 수 있음을 보여준다.
 - 플레이어 기본 기능은 AI 자막보다 먼저 이해되어야 한다.
 
@@ -181,40 +183,38 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 
 구성:
 
-- 창 툴바 중앙: 현재 파일명과 자막 상태
+- 창 툴바 중앙: 현재 파일명
 - 창 툴바 우측: 자막, 보조 패널 메뉴, 영상 열기
-- 중앙: 장식 없는 검정 영상 스테이지
-- 영상 하단: 자막 상태, 이전/다음, 자막 표시, 자막 생성 문맥 액션
-- 우측: 자막/재생목록/미디어 정보/AI 미디어 중 하나만 표시하는 360pt 인스펙터
+- 중앙: 창 너비를 우선 사용하는 검정 영상 스테이지
+- 영상 하단: 시간축, 재생/일시정지, ±15초 탐색, 이전/다음, 자막, 볼륨, 전체 화면을 묶은 Liquid Glass transport controls
+- 우측: 자막/재생목록/미디어 정보/AI 미디어를 전환하는 시스템 Inspector(300–420pt 가변 폭)
 
-우측 인스펙터는 기본적으로 닫혀 있으며, 사용자가 툴바나 자막 상태 액션을 선택할 때만 열린다.
+우측 Inspector는 기본적으로 닫혀 있으며, 사용자가 툴바나 transport controls의 자막 액션을 선택할 때만 열린다. 내부 정보는 `Form`, `Section`, `LabeledContent`, `List`, segmented `Picker`로 구성한다.
 
 ### Empty State
 
-빈 화면은 브랜드 일러스트나 커스텀 그라데이션을 사용하지 않는다. macOS 표준 `ContentUnavailableView`, 시스템 배경색, SF Symbol, 강조 버튼만 사용한다.
+빈 화면도 영상이 나타날 자리라는 점을 즉시 이해하도록 어두운 미디어 스테이지를 유지한다. 장식 카드는 두지 않고 SF Symbol, 짧은 제목, 설명, `glassProminent` 영상 열기 버튼만 중앙에 배치한다. 약한 단색 방사형 명암은 콘텐츠 깊이 표현에만 사용한다.
 
 권장 메시지:
 
-- 한국어: "영상을 열어 자막 준비를 시작하세요"
-- 영어: "Open a video to prepare subtitles"
+- 한국어: "영상을 놓고 바로 재생하세요"
+- 영어: "Drop a video and start watching"
 
 보조 문구:
 
-- "로컬 영상부터 시작합니다. 자막이 없으면 글레이즈가 준비를 도와드립니다."
+- "어떤 포맷이든 열어보세요. 자막이 없을 때만 글레이즈가 조용히 도와드립니다."
 
-### Subtitle Context Bar
+### Transport Controls
 
-영상이 열린 경우에만 하단에 작은 문맥 영역을 둔다. 고정 앱 상태 표시줄이 아니라 현재 영상의 자막 상태와 즉시 필요한 액션을 한 줄로 묶는다.
+영상이 열린 경우에만 하단에 시스템 transport controls의 조작 순서를 따르는 단일 Glass surface를 둔다.
 
-상태 예:
+구성 순서:
 
-- 자막 없음
-- 원어 자막 감지됨
-- 한국어 자막 없음
-- 자막 생성 가능
-- 생성 중 42%
-- 한국어 번역 완료
-- 실패: 저장 권한 필요
+- 현재 시간 / scrubber / 남은 시간
+- 이전 영상 / 15초 뒤로 / 재생·일시정지 / 15초 앞으로 / 다음 영상
+- 자막 상태·표시 / 명시적 자막 생성 / 볼륨 / 전체 화면
+
+재생 중에는 2.5초 비활동 후 controls를 숨기고 포인터 이동·Space 입력·일시정지 시 다시 표시한다. 자막은 controls가 표시될 때만 충돌하지 않도록 위로 이동한다.
 
 ### AI Subtitle Panel
 
@@ -262,7 +262,8 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 
 ### 컴포넌트
 
-- 커스텀 컴포넌트보다 표준 `Label`, `ControlGroup`, `Menu`, system `Material`(`.regularMaterial`, `.ultraThinMaterial`)을 우선 사용
+- 커스텀 컴포넌트보다 표준 `Label`, `Menu`, `Slider`, `Form`, `List`, `LabeledContent`, `inspector`를 우선 사용
+- 영상 위 상호작용 레이어에만 `glassEffect`, `.buttonStyle(.glass)`, `.buttonStyle(.glassProminent)`를 사용한다.
 - 상태 표시는 커스텀 `StatusBadge` 캡슐 대신 표준 `Label` + system color로 대체
 - segmented control: 자막 출력 모드
 - popover/panel: 자막 생성 옵션
@@ -275,14 +276,14 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 
 ## 현재 코드 반영 상태 (2026-08-10)
 
-1. 대형 커스텀 헤더, 영상 상단 아이콘 열, AI 버블, 고정 하단 스트립 제거 완료
-2. macOS 창 툴바 기반 1차 탐색 구조 적용 완료
-3. 표준 `ContentUnavailableView` 기반 빈 화면 적용 완료
-4. 단일 `activePanel` 상태와 공통 `PlayerInspectorLayout` 기반 우측 인스펙터 통합 완료
-5. `Color.accentColor`, system green/orange/red 기반 상태색 적용 완료; 커스텀 `GlazeColors` 제거
-6. 자막 상태와 액션을 영상 하단 문맥 바로 통합 완료
-7. 한국어/영어 신규 인스펙터 텍스트 동기화 완료
-8. 다음 개선: VLC 재생 제어 API를 노출한 뒤 재생/일시정지, 탐색, 볼륨을 동일 문맥 바에 통합
+1. 어두운 edge-to-edge 미디어 스테이지와 unified compact 창 툴바 적용 완료
+2. 시간축, 재생/일시정지, ±15초 탐색, 이전/다음, 볼륨, 전체 화면을 단일 Liquid Glass transport surface로 구현 완료
+3. 재생 중 controls 자동 숨김과 Space/더블클릭 입력 적용 완료
+4. 직접 만든 `PlayerInspectorLayout` 제거, SwiftUI `inspector` + `Form`/`List` 기반 가변 Inspector 적용 완료
+5. VLC/libVLC의 재생 상태·시간·길이·탐색·볼륨 API를 공통 playback 상태에 연결 완료
+6. VLC 시간 갱신을 자막 cue 동기화에도 연결 완료
+7. 어두운 미디어 빈 상태와 강조색 Glass 기본 액션 적용 완료
+8. 한국어/영어 재생 조작 텍스트 동기화 완료
 
 ## 참고 출처
 
@@ -291,3 +292,6 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 - Elmedia Player 공식 웹사이트: https://www.elmedia-video-player.com/
 - Submarine Player 공식 웹사이트: https://submarineplayer.com/
 - Figma Community: https://www.figma.com/community
+- Apple HIG — Playing video: https://developer.apple.com/design/human-interface-guidelines/playing-video
+- Apple — Build a SwiftUI app with the new design: https://developer.apple.com/videos/play/wwdc2025/323/
+- Apple — Meet Liquid Glass: https://developer.apple.com/videos/play/wwdc2025/219/

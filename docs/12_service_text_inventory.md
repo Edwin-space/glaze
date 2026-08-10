@@ -28,7 +28,7 @@
 | 알림 | 중요한 변화나 완료 안내 | 한국어 자막 생성 완료 |
 | 오류 | 실패와 해결 방법 | 저장 권한이 필요합니다 |
 | 설정 | 앱 동작 정책 | 저장 위치, 모델 모드 |
-| 빈 화면 | 시작/무상태 화면 | 영상을 열어 자막 준비를 시작하세요 |
+| 빈 화면 | 시작/무상태 화면 | 영상을 놓고 바로 재생하세요 |
 | 가이드 | 도움말/FAQ로 확장될 설명 | 자막 파일은 어디에 저장되나요? |
 
 ## 현재 앱 텍스트
@@ -61,8 +61,8 @@
 | `media.panel.tracks` | 트랙 | Tracks | 패널 제목 | 구현 |
 | `media.panel.tracks_empty` | 인식된 트랙이 없습니다. | No recognized tracks. | 안내 | 구현 |
 | `media.error.title` | 미디어 정보 문제 | Media info issue | 오류 | 구현 |
-| `player.empty_title` | 영상을 열어 자막 준비를 시작하세요 | Open a video to prepare subtitles | 빈 화면 | 구현 |
-| `player.empty_subtitle` | 로컬 영상부터 시작합니다. 자막이 없으면 글레이즈가 준비를 도와드립니다. | Start with a local file. If subtitles are missing, Glaze will help prepare them. | 빈 화면 | 구현 |
+| `player.empty_title` | 영상을 놓고 바로 재생하세요 | Drop a video and start watching | 빈 화면 | 구현 |
+| `player.empty_subtitle` | 어떤 포맷이든 열어보세요. 자막이 없을 때만 글레이즈가 조용히 도와드립니다. | Open any format. Glaze stays out of the way until you need subtitles. | 빈 화면 | 구현 |
 | `player.drop_hint` | 영상 또는 폴더를 놓으세요 | Drop a video or folder | 드래그앤드롭 | 구현 |
 | `player.drop_subtitle` | 같은 폴더의 영상은 재생목록에 함께 추가됩니다. | Videos in the same folder are added to the playlist. | 안내 | 구현 |
 | `player.error.compatibility_required` | 이 MKV 파일은 macOS 기본 재생으로 열리지 않습니다. FFmpeg/remux 호환성 처리가 필요합니다. | This MKV file cannot be opened by macOS playback yet. FFmpeg/remux compatibility handling is required. | 오류 | 구현 |
@@ -79,6 +79,12 @@
 | `player.native_engine.subtitle` | 주요 영상 포맷은 변환 대기 없이 네이티브 엔진으로 바로 재생합니다. | Major video formats play directly through the native engine without conversion wait time. | 안내 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
 | `player.open_video` | 영상 열기 | Open Video | 버튼 | 구현 |
+| `player.play` | 재생 | Play | 재생 컨트롤 | 구현 |
+| `player.pause` | 일시 정지 | Pause | 재생 컨트롤 | 구현 |
+| `player.rewind` | 15초 뒤로 | Back 15 Seconds | 재생 컨트롤 | 구현 |
+| `player.forward` | 15초 앞으로 | Forward 15 Seconds | 재생 컨트롤 | 구현 |
+| `player.volume` | 음량 | Volume | 재생 컨트롤 | 구현 |
+| `player.full_screen` | 전체 화면 | Enter Full Screen | 재생 컨트롤 | 구현 |
 | `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |
 | `player.next_video` | 다음 영상 | Next Video | 버튼 | 구현 |
 | `player.status.buffering` | 재생 준비 중입니다. | Preparing playback. | 상태 | 구현 |

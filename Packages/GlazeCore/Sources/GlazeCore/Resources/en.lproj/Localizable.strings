@@ -45,8 +45,8 @@
 "media.panel.toggle" = "Info";
 "media.panel.tracks" = "Tracks";
 "media.panel.tracks_empty" = "No recognized tracks.";
-"player.empty_title" = "Open a video to prepare subtitles";
-"player.empty_subtitle" = "Start with a local file. If subtitles are missing, Glaze will help prepare them.";
+"player.empty_title" = "Drop a video and start watching";
+"player.empty_subtitle" = "Open any format. Glaze stays out of the way until you need subtitles.";
 "player.drop_hint" = "Drop a video or folder";
 "player.drop_subtitle" = "Videos in the same folder are added to the playlist.";
 "player.error.compatibility_required" = "This MKV file cannot be opened by macOS playback yet. FFmpeg/remux compatibility handling is required.";
@@ -64,6 +64,12 @@
 "player.no_file" = "No video selected";
 "player.next_video" = "Next Video";
 "player.open_video" = "Open Video";
+"player.play" = "Play";
+"player.pause" = "Pause";
+"player.rewind" = "Back 15 Seconds";
+"player.forward" = "Forward 15 Seconds";
+"player.volume" = "Volume";
+"player.full_screen" = "Enter Full Screen";
 "player.previous_video" = "Previous Video";
 "player.status.buffering" = "Preparing playback.";
 "player.status.preparing_compatibility" = "Preparing an MKV compatibility playback file. Audio will be corrected if needed.";

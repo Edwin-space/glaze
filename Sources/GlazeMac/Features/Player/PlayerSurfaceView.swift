@@ -7,7 +7,7 @@ struct PlayerSurfaceView: NSViewRepresentable {
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
         view.player = player
-        view.controlsStyle = .inline
+        view.controlsStyle = .none
         view.videoGravity = .resizeAspect
         view.allowsPictureInPicturePlayback = true
         view.showsFullScreenToggleButton = true

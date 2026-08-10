@@ -6,11 +6,16 @@ import Observation
 @Observable
 final class PlaybackController {
     var player: AVPlayer?
+    let nativeVLCSession = NativeVLCPlaybackSession()
     var activePlaybackEngine: PlaybackEngineKind = .none
     var currentVideoURL: URL?
     var currentPlaybackURL: URL?
     var errorMessage: String?
     var isPreparingCompatibilityPlayback = false
+    private(set) var isPlaying = false
+    private(set) var currentTime: TimeInterval = 0
+    private(set) var duration: TimeInterval = 0
+    var volume: Double = 1
 
     /// Fired on every periodic time update so other controllers (subtitles) can react without owning the player.
     var onTimeUpdate: ((TimeInterval) -> Void)?
@@ -29,6 +34,9 @@ final class PlaybackController {
 
     func loadWithNativeEngine(_ url: URL) {
         beginNewPlaybackSession()
+        nativeVLCSession.onTimeUpdate = { [weak self] time in
+            self?.onTimeUpdate?(time)
+        }
         player = nil
         activePlaybackEngine = .nativeVLC
         currentVideoURL = url
@@ -59,6 +67,9 @@ final class PlaybackController {
         player?.replaceCurrentItem(with: nil)
         activePlaybackEngine = .none
         isPreparingCompatibilityPlayback = false
+        isPlaying = false
+        currentTime = 0
+        duration = 0
     }
 
     func stopForWindowClose() {
@@ -71,6 +82,66 @@ final class PlaybackController {
         observedPlayer = nil
         activePlaybackEngine = .none
         isPreparingCompatibilityPlayback = false
+        isPlaying = false
+        currentTime = 0
+        duration = 0
+    }
+
+    var displayedIsPlaying: Bool {
+        activePlaybackEngine == .nativeVLC ? nativeVLCSession.isPlaying : isPlaying
+    }
+
+    var displayedCurrentTime: TimeInterval {
+        activePlaybackEngine == .nativeVLC ? nativeVLCSession.currentTime : currentTime
+    }
+
+    var displayedDuration: TimeInterval {
+        activePlaybackEngine == .nativeVLC ? nativeVLCSession.duration : duration
+    }
+
+    var displayedVolume: Double {
+        activePlaybackEngine == .nativeVLC ? nativeVLCSession.volume : volume
+    }
+
+    func togglePlayback() {
+        switch activePlaybackEngine {
+        case .nativeVLC:
+            nativeVLCSession.togglePlayback()
+        case .avkit:
+            guard let player else { return }
+            player.timeControlStatus == .playing ? player.pause() : player.play()
+        case .none:
+            break
+        }
+    }
+
+    func seek(to time: TimeInterval) {
+        let nextTime = min(max(time, 0), max(displayedDuration, 0))
+        switch activePlaybackEngine {
+        case .nativeVLC:
+            nativeVLCSession.seek(to: nextTime)
+        case .avkit:
+            player?.seek(to: CMTime(seconds: nextTime, preferredTimescale: 600))
+        case .none:
+            break
+        }
+    }
+
+    func skip(by offset: TimeInterval) {
+        seek(to: displayedCurrentTime + offset)
+    }
+
+    func setVolume(_ value: Double) {
+        let nextVolume = min(max(value, 0), 1)
+        volume = nextVolume
+        switch activePlaybackEngine {
+        case .nativeVLC:
+            nativeVLCSession.setVolume(nextVolume)
+        case .avkit:
+            player?.volume = Float(nextVolume)
+        case .none:
+            break
+        }
     }
 
     var isCurrentContainerKnownCompatibilityRisk: Bool {
@@ -124,6 +195,7 @@ final class PlaybackController {
                 } else if observedPlayer.timeControlStatus == .playing {
                     self.errorMessage = nil
                 }
+                self.isPlaying = observedPlayer.timeControlStatus == .playing
             }
         }
     }
@@ -133,6 +205,10 @@ final class PlaybackController {
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             Task { @MainActor in
                 self?.onTimeUpdate?(time.seconds)
+                self?.currentTime = max(time.seconds, 0)
+                if let duration = player.currentItem?.duration.seconds, duration.isFinite {
+                    self?.duration = max(duration, 0)
+                }
             }
         }
         observedPlayer = player

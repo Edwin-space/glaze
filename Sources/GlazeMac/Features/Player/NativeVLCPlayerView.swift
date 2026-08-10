@@ -1,34 +1,93 @@
 import AppKit
+import Observation
 import SwiftUI
 
 struct NativeVLCSurfaceView: NSViewRepresentable {
     let url: URL
+    let session: NativeVLCPlaybackSession
     let onFailure: (String) -> Void
 
     func makeNSView(context: Context) -> NativeVLCPlayerView {
         let view = NativeVLCPlayerView()
         view.onFailure = onFailure
+        session.attach(view)
         view.load(url)
         return view
     }
 
     func updateNSView(_ view: NativeVLCPlayerView, context: Context) {
         view.onFailure = onFailure
+        session.attach(view)
         view.load(url)
     }
 
     static func dismantleNSView(_ nsView: NativeVLCPlayerView, coordinator: ()) {
+        nsView.session?.detach(nsView)
         nsView.stopPlayback()
     }
 }
 
+@MainActor
+@Observable
+final class NativeVLCPlaybackSession {
+    private(set) var isPlaying = false
+    private(set) var currentTime: TimeInterval = 0
+    private(set) var duration: TimeInterval = 0
+    var volume: Double = 1
+    var onTimeUpdate: ((TimeInterval) -> Void)?
+
+    fileprivate weak var playerView: NativeVLCPlayerView?
+
+    func attach(_ view: NativeVLCPlayerView) {
+        guard playerView !== view else { return }
+        playerView = view
+        view.session = self
+    }
+
+    func detach(_ view: NativeVLCPlayerView) {
+        guard playerView === view else { return }
+        playerView = nil
+        reset()
+    }
+
+    func togglePlayback() {
+        playerView?.setPaused(isPlaying)
+    }
+
+    func seek(to time: TimeInterval) {
+        playerView?.seek(to: time)
+    }
+
+    func setVolume(_ value: Double) {
+        volume = min(max(value, 0), 1)
+        playerView?.setVolume(volume)
+    }
+
+    fileprivate func update(isPlaying: Bool, currentTime: TimeInterval, duration: TimeInterval, volume: Double) {
+        self.isPlaying = isPlaying
+        self.currentTime = currentTime
+        self.duration = duration
+        self.volume = volume
+        onTimeUpdate?(currentTime)
+    }
+
+    fileprivate func reset() {
+        isPlaying = false
+        currentTime = 0
+        duration = 0
+    }
+}
+
+@MainActor
 final class NativeVLCPlayerView: NSView {
     var onFailure: ((String) -> Void)?
+    weak var session: NativeVLCPlaybackSession?
 
     private var library: NativeVLCLibrary?
     private var player: NativeVLCLibrary.MediaPlayerHandle?
     private var loadedURL: URL?
     private var securityScopedURL: URL?
+    private var progressTask: Task<Void, Never>?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -101,10 +160,53 @@ final class NativeVLCPlayerView: NSView {
         _ = library.play(player)
 
         self.library = library
+        setVolume(session?.volume ?? 1)
+        startProgressUpdates()
     }
 
     func stopPlayback() {
         releasePlaybackResources()
+    }
+
+    func setPaused(_ paused: Bool) {
+        guard let library, let player else { return }
+        library.setPause(player, paused ? 1 : 0)
+        updateSession()
+    }
+
+    func seek(to time: TimeInterval) {
+        guard let library, let player else { return }
+        _ = library.setTime(player, Int64(max(time, 0) * 1_000))
+        updateSession()
+    }
+
+    func setVolume(_ volume: Double) {
+        guard let library, let player else { return }
+        _ = library.setVolume(player, Int32(min(max(volume, 0), 1) * 100))
+        updateSession()
+    }
+
+    private func startProgressUpdates() {
+        progressTask?.cancel()
+        progressTask = Task { [weak self] in
+            while !Task.isCancelled {
+                self?.updateSession()
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
+    }
+
+    private func updateSession() {
+        guard let library, let player else { return }
+        let currentTime = max(TimeInterval(library.getTime(player)) / 1_000, 0)
+        let duration = max(TimeInterval(library.getLength(player)) / 1_000, 0)
+        let volume = max(Double(library.getVolume(player)) / 100, 0)
+        session?.update(
+            isPlaying: library.isPlaying(player) != 0,
+            currentTime: currentTime,
+            duration: duration,
+            volume: volume
+        )
     }
 
     private func reusablePlayer(using library: NativeVLCLibrary, instance: NativeVLCLibrary.InstanceHandle) -> NativeVLCLibrary.MediaPlayerHandle? {
@@ -122,6 +224,8 @@ final class NativeVLCPlayerView: NSView {
     }
 
     private func stopCurrentMedia() {
+        progressTask?.cancel()
+        progressTask = nil
         if let library, let player {
             library.stop(player)
             library.setMedia(player, nil)
@@ -129,9 +233,12 @@ final class NativeVLCPlayerView: NSView {
 
         releaseSecurityScopedURL()
         loadedURL = nil
+        session?.reset()
     }
 
     private func releasePlaybackResources() {
+        progressTask?.cancel()
+        progressTask = nil
         if let library {
             if let player {
                 library.stop(player)
@@ -145,6 +252,7 @@ final class NativeVLCPlayerView: NSView {
         releaseSecurityScopedURL()
         loadedURL = nil
         self.library = nil
+        session?.reset()
     }
 
     private func releaseSecurityScopedURL() {

@@ -144,10 +144,10 @@ scripts/
 
 - 같은 폴더의 sidecar 자막 파일 감지
 - 감지 패턴: `movie.srt`, `movie.vtt`, `movie.smi`, `movie.ko.srt`, `movie.ko.vtt`, `movie.ko.smi`, `movie.en.srt`, `movie.en.vtt`, `movie.en.smi`, `movie.original.srt`
-- 영상 하단 자막 문맥 바에 감지 결과 표시
+- 영상 하단 transport controls에 자막 감지 결과 표시
 - 자막 패널에서 SRT/VTT/SMI 파일 수동 불러오기
 - SRT/VTT/SMI 기본 파싱 및 영상 위 자막 오버레이 표시
-- 자막 문맥 바와 자막 인스펙터에서 자막 표시/숨김 전환
+- transport controls와 자막 Inspector에서 자막 표시/숨김 전환
 - SMI 레거시 인코딩 대응: UTF 계열, EUC-KR, CP949 계열, ISO Latin 1 순서로 읽기 시도
 - SMI 기본 정리: head/style/script 제거, `<P Class=...>` 구간 기반 한국어 클래스 우선 표시
 - 여러 자막 파일이 감지되거나 수동 추가된 경우 자막 패널에서 선택/전환
@@ -229,7 +229,9 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - VLC 파일 캐시 옵션을 낮춰 로컬 대용량 파일의 첫 프레임 대기 시간을 줄임
 - Native VLC surface는 media player를 매 파일마다 새로 만들지 않고, 같은 player에 media만 교체해 전환 비용을 줄임
 - 단일 파일 드롭 시 재생목록 패널을 자동으로 열지 않아 첫 렌더 중 영상 표면 크기가 흔들리지 않게 처리
-- 재생/일시정지/탐색/볼륨 제어를 공통 플레이어 상태로 연결
+- 재생/일시정지/±15초 탐색/scrubber/볼륨 제어를 AVKit·VLC 공통 플레이어 상태로 연결 완료
+- VLC 재생 시간 갱신을 외부 자막 cue 동기화에 연결 완료
+- Space 재생/일시정지, 더블클릭 전체 화면, 재생 중 transport controls 자동 숨김 구현
 - 다중 오디오 트랙, 내장 자막 트랙, ASS/SSA 자막 대응
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 오디오 추출 작업으로 재분류
 
@@ -272,10 +274,11 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 ### 진행 중 구현
 
 - `MediaAsset` 기초 모델 추가: 파일 위치, 보관 소스, 작품 메타데이터, 자막 준비 상태, 시청 위치
-- macOS 창 툴바 + 영상 스테이지 + 하단 자막 문맥 바 + 단일 우측 인스펙터로 Player Shell 전면 재설계
-- 자막/재생목록/미디어 정보/AI 미디어 패널을 공통 `PlayerInspectorLayout`과 단일 `activePanel` 상태로 통합
+- macOS unified compact 툴바 + edge-to-edge 영상 스테이지 + Liquid Glass transport controls로 Player Shell 전면 재설계
+- 자막/재생목록/미디어 정보/AI 미디어 패널을 네이티브 SwiftUI `inspector`와 단일 `activePanel` 상태로 통합
 - 상시 노출 AI 미디어 버블 제거, 툴바 패널 메뉴로 진입점 이동
-- 커스텀 유약 그래픽/그라데이션/색상 토큰 제거, 시스템 배경·material·tint·SF Symbols 적용
+- 카드형 커스텀 Inspector 제거, `Form`/`Section`/`LabeledContent`/`List`/segmented `Picker` 적용
+- 콘텐츠는 어두운 미디어 스테이지, 조작은 `glassEffect`/glass button style과 SF Symbols로 분리
 - 작품 정보 찾기, 자막 준비, 파일 정보 반영 액션 자리 표시
 - 원본 파일 쓰기는 기본값이 아니라 명시적 액션으로 분리
 
@@ -284,7 +287,6 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - TMDB/IMDb/TVDB 등 메타데이터 공급자 추상화 설계
 - sidecar metadata 저장 포맷 결정
 - 포스터/줄거리/시즌/에피소드 매칭 UI 설계
-- VLC 재생 제어 API를 Player Shell에 연결해 재생/일시정지·탐색·볼륨 컨트롤 완성
 
 ## Phase 4. AI 자막 기술 검증
 

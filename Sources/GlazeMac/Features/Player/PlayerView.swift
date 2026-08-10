@@ -11,74 +11,44 @@ struct PlayerView: View {
 
     @State private var activePanel: PlayerPanel?
     @State private var isDropTargeted = false
+    @State private var areControlsVisible = true
+    @State private var isSeeking = false
+    @State private var hideControlsTask: Task<Void, Never>?
 
     var body: some View {
-        HStack(spacing: 0) {
-            videoSurface
-
-            if let activePanel {
-                Divider()
-                panelView(for: activePanel)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+        videoStage
+            .inspector(isPresented: inspectorPresentation) {
+                playerInspector
+                    .inspectorColumnWidth(min: 300, ideal: 340, max: 420)
             }
-        }
-        .background(.black)
-        .animation(.snappy(duration: 0.24), value: activePanel)
-        .toolbar {
-            playerToolbar
-        }
-        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
-            handleDrop(providers)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { notification in
-            guard let endedItem = notification.object as? AVPlayerItem,
-                  endedItem === playback.player?.currentItem else {
-                return
-            }
-
-            playNextPlaylistItem()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in
-            openVideo()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openMediaURL)) { notification in
-            guard let url = notification.object as? URL else {
-                return
-            }
-
-            openMedia(from: url)
-        }
-        .onAppear {
-            configureControllers()
-            NativeVLCLibrary.prewarm()
-            if let url = PendingOpenMediaURLs.consumeFirst() {
+            .toolbar { playerToolbar }
+            .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
+            .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime), perform: handlePlaybackEnd)
+            .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in openVideo() }
+            .onReceive(NotificationCenter.default.publisher(for: .openMediaURL)) { notification in
+                guard let url = notification.object as? URL else { return }
                 openMedia(from: url)
             }
-        }
-        .onDisappear {
-            playback.stopForWindowClose()
-        }
+            .onAppear {
+                configureControllers()
+                NativeVLCLibrary.prewarm()
+                if let url = PendingOpenMediaURLs.consumeFirst() {
+                    openMedia(from: url)
+                }
+            }
+            .onDisappear {
+                hideControlsTask?.cancel()
+                playback.stopForWindowClose()
+            }
     }
 
-    /// Wires the four controllers together. Called from `.onAppear`; safe to call more than once.
-    private func configureControllers() {
-        playback.onTimeUpdate = { time in
-            subtitles.updateActiveCue(at: time)
-        }
-        playback.onPlaybackFailureNeedsAttention = {
-            activePanel = .media
-        }
-        playback.onCompatibilityRemuxSucceeded = { originalURL, remuxedURL in
-            loadVideo(
-                originalURL: originalURL,
-                playbackURL: remuxedURL,
-                playlist: playlistStore.items,
-                shouldStartPlayback: true
-            )
-        }
-        subtitles.onGenerationFinished = {
-            mediaAssets.markSubtitleGenerated()
-        }
+    private var inspectorPresentation: Binding<Bool> {
+        Binding(
+            get: { activePanel != nil },
+            set: { isPresented in
+                if !isPresented { activePanel = nil }
+            }
+        )
     }
 
     private var currentFileName: String {
@@ -89,24 +59,18 @@ struct PlayerView: View {
     private var playerToolbar: some ToolbarContent {
         if playback.currentVideoURL != nil {
             ToolbarItem(placement: .principal) {
-                VStack(spacing: 0) {
-                    Text(currentFileName)
-                        .font(.headline)
-                        .lineLimit(1)
-                    Text(L10n.string(subtitles.status.titleKey))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: 360)
+                Text(currentFileName)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .frame(maxWidth: 420)
+                    .help(currentFileName)
             }
-        }
 
-        ToolbarItemGroup(placement: .primaryAction) {
-            if playback.currentVideoURL != nil {
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     togglePanel(.subtitles)
                 } label: {
-                    Label(L10n.string("subtitle.panel.toggle"), systemImage: "captions.bubble")
+                    Label(L10n.string("subtitle.panel.toggle"), systemImage: subtitles.status.iconName)
                 }
                 .help(L10n.string("subtitle.panel.toggle"))
 
@@ -114,30 +78,34 @@ struct PlayerView: View {
                     panelMenuButton(.playlist, key: "playlist.panel.toggle", systemImage: "list.bullet")
                         .disabled(playlistStore.items.isEmpty)
                     panelMenuButton(.media, key: "media.panel.toggle", systemImage: "info.circle")
-                    Divider()
                     panelMenuButton(.assistant, key: "assistant.panel.toggle", systemImage: "sparkles")
                 } label: {
                     Label(L10n.string("player.inspector"), systemImage: "sidebar.right")
                 }
                 .help(L10n.string("player.inspector"))
-            }
 
-            Button {
-                openVideo()
-            } label: {
-                Label(L10n.string("player.open_video"), systemImage: "folder")
+                Button(action: openVideo) {
+                    Label(L10n.string("player.open_video"), systemImage: "folder")
+                }
+                .help(L10n.string("player.open_video"))
             }
-            .buttonStyle(.borderedProminent)
-            .help(L10n.string("player.open_video"))
+        } else {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: openVideo) {
+                    Label(L10n.string("player.open_video"), systemImage: "folder")
+                }
+                .buttonStyle(.glassProminent)
+                .help(L10n.string("player.open_video"))
+            }
         }
     }
 
-    private var videoSurface: some View {
+    private var videoStage: some View {
         ZStack {
             Color.black
 
             if playback.activePlaybackEngine == .nativeVLC, let currentVideoURL = playback.currentVideoURL {
-                NativeVLCSurfaceView(url: currentVideoURL) { message in
+                NativeVLCSurfaceView(url: currentVideoURL, session: playback.nativeVLCSession) { message in
                     playback.errorMessage = "\(L10n.string("player.error.native_engine_unavailable")) \(message)"
                 }
                 subtitleOverlay
@@ -145,11 +113,11 @@ struct PlayerView: View {
                 PlayerSurfaceView(player: player)
                 subtitleOverlay
             } else {
-                emptyState
+                emptyStage
             }
 
             if playback.currentVideoURL != nil {
-                playbackOverlay
+                playerChrome
             }
 
             if let errorMessage = playback.errorMessage {
@@ -160,573 +128,464 @@ struct PlayerView: View {
                 dropTargetOverlay
             }
         }
+        .background(.black)
         .clipped()
+        .focusable()
+        .onKeyPress(.space) {
+            playback.togglePlayback()
+            revealControls()
+            return .handled
+        }
+        .onContinuousHover { phase in
+            switch phase {
+            case .active:
+                revealControls()
+            case .ended:
+                scheduleControlsToHide()
+            }
+        }
+        .onTapGesture(count: 2) {
+            NSApp.keyWindow?.toggleFullScreen(nil)
+        }
     }
 
-    private var dropTargetOverlay: some View {
+    private var emptyStage: some View {
         ZStack {
-            Color.accentColor.opacity(0.16)
+            RadialGradient(
+                colors: [Color.white.opacity(0.075), Color.clear],
+                center: .center,
+                startRadius: 20,
+                endRadius: 420
+            )
 
-            RoundedRectangle(cornerRadius: 20)
-                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
+            VStack(spacing: 20) {
+                Image(systemName: "play.rectangle.on.rectangle")
+                    .font(.system(size: 48, weight: .light))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.white.opacity(0.72))
 
-            VStack(spacing: GlazeSpacing.sm) {
-                Image(systemName: "arrow.down.doc")
-                    .font(.system(size: 34, weight: .medium))
-                Text(L10n.string("player.drop_hint"))
-                    .font(.system(.headline, design: .rounded))
-                Text(L10n.string("player.drop_subtitle"))
+                VStack(spacing: 7) {
+                    Text(L10n.string("player.empty_title"))
+                        .font(.system(size: 24, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+
+                    Text(L10n.string("player.empty_subtitle"))
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.56))
+                        .multilineTextAlignment(.center)
+                }
+
+                Button(action: openVideo) {
+                    Label(L10n.string("player.open_video"), systemImage: "folder")
+                        .padding(.horizontal, 6)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(.accentColor)
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
+
+                Label(L10n.string("player.drop_subtitle"), systemImage: "arrow.down.doc")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.42))
             }
-            .foregroundStyle(.white)
+            .frame(maxWidth: 520)
+            .padding(48)
         }
-        .padding(GlazeSpacing.xl)
+    }
+
+    private var playerChrome: some View {
+        VStack(spacing: 0) {
+            LinearGradient(
+                colors: [.black.opacity(0.52), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 96)
+            .opacity(areControlsVisible ? 1 : 0)
+
+            Spacer()
+
+            transportControls
+                .padding(.horizontal, 24)
+                .padding(.bottom, 22)
+                .opacity(areControlsVisible ? 1 : 0)
+                .offset(y: areControlsVisible ? 0 : 12)
+                .allowsHitTesting(areControlsVisible)
+        }
+        .animation(.easeOut(duration: 0.18), value: areControlsVisible)
+    }
+
+    private var transportControls: some View {
+        PlayerTransportControls(
+            isPlaying: playback.displayedIsPlaying,
+            currentTime: playback.displayedCurrentTime,
+            duration: playback.displayedDuration,
+            volume: playback.displayedVolume,
+            canPlayPrevious: canPlayPrevious,
+            canPlayNext: canPlayNext,
+            subtitleStatusIcon: subtitles.status.iconName,
+            subtitleStatusTitle: L10n.string(subtitles.status.titleKey),
+            hasSubtitles: !subtitles.subtitleCues.isEmpty,
+            areSubtitlesVisible: subtitles.isSubtitleVisible,
+            onPlayPause: {
+                playback.togglePlayback()
+                revealControls()
+            },
+            onSkip: playback.skip,
+            onSeek: playback.seek,
+            onVolumeChange: playback.setVolume,
+            onPrevious: playPreviousPlaylistItem,
+            onNext: playNextPlaylistItem,
+            onOpenSubtitles: { togglePanel(.subtitles) },
+            onToggleSubtitles: { subtitles.isSubtitleVisible.toggle() },
+            onGenerateSubtitles: { activePanel = .subtitles },
+            onToggleFullScreen: { NSApp.keyWindow?.toggleFullScreen(nil) },
+            onSeekingChanged: { editing in
+                isSeeking = editing
+                editing ? hideControlsTask?.cancel() : scheduleControlsToHide()
+            }
+        )
+    }
+
+    private func revealControls() {
+        areControlsVisible = true
+        scheduleControlsToHide()
+    }
+
+    private func scheduleControlsToHide() {
+        hideControlsTask?.cancel()
+        guard playback.displayedIsPlaying, !isSeeking else { return }
+        hideControlsTask = Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            areControlsVisible = false
+        }
     }
 
     private var subtitleOverlay: some View {
         VStack {
             Spacer()
-
             if subtitles.isSubtitleVisible, !subtitles.activeSubtitleText.isEmpty {
                 Text(subtitles.activeSubtitleText)
                     .font(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
-                    .padding(.horizontal, GlazeSpacing.lg)
-                    .padding(.vertical, GlazeSpacing.sm)
-                    .background(.black.opacity(0.68), in: RoundedRectangle(cornerRadius: 8))
-                    .shadow(radius: 2)
-                    .padding(.horizontal, GlazeSpacing.xl)
-                    .padding(.bottom, 56)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 9)
+                    .background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 8))
+                    .shadow(radius: 3)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, areControlsVisible ? 166 : 34)
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.12), value: subtitles.activeSubtitleText)
+        .animation(.easeInOut(duration: 0.15), value: subtitles.activeSubtitleText)
+        .animation(.easeOut(duration: 0.18), value: areControlsVisible)
     }
 
-    private var emptyState: some View {
+    private var dropTargetOverlay: some View {
         ZStack {
-            Color(nsColor: .windowBackgroundColor)
+            Rectangle().fill(.black.opacity(0.62))
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(.white.opacity(0.68), style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+                .padding(28)
 
-            ContentUnavailableView {
-                Label(L10n.string("player.empty_title"), systemImage: "play.rectangle.on.rectangle")
-            } description: {
-                Text(L10n.string("player.empty_subtitle"))
-            } actions: {
-                Button {
-                    openVideo()
-                } label: {
-                    Label(L10n.string("player.open_video"), systemImage: "folder")
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .keyboardShortcut(.defaultAction)
-
+            VStack(spacing: 10) {
+                Image(systemName: "arrow.down.doc.fill")
+                    .font(.system(size: 36, weight: .medium))
+                Text(L10n.string("player.drop_hint"))
+                    .font(.title3.weight(.semibold))
                 Text(L10n.string("player.drop_subtitle"))
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: 520)
-        }
-    }
-
-    private var playbackOverlay: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            HStack(spacing: GlazeSpacing.md) {
-                Button {
-                    togglePanel(.subtitles)
-                } label: {
-                    HStack(spacing: GlazeSpacing.sm) {
-                        Image(systemName: subtitles.status.iconName)
-                            .foregroundStyle(subtitles.status.tint)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(L10n.string(subtitles.status.titleKey))
-                                .font(.caption.weight(.semibold))
-                            Text(subtitles.statusHint(hasPlayer: true))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-
-                Spacer(minLength: GlazeSpacing.lg)
-
-                ControlGroup {
-                    Button(action: playPreviousPlaylistItem) {
-                        Label(L10n.string("player.previous_video"), systemImage: "backward.end.fill")
-                    }
-                    .disabled(!canPlayPrevious)
-
-                    Button(action: playNextPlaylistItem) {
-                        Label(L10n.string("player.next_video"), systemImage: "forward.end.fill")
-                    }
-                    .disabled(!canPlayNext)
-                }
-                .labelStyle(.iconOnly)
-
-                Button {
-                    subtitles.isSubtitleVisible.toggle()
-                } label: {
-                    Label(
-                        L10n.string(subtitles.isSubtitleVisible ? "subtitle.visibility.hide" : "subtitle.visibility.show"),
-                        systemImage: subtitles.isSubtitleVisible ? "captions.bubble.fill" : "captions.bubble"
-                    )
-                }
-                .labelStyle(.iconOnly)
-                .disabled(subtitles.subtitleCues.isEmpty)
-
-                Button {
-                    activePanel = .subtitles
-                } label: {
-                    Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(subtitles.isGenerating)
-            }
-            .padding(.horizontal, GlazeSpacing.lg)
-            .padding(.vertical, GlazeSpacing.sm)
-            .background(.regularMaterial)
-            .overlay(alignment: .top) {
-                Divider()
-            }
+            .foregroundStyle(.white)
         }
     }
 
     private func playbackNotice(_ message: String) -> some View {
         VStack {
-            HStack(spacing: GlazeSpacing.sm) {
+            HStack(spacing: 10) {
                 if playback.isPreparingCompatibilityPlayback {
-                    ProgressView()
-                        .controlSize(.small)
+                    ProgressView().controlSize(.small)
                 } else {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                 }
-
-                Text(message)
-                    .font(.caption)
-                    .lineLimit(2)
-
+                Text(message).font(.callout).lineLimit(2)
                 Spacer()
-
                 Button {
                     activePanel = .media
                 } label: {
                     Label(L10n.string("media.panel.toggle"), systemImage: "info.circle")
                 }
-                .controlSize(.small)
             }
-            .padding(GlazeSpacing.md)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-            .padding(GlazeSpacing.lg)
-
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(18)
             Spacer()
         }
+        .foregroundStyle(.white)
+    }
+
+    private var playerInspector: some View {
+        VStack(spacing: 0) {
+            Picker(L10n.string("player.inspector"), selection: panelSelection) {
+                Label(L10n.string("subtitle.panel.toggle"), systemImage: "captions.bubble").tag(PlayerPanel.subtitles)
+                Label(L10n.string("playlist.panel.toggle"), systemImage: "list.bullet").tag(PlayerPanel.playlist)
+                Label(L10n.string("media.panel.toggle"), systemImage: "info.circle").tag(PlayerPanel.media)
+                Label(L10n.string("assistant.panel.toggle"), systemImage: "sparkles").tag(PlayerPanel.assistant)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(12)
+
+            Divider()
+            panelView(for: activePanel ?? .subtitles)
+        }
+    }
+
+    private var panelSelection: Binding<PlayerPanel> {
+        Binding(
+            get: { activePanel ?? .subtitles },
+            set: { activePanel = $0 }
+        )
     }
 
     private var subtitlePanel: some View {
-        PlayerInspectorLayout(
-            title: L10n.string("subtitle.panel.title"),
-            subtitle: L10n.string("subtitle.panel.subtitle"),
-            systemImage: "captions.bubble",
-            onClose: closePanel
-        ) {
-            InspectorSection(L10n.string("subtitle.panel.preparation")) {
-                panelRow(icon: "waveform", titleKey: "subtitle.panel.language", valueKey: "subtitle.panel.auto_detect")
-                Divider()
-                panelRow(icon: "captions.bubble", titleKey: "subtitle.panel.output", value: subtitles.panelOutputValue)
-                Divider()
-                panelRow(icon: "speedometer", titleKey: "subtitle.panel.mode", valueKey: "subtitle.panel.mode_standard")
-                Divider()
-                panelRow(icon: "internaldrive", titleKey: "subtitle.panel.storage", valueKey: "subtitle.panel.storage_ask")
+        Form {
+            Section {
+                LabeledContent(L10n.string("subtitle.panel.language"), value: L10n.string("subtitle.panel.auto_detect"))
+                LabeledContent(L10n.string("subtitle.panel.output"), value: subtitles.panelOutputValue)
+                LabeledContent(L10n.string("subtitle.panel.mode"), value: L10n.string("subtitle.panel.mode_standard"))
+                LabeledContent(L10n.string("subtitle.panel.storage"), value: L10n.string("subtitle.panel.storage_ask"))
+            } header: {
+                inspectorHeader("subtitle.panel.title", detailKey: "subtitle.panel.subtitle")
             }
 
-            InspectorSection(L10n.string("subtitle.panel.files")) {
+            Section(L10n.string("subtitle.panel.files")) {
                 subtitleFileSection
-
-                Toggle(
-                    L10n.string("subtitle.visibility.toggle"),
-                    isOn: Binding(
-                        get: { subtitles.isSubtitleVisible },
-                        set: { subtitles.isSubtitleVisible = $0 }
-                    )
-                )
-                .disabled(subtitles.subtitleCues.isEmpty)
+                Toggle(L10n.string("subtitle.visibility.toggle"), isOn: $subtitles.isSubtitleVisible)
+                    .disabled(subtitles.subtitleCues.isEmpty)
             }
 
             if let errorMessage = subtitles.errorMessage {
-                subtitleErrorCard(errorMessage)
+                Section { issueLabel(titleKey: "subtitle.error.title", message: errorMessage) }
             }
-        } footer: {
-            if subtitles.isGenerating {
-                generationProgressCard
-            } else {
-                Button {
-                    importSubtitle()
-                } label: {
-                    Label(L10n.string("subtitle.import"), systemImage: "text.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .disabled(playback.currentVideoURL == nil)
+        }
+        .formStyle(.grouped)
+        .safeAreaInset(edge: .bottom) {
+            subtitleActions
+        }
+    }
 
-                Button {
-                    generateSubtitle()
-                } label: {
-                    Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
+    private var subtitleActions: some View {
+        VStack(spacing: 8) {
+            Divider()
+            if subtitles.isGenerating {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(generationStageText).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button(L10n.string("subtitle.generate.cancel")) { subtitles.cancelGenerating() }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(playback.currentVideoURL == nil)
+            } else {
+                HStack {
+                    Button(action: importSubtitle) {
+                        Label(L10n.string("subtitle.import"), systemImage: "text.badge.plus")
+                    }
+                    Spacer()
+                    Button(action: generateSubtitle) {
+                        Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .padding(12)
+        .background(.bar)
+    }
+
+    private var subtitleFileSection: some View {
+        Group {
+            if subtitles.detectedSubtitles.isEmpty {
+                Label(L10n.string("subtitle.panel.files_empty"), systemImage: "captions.bubble")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(subtitles.detectedSubtitles) { subtitle in
+                    Button { subtitles.load(subtitle) } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(subtitle.displayName).lineLimit(1)
+                                Text(subtitles.kindLabel(for: subtitle.kind))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if subtitles.selectedSubtitlePath == subtitle.url.path {
+                                Image(systemName: "checkmark").foregroundStyle(.tint)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }
 
-    private var generationProgressCard: some View {
-        VStack(alignment: .leading, spacing: GlazeSpacing.sm) {
-            HStack(spacing: GlazeSpacing.sm) {
-                ProgressView()
-                    .controlSize(.small)
-                Text(generationStageText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    private var playlistPanel: some View {
+        List(playlistStore.items, selection: Binding<String?>(
+            get: { playback.currentVideoURL?.path },
+            set: { path in
+                guard let item = playlistStore.items.first(where: { $0.url.path == path }) else { return }
+                loadVideo(item.url, playlist: playlistStore.items, shouldStartPlayback: true)
+            }
+        )) { item in
+            Label(item.displayName, systemImage: playback.currentVideoURL?.path == item.url.path ? "play.fill" : "film")
+                .tag(item.url.path)
+        }
+        .safeAreaInset(edge: .top) {
+            inspectorTitleBar("playlist.panel.title", detail: playlistSummary)
+        }
+        .overlay {
+            if playlistStore.items.isEmpty {
+                ContentUnavailableView(L10n.string("playlist.panel.empty"), systemImage: "list.bullet")
+            }
+        }
+    }
+
+    private var mediaPanel: some View {
+        Form {
+            Section {
+                if mediaAssets.isInspectingMedia {
+                    HStack { ProgressView().controlSize(.small); Text(L10n.string("media.panel.inspecting")) }
+                } else if let inspection = mediaAssets.mediaInspection {
+                    LabeledContent(L10n.string("media.panel.container"), value: inspection.containerHint.isEmpty ? "–" : inspection.containerHint)
+                    LabeledContent(L10n.string("media.panel.duration"), value: inspection.duration)
+                    LabeledContent(L10n.string("media.panel.avkit"), value: avKitSupportText(for: inspection.isPlayable))
+                } else {
+                    Label(L10n.string("media.panel.empty"), systemImage: "info.circle")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                inspectorHeader("media.panel.title", detailKey: "media.panel.subtitle")
             }
 
-            Button {
-                subtitles.cancelGenerating()
-            } label: {
-                Label(L10n.string("subtitle.generate.cancel"), systemImage: "xmark.circle")
-                    .frame(maxWidth: .infinity)
+            if let inspection = mediaAssets.mediaInspection, !inspection.tracks.isEmpty {
+                Section(L10n.string("media.panel.tracks")) {
+                    ForEach(inspection.tracks) { track in
+                        LabeledContent {
+                            Text(track.detail).foregroundStyle(.secondary).lineLimit(2)
+                        } label: {
+                            Label("\(track.title) · \(track.codec)", systemImage: mediaTrackIcon(for: track.title))
+                        }
+                    }
+                }
             }
-            .buttonStyle(.bordered)
+
+            if let message = mediaAssets.mediaInspection?.errorMessage {
+                Section { issueLabel(titleKey: "media.error.title", message: message) }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var assistantPanel: some View {
+        Form {
+            Section {
+                if let asset = mediaAssets.currentMediaAsset {
+                    LabeledContent(L10n.string("assistant.metadata.status"), value: L10n.string(asset.metadata.matchStatus.labelKey))
+                    LabeledContent(L10n.string("assistant.subtitle.status"), value: L10n.string(asset.subtitleReadiness.labelKey))
+                    LabeledContent(L10n.string("assistant.media.source"), value: L10n.string(asset.source.labelKey))
+                } else {
+                    Label(L10n.string("assistant.panel.empty"), systemImage: "sparkles")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                inspectorHeader("assistant.panel.title", detailKey: "assistant.panel.subtitle")
+            }
+
+            if mediaAssets.currentMediaAsset != nil {
+                Section(L10n.string("assistant.panel.suggestions")) {
+                    assistantAction("assistant.action.match_metadata", detailKey: "assistant.action.match_metadata_hint", icon: "magnifyingglass")
+                    assistantAction("assistant.action.prepare_subtitles", detailKey: "assistant.action.prepare_subtitles_hint", icon: "captions.bubble")
+                    assistantAction("assistant.action.write_metadata", detailKey: "assistant.action.write_metadata_hint", icon: "square.and.pencil")
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func inspectorHeader(_ titleKey: String, detailKey: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(L10n.string(titleKey)).font(.title2.weight(.semibold)).textCase(nil)
+            Text(L10n.string(detailKey)).font(.caption).foregroundStyle(.secondary).textCase(nil)
+        }
+        .padding(.bottom, 8)
+    }
+
+    private func inspectorTitleBar(_ titleKey: String, detail: String) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.string(titleKey)).font(.title2.weight(.semibold))
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(16)
+        .background(.bar)
+    }
+
+    private func issueLabel(titleKey: String, message: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(L10n.string(titleKey)).fontWeight(.semibold)
+                Text(message).font(.caption).foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+        }
+    }
+
+    private func assistantAction(_ titleKey: String, detailKey: String, icon: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(L10n.string(titleKey))
+                Text(L10n.string(detailKey)).font(.caption).foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: icon).foregroundStyle(.tint)
         }
     }
 
     private var generationStageText: String {
         switch subtitles.generationStage {
-        case .extractingAudio:
-            L10n.string("subtitle.generating.stage.extracting_audio")
-        case .preparingModel:
-            L10n.string("subtitle.generating.stage.preparing_model")
-        case .transcribing:
-            L10n.string("subtitle.generating.stage.transcribing")
-        case .none:
-            L10n.string("subtitle.status.generating")
+        case .extractingAudio: L10n.string("subtitle.generating.stage.extracting_audio")
+        case .preparingModel: L10n.string("subtitle.generating.stage.preparing_model")
+        case .transcribing: L10n.string("subtitle.generating.stage.transcribing")
+        case .none: L10n.string("subtitle.status.generating")
         }
+    }
+
+    private func configureControllers() {
+        playback.onTimeUpdate = { time in subtitles.updateActiveCue(at: time) }
+        playback.onPlaybackFailureNeedsAttention = { activePanel = .media }
+        playback.onCompatibilityRemuxSucceeded = { originalURL, remuxedURL in
+            loadVideo(originalURL: originalURL, playbackURL: remuxedURL, playlist: playlistStore.items, shouldStartPlayback: true)
+        }
+        subtitles.onGenerationFinished = { mediaAssets.markSubtitleGenerated() }
+    }
+
+    private func handlePlaybackEnd(_ notification: Notification) {
+        guard let endedItem = notification.object as? AVPlayerItem,
+              endedItem === playback.player?.currentItem else { return }
+        playNextPlaylistItem()
     }
 
     private func generateSubtitle() {
-        guard let url = playback.currentVideoURL else {
-            return
-        }
-
+        guard let url = playback.currentVideoURL else { return }
         subtitles.startGenerating(from: url)
-    }
-
-    private var playlistPanel: some View {
-        PlayerInspectorLayout(
-            title: L10n.string("playlist.panel.title"),
-            subtitle: playlistSummary,
-            systemImage: "list.bullet",
-            onClose: closePanel
-        ) {
-            if playlistStore.items.isEmpty {
-                InspectorEmptyMessage(
-                    text: L10n.string("playlist.panel.empty"),
-                    systemImage: "list.bullet"
-                )
-            } else {
-                VStack(spacing: 2) {
-                    ForEach(playlistStore.items) { item in
-                        Button {
-                            loadVideo(item.url, playlist: playlistStore.items, shouldStartPlayback: true)
-                        } label: {
-                            HStack(spacing: GlazeSpacing.md) {
-                                Image(systemName: playback.currentVideoURL?.path == item.url.path ? "play.fill" : "film")
-                                    .frame(width: 18)
-                                    .foregroundStyle(playback.currentVideoURL?.path == item.url.path ? Color.accentColor : .secondary)
-
-                                Text(item.displayName)
-                                    .font(.callout)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.leading)
-
-                                Spacer()
-
-                                if playback.currentVideoURL?.path == item.url.path {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Color.accentColor)
-                                }
-                            }
-                            .padding(.horizontal, GlazeSpacing.md)
-                            .padding(.vertical, 10)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .background(
-                            playback.currentVideoURL?.path == item.url.path ? Color.accentColor.opacity(0.12) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 8)
-                        )
-                    }
-                }
-            }
-        } footer: {
-            EmptyView()
-        }
-    }
-
-    private var assistantPanel: some View {
-        PlayerInspectorLayout(
-            title: L10n.string("assistant.panel.title"),
-            subtitle: L10n.string("assistant.panel.subtitle"),
-            systemImage: "sparkles",
-            onClose: closePanel
-        ) {
-            if let currentMediaAsset = mediaAssets.currentMediaAsset {
-                InspectorSection {
-                    Text(currentMediaAsset.displayTitle)
-                        .font(.title3.weight(.semibold))
-                        .lineLimit(2)
-
-                    panelRow(icon: "sparkles.tv", titleKey: "assistant.metadata.status", value: L10n.string(currentMediaAsset.metadata.matchStatus.labelKey))
-                    Divider()
-                    panelRow(icon: "captions.bubble", titleKey: "assistant.subtitle.status", value: L10n.string(currentMediaAsset.subtitleReadiness.labelKey))
-                    Divider()
-                    panelRow(icon: "externaldrive", titleKey: "assistant.media.source", value: L10n.string(currentMediaAsset.source.labelKey))
-                }
-
-                InspectorSection(L10n.string("assistant.panel.suggestions")) {
-                    assistantActionRow(icon: "magnifyingglass", titleKey: "assistant.action.match_metadata", subtitleKey: "assistant.action.match_metadata_hint")
-                    Divider()
-                    assistantActionRow(icon: "text.badge.checkmark", titleKey: "assistant.action.prepare_subtitles", subtitleKey: "assistant.action.prepare_subtitles_hint")
-                    Divider()
-                    assistantActionRow(icon: "square.and.pencil", titleKey: "assistant.action.write_metadata", subtitleKey: "assistant.action.write_metadata_hint")
-                }
-            } else {
-                InspectorEmptyMessage(
-                    text: L10n.string("assistant.panel.empty"),
-                    systemImage: "sparkles"
-                )
-            }
-        } footer: {
-            EmptyView()
-        }
-    }
-
-    private var mediaPanel: some View {
-        PlayerInspectorLayout(
-            title: L10n.string("media.panel.title"),
-            subtitle: L10n.string("media.panel.subtitle"),
-            systemImage: "info.circle",
-            onClose: closePanel
-        ) {
-            if mediaAssets.isInspectingMedia {
-                HStack(spacing: GlazeSpacing.sm) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text(L10n.string("media.panel.inspecting"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } else if let mediaInspection = mediaAssets.mediaInspection {
-                InspectorSection(L10n.string("media.panel.summary")) {
-                    mediaSummary(mediaInspection)
-                }
-                InspectorSection(L10n.string("media.panel.tracks")) {
-                    mediaTrackSection(mediaInspection)
-                }
-
-                if let errorMessage = mediaInspection.errorMessage {
-                    mediaIssueCard(errorMessage)
-                }
-            } else {
-                InspectorEmptyMessage(
-                    text: L10n.string("media.panel.empty"),
-                    systemImage: "info.circle"
-                )
-            }
-        } footer: {
-            EmptyView()
-        }
-    }
-
-    private func mediaSummary(_ inspection: MediaInspection) -> some View {
-        VStack(alignment: .leading, spacing: GlazeSpacing.md) {
-            panelRow(icon: "shippingbox", titleKey: "media.panel.container", value: inspection.containerHint.isEmpty ? "-" : inspection.containerHint)
-            Divider()
-            panelRow(icon: "clock", titleKey: "media.panel.duration", value: inspection.duration)
-            Divider()
-            panelRow(icon: "play.rectangle", titleKey: "media.panel.avkit", value: avKitSupportText(for: inspection.isPlayable))
-        }
-    }
-
-    private func mediaTrackSection(_ inspection: MediaInspection) -> some View {
-        VStack(alignment: .leading, spacing: GlazeSpacing.sm) {
-            if inspection.tracks.isEmpty {
-                Text(L10n.string("media.panel.tracks_empty"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, GlazeSpacing.sm)
-            } else {
-                VStack(spacing: GlazeSpacing.md) {
-                    ForEach(inspection.tracks) { track in
-                        HStack(alignment: .top, spacing: GlazeSpacing.sm) {
-                            Image(systemName: mediaTrackIcon(for: track.title))
-                                .frame(width: 22)
-                                .foregroundStyle(.secondary)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(track.title) · \(track.codec)")
-                                    .font(.callout.weight(.medium))
-                                    .lineLimit(1)
-                                Text(track.detail)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-
-                            Spacer()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func mediaIssueCard(_ message: String) -> some View {
-        HStack(alignment: .top, spacing: GlazeSpacing.sm) {
-            Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
-                .padding(.top, 1)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.string("media.error.title"))
-                    .font(.caption.weight(.semibold))
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(GlazeSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-    }
-
-    private var subtitleFileSection: some View {
-        VStack(alignment: .leading, spacing: GlazeSpacing.sm) {
-            if subtitles.detectedSubtitles.isEmpty {
-                Text(L10n.string("subtitle.panel.files_empty"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, GlazeSpacing.sm)
-            } else {
-                HStack {
-                    Text(String(format: L10n.string("subtitle.panel.files_count_format"), subtitles.detectedSubtitles.count))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-
-                VStack(spacing: GlazeSpacing.xs) {
-                    ForEach(subtitles.detectedSubtitles) { subtitle in
-                        Button {
-                            subtitles.load(subtitle)
-                        } label: {
-                            HStack(spacing: GlazeSpacing.sm) {
-                                Image(systemName: subtitles.selectedSubtitlePath == subtitle.url.path ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(subtitles.selectedSubtitlePath == subtitle.url.path ? Color.accentColor : .secondary)
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(subtitle.displayName)
-                                        .font(.callout)
-                                        .lineLimit(1)
-                                    Text(subtitles.kindLabel(for: subtitle.kind))
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .padding(GlazeSpacing.sm)
-                        .background(
-                            subtitles.selectedSubtitlePath == subtitle.url.path ? Color.accentColor.opacity(0.12) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 7)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private func subtitleErrorCard(_ message: String) -> some View {
-        HStack(alignment: .top, spacing: GlazeSpacing.sm) {
-            Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
-                .padding(.top, 1)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.string("subtitle.error.title"))
-                    .font(.caption.weight(.semibold))
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(GlazeSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-    }
-
-    private func panelRow(icon: String, titleKey: String, valueKey: String) -> some View {
-        panelRow(icon: icon, titleKey: titleKey, value: L10n.string(valueKey))
-    }
-
-    private func panelRow(icon: String, titleKey: String, value: String) -> some View {
-        HStack(spacing: GlazeSpacing.sm) {
-            Image(systemName: icon)
-                .frame(width: 22)
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.string(titleKey))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.callout.weight(.medium))
-            }
-
-            Spacer()
-        }
-    }
-
-    private func assistantActionRow(icon: String, titleKey: String, subtitleKey: String) -> some View {
-        HStack(alignment: .top, spacing: GlazeSpacing.sm) {
-            Image(systemName: icon)
-                .frame(width: 24)
-                .foregroundStyle(Color.accentColor)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.string(titleKey))
-                    .font(.callout.weight(.medium))
-                Text(L10n.string(subtitleKey))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer()
-        }
     }
 
     private func openVideo() {
@@ -736,11 +595,7 @@ struct PlayerView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
         panel.allowedContentTypes = supportedVideoTypes + [.folder]
-
-        guard panel.runModal() == .OK, let url = panel.url else {
-            return
-        }
-
+        guard panel.runModal() == .OK, let url = panel.url else { return }
         openMedia(from: url)
     }
 
@@ -750,10 +605,10 @@ struct PlayerView: View {
             playback.errorMessage = L10n.string("player.error.no_playable_files")
             return
         }
-
         loadVideo(firstItem.url, playlist: nextPlaylist, shouldStartPlayback: true)
         activePanel = MediaPlaylistBuilder.isDirectory(url) && nextPlaylist.count > 1 ? .playlist : nil
         expandPlaylistInBackground(for: url, currentItem: firstItem.url)
+        revealControls()
     }
 
     private func loadVideo(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
@@ -771,7 +626,6 @@ struct PlayerView: View {
         prepareCurrentMediaState(originalURL: originalURL, playlist: nextPlaylist)
     }
 
-    /// Resets playlist, subtitle, and media-asset state for a newly loaded video across all three stores.
     private func prepareCurrentMediaState(originalURL: URL, playlist nextPlaylist: [MediaPlaylistItem]) {
         playlistStore.setInitial(nextPlaylist)
         subtitles.prepareForNewVideo(url: originalURL)
@@ -792,21 +646,11 @@ struct PlayerView: View {
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else {
-            return false
-        }
-
+        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else { return false }
         provider.loadDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { data, _ in
-            guard let data,
-                  let url = URL(dataRepresentation: data, relativeTo: nil) else {
-                return
-            }
-
-            Task { @MainActor in
-                openMedia(from: url)
-            }
+            guard let data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+            Task { @MainActor in openMedia(from: url) }
         }
-
         return true
     }
 
@@ -817,11 +661,7 @@ struct PlayerView: View {
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowedContentTypes = supportedSubtitleTypes
-
-        guard panel.runModal() == .OK, let url = panel.url else {
-            return
-        }
-
+        guard panel.runModal() == .OK, let url = panel.url else { return }
         subtitles.importManual(url: url)
         mediaAssets.markSubtitleExternallyLoaded()
         playback.errorMessage = nil
@@ -830,63 +670,41 @@ struct PlayerView: View {
 
     private func avKitSupportText(for isPlayable: Bool?) -> String {
         switch isPlayable {
-        case .some(true):
-            L10n.string("media.panel.avkit_playable")
-        case .some(false):
-            L10n.string("media.panel.avkit_not_playable")
-        case .none:
-            L10n.string("media.panel.avkit_unknown")
+        case .some(true): L10n.string("media.panel.avkit_playable")
+        case .some(false): L10n.string("media.panel.avkit_not_playable")
+        case .none: L10n.string("media.panel.avkit_unknown")
         }
     }
 
     private func mediaTrackIcon(for title: String) -> String {
         switch title {
-        case "Video":
-            "film"
-        case "Audio":
-            "waveform"
-        case "Subtitle", "Text", "Closed Caption":
-            "captions.bubble"
-        default:
-            "questionmark.circle"
+        case "Video": "film"
+        case "Audio": "waveform"
+        case "Subtitle", "Text", "Closed Caption": "captions.bubble"
+        default: "questionmark.circle"
         }
     }
 
-    private enum PlayerPanel: Equatable {
-        case media
-        case playlist
-        case subtitles
-        case assistant
+    private enum PlayerPanel: Hashable {
+        case subtitles, playlist, media, assistant
     }
 
     private func togglePanel(_ panel: PlayerPanel) {
         activePanel = activePanel == panel ? nil : panel
     }
 
-    private func closePanel() {
-        activePanel = nil
-    }
-
     @ViewBuilder
     private func panelView(for panel: PlayerPanel) -> some View {
         switch panel {
-        case .media:
-            mediaPanel
-        case .playlist:
-            playlistPanel
-        case .subtitles:
-            subtitlePanel
-        case .assistant:
-            assistantPanel
+        case .subtitles: subtitlePanel
+        case .playlist: playlistPanel
+        case .media: mediaPanel
+        case .assistant: assistantPanel
         }
     }
 
     private func panelMenuButton(_ panel: PlayerPanel, key: String, systemImage: String) -> some View {
-        Button {
-            togglePanel(panel)
-        } label: {
-            Label(L10n.string(key), systemImage: systemImage)
-        }
+        Button { togglePanel(panel) } label: { Label(L10n.string(key), systemImage: systemImage) }
     }
 
     private var playlistSummary: String {
@@ -894,60 +712,30 @@ struct PlayerView: View {
     }
 
     private var currentPlaylistIndex: Int? {
-        guard let currentVideoURL = playback.currentVideoURL else {
-            return nil
-        }
-
+        guard let currentVideoURL = playback.currentVideoURL else { return nil }
         return playlistStore.items.firstIndex { $0.url.path == currentVideoURL.path }
     }
 
-    private var canPlayPrevious: Bool {
-        guard let currentPlaylistIndex else {
-            return false
-        }
-
-        return currentPlaylistIndex > 0
-    }
+    private var canPlayPrevious: Bool { (currentPlaylistIndex ?? 0) > 0 }
 
     private var canPlayNext: Bool {
-        guard let currentPlaylistIndex else {
-            return false
-        }
-
+        guard let currentPlaylistIndex else { return false }
         return currentPlaylistIndex < playlistStore.items.count - 1
     }
 
     private func playPreviousPlaylistItem() {
-        guard let currentPlaylistIndex, currentPlaylistIndex > 0 else {
-            return
-        }
-
-        loadVideo(playlistStore.items[currentPlaylistIndex - 1].url, playlist: playlistStore.items, shouldStartPlayback: true)
+        guard let index = currentPlaylistIndex, index > 0 else { return }
+        loadVideo(playlistStore.items[index - 1].url, playlist: playlistStore.items, shouldStartPlayback: true)
     }
 
     private func playNextPlaylistItem() {
-        guard let currentPlaylistIndex, currentPlaylistIndex < playlistStore.items.count - 1 else {
-            return
-        }
-
-        loadVideo(playlistStore.items[currentPlaylistIndex + 1].url, playlist: playlistStore.items, shouldStartPlayback: true)
+        guard let index = currentPlaylistIndex, index < playlistStore.items.count - 1 else { return }
+        loadVideo(playlistStore.items[index + 1].url, playlist: playlistStore.items, shouldStartPlayback: true)
     }
 
     private var supportedVideoTypes: [UTType] {
-        var types: [UTType] = [
-            .movie,
-            .video,
-            .mpeg4Movie,
-            .quickTimeMovie,
-            .audiovisualContent
-        ]
-
-        for extensionName in ["mkv", "webm", "avi"] {
-            if let type = UTType(filenameExtension: extensionName) {
-                types.append(type)
-            }
-        }
-
+        var types: [UTType] = [.movie, .video, .mpeg4Movie, .quickTimeMovie, .audiovisualContent]
+        types += ["mkv", "webm", "avi"].compactMap { UTType(filenameExtension: $0) }
         return types
     }
 
@@ -957,6 +745,5 @@ struct PlayerView: View {
 }
 
 #Preview {
-    PlayerView()
-        .frame(width: 960, height: 620)
+    PlayerView().frame(width: 1100, height: 700)
 }
