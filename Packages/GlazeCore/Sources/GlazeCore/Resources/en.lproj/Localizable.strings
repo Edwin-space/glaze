@@ -15,6 +15,7 @@
 "assistant.metadata.status" = "Title info";
 "assistant.panel.empty" = "Open a video and the AI media assistant will check title info and subtitle readiness.";
 "assistant.panel.subtitle" = "Manage title info, subtitle readiness, and file organization in one place.";
+"assistant.panel.suggestions" = "Suggested Actions";
 "assistant.panel.title" = "AI Media Assistant";
 "assistant.panel.toggle" = "AI Media";
 "assistant.subtitle.external_loaded" = "External subtitles connected";
@@ -39,6 +40,7 @@
 "media.panel.empty" = "Open a video to inspect media details.";
 "media.panel.inspecting" = "Inspecting media details";
 "media.panel.subtitle" = "Check container, codec, and track recognition.";
+"media.panel.summary" = "Summary";
 "media.panel.title" = "Media Info";
 "media.panel.toggle" = "Info";
 "media.panel.tracks" = "Tracks";
@@ -55,6 +57,8 @@
 "player.error.no_playable_files" = "No playable video files were found.";
 "player.error.playback_failed" = "This video cannot be played right now.";
 "player.error.unsupported_video_codec" = "This file's video codec cannot be shown by the current macOS compatibility path.";
+"player.inspector" = "Panels";
+"player.inspector.close" = "Close Panel";
 "player.native_engine.subtitle" = "Major video formats play directly through the native engine without conversion wait time.";
 "player.native_engine.title" = "Native playback engine";
 "player.no_file" = "No video selected";
@@ -98,6 +102,7 @@
 "subtitle.panel.output_dual" = "Original + Korean";
 "subtitle.panel.output_korean_available" = "Korean subtitle available";
 "subtitle.panel.output_original_available" = "Subtitle file available";
+"subtitle.panel.preparation" = "Generation Settings";
 "subtitle.panel.storage" = "Save location";
 "subtitle.panel.storage_ask" = "Stored in app";
 "subtitle.panel.subtitle" = "Prepare reusable subtitles before playback.";

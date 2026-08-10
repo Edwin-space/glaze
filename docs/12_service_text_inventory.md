@@ -39,6 +39,7 @@
 | `assistant.panel.toggle` | AI 미디어 | AI Media | 버튼 | 구현 |
 | `assistant.panel.title` | AI 미디어 어시스턴트 | AI Media Assistant | 패널 제목 | 구현 |
 | `assistant.panel.subtitle` | 작품 정보, 자막 준비, 파일 정리를 한 곳에서 관리합니다. | Manage title info, subtitle readiness, and file organization in one place. | 안내 | 구현 |
+| `assistant.panel.suggestions` | 다음 작업 | Suggested Actions | 섹션 제목 | 구현 |
 | `assistant.bubble.title` | AI 미디어 | AI Media | 상태 | 구현 |
 | `assistant.action.match_metadata` | 작품 정보 찾기 | Find Title Info | 버튼 후보 | 구현 |
 | `assistant.action.prepare_subtitles` | 자막 준비 | Prepare Subtitles | 버튼 후보 | 구현 |
@@ -48,6 +49,7 @@
 | `media.panel.toggle` | 정보 | Info | 버튼 | 구현 |
 | `media.panel.title` | 미디어 정보 | Media Info | 패널 제목 | 구현 |
 | `media.panel.subtitle` | 컨테이너, 코덱, 트랙 인식 상태를 확인합니다. | Check container, codec, and track recognition. | 안내 | 구현 |
+| `media.panel.summary` | 요약 | Summary | 섹션 제목 | 구현 |
 | `media.panel.inspecting` | 미디어 정보 확인 중 | Inspecting media details | 상태 | 구현 |
 | `media.panel.empty` | 영상을 열면 미디어 정보를 확인할 수 있습니다. | Open a video to inspect media details. | 안내 | 구현 |
 | `media.panel.container` | 컨테이너 | Container | 상태 | 구현 |
@@ -71,6 +73,8 @@
 | `player.error.no_playable_files` | 재생할 수 있는 영상 파일을 찾지 못했습니다. | No playable video files were found. | 오류 | 구현 |
 | `player.error.playback_failed` | 이 영상은 현재 재생할 수 없습니다. | This video cannot be played right now. | 오류 | 구현 |
 | `player.error.unsupported_video_codec` | 이 파일의 비디오 코덱은 현재 macOS 재생 호환성 처리로 표시할 수 없습니다. | This file's video codec cannot be shown by the current macOS compatibility path. | 오류 | 구현 |
+| `player.inspector` | 패널 | Panels | 메뉴 | 구현 |
+| `player.inspector.close` | 패널 닫기 | Close Panel | 도움말 | 구현 |
 | `player.native_engine.title` | 네이티브 재생 엔진 | Native playback engine | 상태 | 구현 |
 | `player.native_engine.subtitle` | 주요 영상 포맷은 변환 대기 없이 네이티브 엔진으로 바로 재생합니다. | Major video formats play directly through the native engine without conversion wait time. | 안내 | 구현 |
 | `player.no_file` | 선택된 영상 없음 | No video selected | 상태 | 구현 |
@@ -106,10 +110,11 @@
 | `subtitle.panel.output_dual` | 원문 + 한국어 | Original + Korean | 설정값 | 구현 |
 | `subtitle.panel.output_korean_available` | 한국어 자막 사용 가능 | Korean subtitle available | 상태 | 구현 |
 | `subtitle.panel.output_original_available` | 자막 파일 사용 가능 | Subtitle file available | 상태 | 구현 |
+| `subtitle.panel.preparation` | 생성 설정 | Generation Settings | 섹션 제목 | 구현 |
 | `subtitle.panel.mode` | 모델 모드 | Model mode | 설정 | 구현 |
 | `subtitle.panel.mode_standard` | 표준 | Standard | 설정값 | 구현 |
 | `subtitle.panel.storage` | 저장 위치 | Save location | 설정 | 구현 |
-| `subtitle.panel.storage_ask` | 생성 시 확인 | Ask when generating | 설정값 | 구현 |
+| `subtitle.panel.storage_ask` | 앱 내부 저장 | Stored in app | 설정값 | 구현 |
 | `subtitle.status.no_video` | 영상 없음 | No video | 상태 | 구현 |
 | `subtitle.status.no_subtitle` | 자막 없음 | No subtitles | 상태 | 구현 |
 | `subtitle.status.ready_to_generate` | 생성 가능 | Ready to generate | 상태 | 구현 |

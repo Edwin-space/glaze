@@ -144,10 +144,10 @@ scripts/
 
 - 같은 폴더의 sidecar 자막 파일 감지
 - 감지 패턴: `movie.srt`, `movie.vtt`, `movie.smi`, `movie.ko.srt`, `movie.ko.vtt`, `movie.ko.smi`, `movie.en.srt`, `movie.en.vtt`, `movie.en.smi`, `movie.original.srt`
-- 자막 상태 strip에 감지 결과 표시
+- 영상 하단 자막 문맥 바에 감지 결과 표시
 - 자막 패널에서 SRT/VTT/SMI 파일 수동 불러오기
 - SRT/VTT/SMI 기본 파싱 및 영상 위 자막 오버레이 표시
-- 자막 상태 strip과 자막 패널에서 자막 표시/숨김 전환
+- 자막 문맥 바와 자막 인스펙터에서 자막 표시/숨김 전환
 - SMI 레거시 인코딩 대응: UTF 계열, EUC-KR, CP949 계열, ISO Latin 1 순서로 읽기 시도
 - SMI 기본 정리: head/style/script 제거, `<P Class=...>` 구간 기반 한국어 클래스 우선 표시
 - 여러 자막 파일이 감지되거나 수동 추가된 경우 자막 패널에서 선택/전환
@@ -272,7 +272,10 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 ### 진행 중 구현
 
 - `MediaAsset` 기초 모델 추가: 파일 위치, 보관 소스, 작품 메타데이터, 자막 준비 상태, 시청 위치
-- AI 미디어 버블과 우측 어시스턴트 패널 추가
+- macOS 창 툴바 + 영상 스테이지 + 하단 자막 문맥 바 + 단일 우측 인스펙터로 Player Shell 전면 재설계
+- 자막/재생목록/미디어 정보/AI 미디어 패널을 공통 `PlayerInspectorLayout`과 단일 `activePanel` 상태로 통합
+- 상시 노출 AI 미디어 버블 제거, 툴바 패널 메뉴로 진입점 이동
+- 커스텀 유약 그래픽/그라데이션/색상 토큰 제거, 시스템 배경·material·tint·SF Symbols 적용
 - 작품 정보 찾기, 자막 준비, 파일 정보 반영 액션 자리 표시
 - 원본 파일 쓰기는 기본값이 아니라 명시적 액션으로 분리
 
@@ -281,7 +284,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - TMDB/IMDb/TVDB 등 메타데이터 공급자 추상화 설계
 - sidecar metadata 저장 포맷 결정
 - 포스터/줄거리/시즌/에피소드 매칭 UI 설계
-- Player Shell을 플레이어/어시스턴트/패널/라이브러리 준비 구조로 분리
+- VLC 재생 제어 API를 Player Shell에 연결해 재생/일시정지·탐색·볼륨 컨트롤 완성
 
 ## Phase 4. AI 자막 기술 검증
 

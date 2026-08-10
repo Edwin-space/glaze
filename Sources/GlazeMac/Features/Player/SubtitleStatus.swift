@@ -52,17 +52,17 @@ enum SubtitleStatus {
         case .noVideo:
             .secondary
         case .noSubtitle:
-            GlazeColors.warning
+            .orange
         case .subtitleDetected:
-            GlazeColors.celadon
+            .green
         case .koreanSubtitleDetected:
-            GlazeColors.celadon
+            .green
         case .subtitleLoaded:
-            GlazeColors.celadon
+            .green
         case .readyToGenerate:
-            GlazeColors.accent
+            .accentColor
         case .generating:
-            GlazeColors.accent
+            .accentColor
         }
     }
 }
