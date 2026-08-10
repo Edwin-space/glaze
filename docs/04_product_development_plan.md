@@ -1,7 +1,10 @@
 # 글레이즈 기본 제품/개발 계획
 
 작성일: 2026-06-18  
+최종 수정: 2026-08-10 (기초 재설계 결정 반영, 근거: `16_foundation_redesign_audit.md`)  
 프로젝트명: 글레이즈
+
+> **2026-08-10 갱신**: 실제 진행은 아래 "Phase 1. 플레이어 MVP"가 네이티브 VLC 엔진 전체 이식으로 크게 확장된 상태다. 이 수준(VLC로 MKV 재생 확인됨)에서 재생 엔진 고도화는 동결하고, 아직 코드가 없는 AI 자막 생성(Phase 2 이하)으로 우선 진입한다. 상세 근거는 `16_foundation_redesign_audit.md`를 따른다.
 
 ## 문서 목적
 
@@ -132,7 +135,7 @@ MVP는 "영상 재생 + 단일 영상 수동 AI 자막 생성 + 저장 + 자동 
 
 ### 2단계. iOS/iPadOS
 
-macOS MVP가 안정화된 뒤 보조 감상 앱으로 확장한다. 모바일에서는 긴 영상 자막 생성보다 macOS에서 준비된 자막과 라이브러리를 이어서 보는 경험을 먼저 제공한다.
+실제 앱 출시는 macOS MVP가 안정화된 뒤 보조 감상 앱으로 확장한다. 모바일에서는 긴 영상 자막 생성보다 macOS에서 준비된 자막과 라이브러리를 이어서 보는 경험을 먼저 제공한다. 다만 아키텍처는 출시 시점을 기다리지 않는다 — `GlazeCore`/`GlazeMac` 모듈 분리는 macOS 개발 단계에서부터 반영한다(상세: `06_platform_global_expansion_plan.md`).
 
 ### 3단계. Android
 
@@ -221,18 +224,22 @@ MVP 이후 선택 기능으로 검토한다. 확장은 현재 페이지에서 �
 ### 앱 구조
 
 - SwiftUI: 앱 UI와 설정 화면
-- AVFoundation/AVKit: 기본 재생
-- FFmpeg 검토: MKV, 특수 코덱, 오디오 추출 보완
+- 모듈 분리: 플랫폼 독립 `GlazeCore`(라이브러리 타겟)와 macOS 전용 `GlazeMac`(executable 타겟)으로 `Package.swift`를 나눈다
+- 영상 재생: MP4/MOV는 AVKit, MKV/WebM/AVI 등은 네이티브 VLC 엔진(`GlazeMac`에 격리). 재생 엔진 고도화는 현재 수준에서 동결
+- FFmpeg remux 경로: 완전 삭제 대신 별도 `LegacyCompatibility` 모듈로 격리(VLC가 처리하지 못하는 예외 케이스 안전망)
 - Core Data 또는 SQLite: 라이브러리, 자막 인덱스, 작업 큐 저장
-- MediaAsset 모델: 파일 위치, 보관 소스, 메타데이터, 자막 준비 상태, 시청 위치를 분리 관리
+- MediaAsset 모델: 파일 위치, 보관 소스, 메타데이터, 자막 준비 상태, 시청 위치를 분리 관리 — `GlazeCore`
 - Metadata Provider: IMDb/TMDB/TVDB 등 외부 공급자를 추상화하고 라이선스/상업 사용/attribution을 공급자별로 관리
-- Core ML/Metal: 온디바이스 음성 인식 모델 실행 검토
+- Core ML/Metal: 온디바이스 음성 인식 모델 실행 검토 — `GlazeCore`에서 macOS/iOS 공유
 - SRT/VTT: 초기 자막 저장 포맷
+- UI: 커스텀 디자인 토큰 최소화, Apple 표준 디자인 시스템(system tint, Material, SF Symbols) 채택(상세: `11_ui_reference_design_direction.md`)
 
 ### 주요 모듈
 
-- Player Core: 재생, 탐색, 오디오/자막 트랙 제어
-- Subtitle Engine: 외부 자막 로딩, 생성 자막 연결, 표시
+- PlaybackController: AVPlayer/VLC 상태, KVO, 엔진 라우팅, 호환성 remux 로직 (`PlayerView` God View 해체 결과물)
+- PlaylistStore: 재생목록 스캔/전환 로직
+- SubtitleController: 자막 감지/파싱/표시/전환 상태 관리
+- MediaAssetStore: `MediaAsset`, 메타데이터, 자막 준비 상태 — 라이브러리 데이터 기반
 - AI Subtitle Engine: 오디오 추출, 음성 인식, 타임스탬프 정리
 - Translation Engine: 한국어 번역, 번역 캐시
 - Job Queue: 자막 생성 작업 상태와 재시도

@@ -1,0 +1,48 @@
+name: Glaze
+options:
+  bundleIdPrefix: app.glaze
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+
+packages:
+  GlazeCore:
+    path: Packages/GlazeCore
+
+targets:
+  GlazeMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Sources/GlazeMac
+    dependencies:
+      - package: GlazeCore
+    settings:
+      base:
+        PRODUCT_NAME: Glaze
+        PRODUCT_BUNDLE_IDENTIFIER: app.glaze.player
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Packaging/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_APP_SANDBOX: NO
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+      configs:
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Packaging/Glaze.entitlements
+    postbuildScripts:
+      - name: "Stage VLC & ffmpeg tools"
+        script: |
+          exec "$SRCROOT/script/xcode_vlc_stage.sh"
+        basedOnDependencyAnalysis: false
+
+schemes:
+  GlazeMac:
+    build:
+      targets:
+        GlazeMac: all
+    run:
+      config: Debug
+    archive:
+      config: Release

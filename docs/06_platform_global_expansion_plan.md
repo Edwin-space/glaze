@@ -1,6 +1,7 @@
 # 플랫폼 및 글로벌 확장 계획
 
 작성일: 2026-06-18  
+최종 수정: 2026-08-10 (기초 재설계 결정 반영, 근거: `16_foundation_redesign_audit.md`)  
 프로젝트명: 글레이즈
 
 ## 문서 목적
@@ -42,7 +43,11 @@
 
 ### Phase B. iOS/iPadOS 보조 앱
 
-macOS MVP가 안정화된 뒤 iPhone/iPad 앱을 검토한다. 다만 모바일 앱은 macOS 앱을 그대로 복제하면 안 된다.
+실제 iPhone/iPad 앱 출시는 macOS MVP가 안정화된 뒤 검토한다. 다만 이 순서는 제품 출시 시점에 한정된다 — 아키텍처는 다르다.
+
+Apple Silicon 온디바이스 AI(Core ML/Neural Engine)를 macOS와 iOS 양쪽에서 활용하는 것이 제품 계획에 들어오면서, `GlazeCore`(플랫폼 독립: 미디어 자산 모델, 자막 파싱, AI 자막/번역 엔진 인터페이스, Job Queue)와 `GlazeMac`(macOS 전용: AppKit/AVKit/VLC 재생 표면)의 모듈 분리는 지금 macOS 개발 단계에서부터 반영한다. "지금 iOS 앱을 만든다"는 뜻이 아니라 "지금 짜는 구조가 iOS 확장을 막지 않아야 한다"는 뜻이다. 모바일 앱은 macOS 앱을 그대로 복제하면 안 된다.
+
+> **2026-08-10 갱신**: `GlazeCore`는 이제 `Packages/GlazeCore`의 독립 SwiftPM 로컬 패키지이고, macOS 앱 자체도 XcodeGen(`project.yml`)이 생성하는 정식 Xcode 프로젝트로 전환됐다(자세한 내용은 `Tools/README.md`). 이후 iOS(그리고 Phase E의 Apple TV)를 실제로 시작할 때는 `project.yml`에 새 앱 타겟을 추가하고 동일한 `Packages/GlazeCore`를 의존성으로 연결하면 된다 — 지금 당장 그 타겟을 만들어두지는 않았다.
 
 모바일의 자연스러운 역할:
 
@@ -167,12 +172,15 @@ Apple TV 앱과 NAS/자체 미디어 서버는 장기 프리미엄 확장의 핵
 
 ## 제품 구조에 미리 반영할 것
 
-플랫폼 확장을 나중에 하더라도, 초기 macOS 개발 때부터 아래 구조는 고려해야 한다.
+플랫폼 확장은 나중이지만, 아래 구조는 지금 macOS 개발 단계부터 실제로 적용한다(더 이상 "고려 사항"이 아니라 아키텍처 전제다).
 
+- `Package.swift`를 `GlazeCore`(플랫폼 독립 라이브러리 타겟)와 `GlazeMac`(macOS 전용 executable 타겟)으로 분리
 - UI 문자열 분리와 localization 파일 관리
-- 자막 생성 엔진과 UI의 분리
+- 자막 생성 엔진과 UI의 분리 — `GlazeCore`에 위치
 - 자막 포맷 처리 모듈의 플랫폼 독립화
-- 작업 큐와 라이브러리 데이터 모델의 이식 가능성
+- 작업 큐와 라이브러리 데이터 모델의 이식 가능성 — `GlazeCore`에 위치
+- AI 자막 생성/번역 파이프라인(Core ML 기반)은 처음부터 `GlazeCore`에 두고 macOS/iOS 양쪽에서 공유
+- VLC/libVLC 네이티브 재생 엔진은 macOS 전용이므로 `GlazeMac`에 격리(iOS는 AVFoundation/AVKit이 기본 경로가 될 가능성이 높음)
 - 계정/동기화 도입 가능성을 고려한 데이터 구조
 - `MediaAsset` 기반 파일/메타데이터/자막/시청 위치 분리
 - 원본 파일 수정과 sidecar metadata 저장 정책 분리
@@ -198,5 +206,5 @@ Apple TV 앱과 NAS/자체 미디어 서버는 장기 프리미엄 확장의 핵
 - 초기 UI 언어를 한국어/영어로 확정
 - 개발 시작 시 localization 구조를 처음부터 적용
 - 플랫폼 확장 로드맵을 제품 계획서에 반영
-- iOS/iPadOS는 1차 개발 범위가 아니라 후속 제품군으로 정의
+- iOS/iPadOS 앱 출시는 1차 개발 범위가 아니지만, `GlazeCore`/`GlazeMac` 모듈 분리는 지금 아키텍처 단계에서 반영한다
 - Windows는 글로벌 데스크톱 확장 후보로 유지

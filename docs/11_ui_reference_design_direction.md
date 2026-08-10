@@ -1,7 +1,19 @@
 # UI 레퍼런스 및 디자인 방향
 
 작성일: 2026-06-18  
+최종 수정: 2026-08-10 (기초 재설계 결정 반영, 근거: `16_foundation_redesign_audit.md`)  
 프로젝트명: 글레이즈 / Glaze
+
+## 확정된 브랜드 (2026-08-10)
+
+전면 재설계를 거쳐 브랜드가 확정됐다. 소스 오브 트루스는 Figma 문서다: [Glaze Brand Guidelines](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa)(팀 드라이브 "#9. 참고 자료"). 색상 값·타입 램프·로고·카피 원칙을 바꿀 때는 이 문서를 먼저 갱신하고 코드/이 파일에 반영한다.
+
+- **브랜드 콘셉트**: "글레이즈"(유약을 입히다) — 자막 없는 영상이 재생 전에 이해 가능한 상태로 "코팅"된다는 은유. 브랜드마크는 별도 심볼이 아니라 실제 UI의 "자막 준비 상태 링"을 그대로 승격한 것(Logo & Iconography 페이지).
+- **포지셔닝**: 한국 사용자에서 시작하지만 메시지는 처음부터 글로벌 — "언어는 더 이상 장벽이 아닙니다 / Language is no longer a barrier." (Messaging 페이지에 미션·태그라인·헤드라인 공식·App Store 카피 정리됨)
+- **색**: `GlazeColors.accent`는 `Assets.xcassets/AccentColor`를 통해 브랜드 앰버(Light `#B36F2E` / Dark `#E0954A`)로 바인딩됨(코드 변경 없이 시스템 tint 메커니즘 그대로 사용). 나머지 팔레트는 Figma Color 페이지의 Primitive/Semantic 변수 참고.
+- **타입**: 실제 앱은 시스템 폰트를 그대로 쓰되, 헤드라인·타이틀 역할에는 `Font.system(_, design: .rounded)`를 적용해 Figma Typography 페이지의 SF Pro Rounded 지정과 맞춘다.
+- **로고 에셋**: `Sources/GlazeMac/Resources/Assets.xcassets/AppIcon.appiconset`에 Figma에서 내보낸 실제 PNG가 채워져 있다(플레이스홀더 아님).
+- **카피 원칙**: 다국어 보이스 원칙(짧은 문장, 관용구 지양, 용어집 고정, 한/영 직접 검수)과 UX 라이팅 Do/Don't는 Figma Voice & Tone 페이지 참고.
 
 ## 문서 목적
 
@@ -213,13 +225,21 @@ AI 기능은 별도 챗봇 앱처럼 과하게 전면화하지 않고, 현재 �
 - 저장 위치: 앱 내부, 영상 위치
 - 액션: 자막 생성, 자막 파일 불러오기, 그냥 시청
 
-## 초기 디자인 시스템 방향
+## 초기 디자인 시스템 방향 (2026-08-10 개정)
+
+기존 방향은 "글레이즈만의" 커스텀 디자인 토큰(teal 강조색 하드코딩, 커스텀 `StatusBadge` 캡슐 컴포넌트 등)을 만드는 것이었다. 이 방향을 바꾼다: 커스텀 토큰을 최소화하고 Apple 표준 디자인 시스템을 그대로 따른다.
+
+이유:
+
+- macOS와 iOS 양쪽에서 별도 튜닝 없이 일관된 룩을 자동으로 얻을 수 있다. iOS 확장을 전제로 하면 이 이점이 커진다.
+- HIG 준수도가 높아져 App Store 심사와 사용자 신뢰 측면에서 유리하다.
+- "AI가 앞에 나서지 않는다"는 제품 원칙과 맞는다. 시스템 UI를 그대로 쓰면 자연스럽게 "조용한 AI" 톤이 만들어진다.
 
 ### 색상
 
-- 기본 감상 영역: 거의 검정에 가까운 다크 배경
-- 패널 영역: macOS window background와 material 느낌
-- 강조색: 차분한 blue 또는 teal 계열
+- 기본 감상 영역: 거의 검정에 가까운 다크 배경(유지)
+- 패널 영역: macOS `.windowBackgroundColor`, `.controlBackgroundColor` 등 시스템 컬러(유지)
+- 강조색: 커스텀 teal 하드코딩 대신 시스템 tint / `Color.accentColor` / `.tint()` 사용
 - 오류: macOS system red
 - 완료: system green
 - 경고: system orange
@@ -228,32 +248,39 @@ AI 기능은 별도 챗봇 앱처럼 과하게 전면화하지 않고, 현재 �
 
 - 전체 UI가 보라/파랑 그라데이션 앱처럼 보이면 안 된다.
 - AI 제품처럼 과한 네온/글로우를 쓰지 않는다.
+- 브랜드 고유 색상은 앱 아이콘과 자막 오버레이 스타일 정도로 최소화한다.
 
 ### 타이포그래피
 
-- 시스템 폰트 사용
+- 시스템 텍스트 스타일(`.title2`, `.caption` 등)을 그대로 사용, 커스텀 폰트/사이즈 정의는 지양
 - 파일명과 상태는 작고 명확하게
 - 패널 제목은 compact하게
 - 버튼 텍스트는 짧게
 
 ### 컴포넌트
 
-- Icon + label 버튼
-- 상태 badge
+- 커스텀 컴포넌트보다 표준 `Label`, `ControlGroup`, `Menu`, system `Material`(`.regularMaterial`, `.ultraThinMaterial`)을 우선 사용
+- 상태 표시는 커스텀 `StatusBadge` 캡슐 대신 표준 `Label` + system color로 대체
 - segmented control: 자막 출력 모드
 - popover/panel: 자막 생성 옵션
 - sidebar: MVP 이후 라이브러리
 - progress bar: 자막 생성 진행률
+- 아이콘: SF Symbols 그대로 사용(이미 대부분 적용됨)
+- Dark Mode, Dynamic Type, 접근성 대비는 커스텀 처리 대신 시스템 기본 동작에 맡긴다
 
-## 현재 코드에 반영할 다음 UI 작업
+`GlazeSpacing`처럼 브랜드 색상과 무관한 간격 토큰은 유지해도 무방하다.
 
-1. `DesignSystem` 폴더 추가
-2. 색상/spacing/typography 토큰 추가
-3. `PlayerView`를 header/video/status/control 영역으로 분리
-4. empty state 문구를 글레이즈 브랜드 톤으로 수정
-5. 자막 상태 strip 자리 추가
-6. AI Subtitle Panel placeholder 추가
-7. 한국어/영어 localization 키 확장
+## 현재 코드에 반영할 다음 UI 작업 (2026-08-10 갱신)
+
+1. ~~`DesignSystem` 폴더 추가~~ 완료
+2. ~~색상/spacing/typography 토큰 추가~~ 완료 — 단, `GlazeColors.accent`(teal 하드코딩)는 시스템 tint로 교체 필요
+3. `PlayerView`(현재 1,489줄, God View)를 `PlaybackController`/`PlaylistStore`/`SubtitleController`/`MediaAssetStore`와 화면만 그리는 얇은 View로 분리
+4. ~~empty state 문구를 글레이즈 브랜드 톤으로 수정~~ 완료
+5. ~~자막 상태 strip 자리 추가~~ 완료
+6. AI Subtitle Panel placeholder 추가 — 아직 착수 전
+7. 한국어/영어 localization 키 확장 — 진행 중
+8. 커스텀 `StatusBadge` 캡슐 컴포넌트를 표준 `Label` + system color 기반으로 교체
+9. VLC/libVLC dlopen 번들링 방식의 App Store 심사 통과 가능 여부를 다른 작업보다 먼저 조기 검증
 
 ## 참고 출처
 
