@@ -105,7 +105,7 @@ struct PlayerView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(L10n.string("app.name"))
-                    .font(.headline)
+                    .font(.system(.headline, design: .rounded))
                 Text(currentFileName)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -152,7 +152,7 @@ struct PlayerView: View {
     private var videoSurface: some View {
         ZStack {
             LinearGradient(
-                colors: [.black, Color(nsColor: .windowBackgroundColor).opacity(0.92), .black],
+                colors: [GlazeColors.playerBackground, Color(white: 0.1), GlazeColors.playerBackground],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -274,7 +274,7 @@ struct PlayerView: View {
                 Image(systemName: "arrow.down.doc")
                     .font(.system(size: 34, weight: .medium))
                 Text(L10n.string("player.drop_hint"))
-                    .font(.headline)
+                    .font(.system(.headline, design: .rounded))
                 Text(L10n.string("player.drop_subtitle"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -342,13 +342,15 @@ struct PlayerView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "play.rectangle")
-                .font(.system(size: 54, weight: .regular))
+            Image(systemName: "play.fill")
+                .font(.system(size: 32, weight: .regular))
                 .foregroundStyle(.secondary)
+                .frame(width: 88, height: 88)
+                .glassEffect(in: Circle())
 
             VStack(spacing: 6) {
                 Text(L10n.string("player.empty_title"))
-                    .font(.title2.weight(.semibold))
+                    .font(.system(.title2, design: .rounded).weight(.semibold))
                     .foregroundStyle(.white)
 
                 Text(L10n.string("player.empty_subtitle"))
@@ -361,6 +363,7 @@ struct PlayerView: View {
             } label: {
                 Label(L10n.string("player.open_video"), systemImage: "folder")
             }
+            .buttonStyle(.glassProminent)
             .keyboardShortcut(.defaultAction)
 
             Text(L10n.string("player.drop_subtitle"))
@@ -413,7 +416,7 @@ struct PlayerView: View {
             HStack {
                 VStack(alignment: .leading, spacing: GlazeSpacing.xs) {
                     Text(L10n.string("subtitle.panel.title"))
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                     Text(L10n.string("subtitle.panel.subtitle"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -526,7 +529,7 @@ struct PlayerView: View {
             HStack {
                 VStack(alignment: .leading, spacing: GlazeSpacing.xs) {
                     Text(L10n.string("playlist.panel.title"))
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                     Text(playlistSummary)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -591,7 +594,7 @@ struct PlayerView: View {
             HStack {
                 VStack(alignment: .leading, spacing: GlazeSpacing.xs) {
                     Text(L10n.string("assistant.panel.title"))
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                     Text(L10n.string("assistant.panel.subtitle"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -644,7 +647,7 @@ struct PlayerView: View {
             HStack {
                 VStack(alignment: .leading, spacing: GlazeSpacing.xs) {
                     Text(L10n.string("media.panel.title"))
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                     Text(L10n.string("media.panel.subtitle"))
                         .font(.caption)
                         .foregroundStyle(.secondary)

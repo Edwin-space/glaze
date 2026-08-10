@@ -1,6 +1,6 @@
 name: Glaze
 options:
-  bundleIdPrefix: app.glaze
+  bundleIdPrefix: com.edwin
   deploymentTarget:
     macOS: "26.0"
   createIntermediateGroups: true
@@ -21,10 +21,11 @@ targets:
     settings:
       base:
         PRODUCT_NAME: Glaze
-        PRODUCT_BUNDLE_IDENTIFIER: app.glaze.player
+        PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Packaging/Info.plist
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JBN99YZ7KN
         ENABLE_APP_SANDBOX: NO
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete

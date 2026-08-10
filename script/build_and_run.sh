@@ -3,7 +3,7 @@ set -euo pipefail
 
 MODE="${1:-run}"
 APP_NAME="Glaze"
-BUNDLE_ID="app.glaze.player"
+BUNDLE_ID="com.edwin.glaze"
 CONFIGURATION="${GLAZE_CONFIGURATION:-Debug}"
 SCHEME="GlazeMac"
 
