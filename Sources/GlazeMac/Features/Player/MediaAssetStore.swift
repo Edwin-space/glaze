@@ -15,11 +15,18 @@ final class MediaAssetStore {
         url: URL,
         hasDetectedSubtitles: Bool,
         engine: PlaybackEngineKind,
+        resource: MediaResource? = nil,
+        source: MediaLibrarySource = .localFolder,
         isStillCurrent: @escaping () -> Bool
     ) {
         mediaInspection = nil
         isInspectingMedia = true
-        currentMediaAsset = makeAsset(for: url, hasSubtitles: hasDetectedSubtitles)
+        currentMediaAsset = makeAsset(
+            for: url,
+            resource: resource,
+            source: source,
+            hasSubtitles: hasDetectedSubtitles
+        )
 
         if engine == .nativeVLC {
             mediaInspection = MediaInspector.lightweightInspection(url: url, isPlayable: nil)
@@ -31,6 +38,10 @@ final class MediaAssetStore {
 
     func markSubtitleExternallyLoaded() {
         currentMediaAsset?.subtitleReadiness = .externalLoaded
+    }
+
+    func markSubtitleEmbeddedLoaded() {
+        currentMediaAsset?.subtitleReadiness = .embeddedLoaded
     }
 
     func markSubtitleGenerated() {
@@ -49,8 +60,13 @@ final class MediaAssetStore {
         }
     }
 
-    private func makeAsset(for url: URL, hasSubtitles: Bool) -> MediaAsset {
-        var asset = MediaAsset(fileURL: url)
+    private func makeAsset(
+        for url: URL,
+        resource: MediaResource?,
+        source: MediaLibrarySource,
+        hasSubtitles: Bool
+    ) -> MediaAsset {
+        var asset = MediaAsset(resource: resource ?? .localFile(url), source: source)
         asset.subtitleReadiness = hasSubtitles ? .externalLoaded : .missing
         return asset
     }

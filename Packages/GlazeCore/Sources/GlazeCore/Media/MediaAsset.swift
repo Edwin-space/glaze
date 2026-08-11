@@ -2,18 +2,22 @@ import Foundation
 
 public struct MediaAsset: Identifiable, Sendable {
     public let id: UUID
-    public let fileURL: URL
+    public let resource: MediaResource
     public let source: MediaLibrarySource
     public var metadata: MediaMetadata
     public var subtitleReadiness: SubtitleReadiness
     public var watchProgress: WatchProgress
 
     public init(fileURL: URL, source: MediaLibrarySource = .localFolder) {
+        self.init(resource: .localFile(fileURL), source: source)
+    }
+
+    public init(resource: MediaResource, source: MediaLibrarySource) {
         self.id = UUID()
-        self.fileURL = fileURL
+        self.resource = resource
         self.source = source
         self.metadata = MediaMetadata(
-            displayTitle: MediaAsset.titleCandidate(from: fileURL),
+            displayTitle: MediaAsset.titleCandidate(from: resource.playbackURL),
             originalTitle: nil,
             year: nil,
             externalIDs: MediaExternalIDs(),
@@ -21,6 +25,10 @@ public struct MediaAsset: Identifiable, Sendable {
         )
         self.subtitleReadiness = .notChecked
         self.watchProgress = WatchProgress(position: 0, duration: 0)
+    }
+
+    public var fileURL: URL {
+        resource.playbackURL
     }
 
     public var displayTitle: String {
@@ -35,9 +43,10 @@ public struct MediaAsset: Identifiable, Sendable {
     }
 }
 
-public enum MediaLibrarySource: Sendable {
+public enum MediaLibrarySource: Equatable, Sendable {
     case localFolder
     case nas
+    case dlna(serverID: String, serverName: String)
     case iCloud
     case mediaServer
 
@@ -47,6 +56,8 @@ public enum MediaLibrarySource: Sendable {
             "media.source.local"
         case .nas:
             "media.source.nas"
+        case .dlna:
+            "media.source.dlna"
         case .iCloud:
             "media.source.icloud"
         case .mediaServer:
@@ -99,6 +110,7 @@ public enum SubtitleReadiness: Sendable {
     case notChecked
     case missing
     case externalLoaded
+    case embeddedLoaded
     case generated
     case translated
 
@@ -110,6 +122,8 @@ public enum SubtitleReadiness: Sendable {
             "assistant.subtitle.missing"
         case .externalLoaded:
             "assistant.subtitle.external_loaded"
+        case .embeddedLoaded:
+            "assistant.subtitle.embedded_loaded"
         case .generated:
             "assistant.subtitle.generated"
         case .translated:

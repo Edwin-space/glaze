@@ -27,6 +27,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
     typealias NewInstance = @convention(c) (Int32, UnsafeMutablePointer<UnsafePointer<CChar>?>?) -> InstanceHandle?
     typealias ReleaseInstance = @convention(c) (InstanceHandle?) -> Void
     typealias NewMediaPath = @convention(c) (InstanceHandle?, UnsafePointer<CChar>?) -> MediaHandle?
+    typealias NewMediaLocation = @convention(c) (InstanceHandle?, UnsafePointer<CChar>?) -> MediaHandle?
     typealias ReleaseMedia = @convention(c) (MediaHandle?) -> Void
     typealias AddMediaOption = @convention(c) (MediaHandle?, UnsafePointer<CChar>?) -> Void
     typealias NewPlayer = @convention(c) (InstanceHandle?) -> MediaPlayerHandle?
@@ -69,6 +70,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
     let newInstance: NewInstance
     let releaseInstance: ReleaseInstance
     let newMediaPath: NewMediaPath
+    let newMediaLocation: NewMediaLocation
     let releaseMedia: ReleaseMedia
     let addMediaOption: AddMediaOption
     let newPlayer: NewPlayer
@@ -113,6 +115,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
         newInstance = try Self.loadSymbol("libvlc_new", from: libraryHandle)
         releaseInstance = try Self.loadSymbol("libvlc_release", from: libraryHandle)
         newMediaPath = try Self.loadSymbol("libvlc_media_new_path", from: libraryHandle)
+        newMediaLocation = try Self.loadSymbol("libvlc_media_new_location", from: libraryHandle)
         releaseMedia = try Self.loadSymbol("libvlc_media_release", from: libraryHandle)
         addMediaOption = try Self.loadSymbol("libvlc_media_add_option", from: libraryHandle)
         newPlayer = try Self.loadSymbol("libvlc_media_player_new", from: libraryHandle)

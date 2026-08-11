@@ -108,7 +108,7 @@ final class NativeVLCPlayerView: NSView {
 
         stopCurrentMedia()
         loadedURL = url
-        if url.startAccessingSecurityScopedResource() {
+        if url.isFileURL, url.startAccessingSecurityScopedResource() {
             securityScopedURL = url
         }
 
@@ -138,7 +138,10 @@ final class NativeVLCPlayerView: NSView {
             return
         }
 
-        guard let media = url.path.withCString({ library.newMediaPath(instance, $0) }) else {
+        let media = url.isFileURL
+            ? url.path.withCString { library.newMediaPath(instance, $0) }
+            : url.absoluteString.withCString { library.newMediaLocation(instance, $0) }
+        guard let media else {
             loadedURL = nil
             releaseSecurityScopedURL()
             onFailure?("Unable to create libVLC media")

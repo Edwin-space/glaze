@@ -9,7 +9,7 @@ public struct MediaPlaylistItem: Identifiable, Sendable {
     }
 
     public var id: String {
-        url.path
+        url.absoluteString
     }
 
     public var displayName: String {

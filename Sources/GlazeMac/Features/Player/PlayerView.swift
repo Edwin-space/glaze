@@ -11,6 +11,7 @@ struct PlayerView: View {
 
     @State private var activePanel: PlayerPanel?
     @State private var isDropTargeted = false
+    @State private var isNetworkBrowserPresented = false
     @State private var areControlsVisible = true
     @State private var isSeeking = false
     @State private var hideControlsTask: Task<Void, Never>?
@@ -22,6 +23,9 @@ struct PlayerView: View {
                     .inspectorColumnWidth(min: 300, ideal: 340, max: 420)
             }
             .toolbar { playerToolbar }
+            .sheet(isPresented: $isNetworkBrowserPresented) {
+                NetworkMediaBrowserView(onOpen: openNetworkMedia)
+            }
             .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
             .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime), perform: handlePlaybackEnd)
             .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in openVideo() }
@@ -88,9 +92,19 @@ struct PlayerView: View {
                     Label(L10n.string("player.open_video"), systemImage: "folder")
                 }
                 .help(L10n.string("player.open_video"))
+
+                Button { isNetworkBrowserPresented = true } label: {
+                    Label(L10n.string("network.browser.open"), systemImage: "externaldrive.badge.wifi")
+                }
+                .help(L10n.string("network.browser.open"))
             }
         } else {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button { isNetworkBrowserPresented = true } label: {
+                    Label(L10n.string("network.browser.open"), systemImage: "externaldrive.badge.wifi")
+                }
+                .help(L10n.string("network.browser.open"))
+
                 Button(action: openVideo) {
                     Label(L10n.string("player.open_video"), systemImage: "folder")
                 }
@@ -175,14 +189,22 @@ struct PlayerView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Button(action: openVideo) {
-                    Label(L10n.string("player.open_video"), systemImage: "folder")
-                        .padding(.horizontal, 6)
+                HStack(spacing: 10) {
+                    Button(action: openVideo) {
+                        Label(L10n.string("player.open_video"), systemImage: "folder")
+                            .padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(.accentColor)
+                    .controlSize(.large)
+                    .keyboardShortcut(.defaultAction)
+
+                    Button { isNetworkBrowserPresented = true } label: {
+                        Label(L10n.string("network.browser.open"), systemImage: "externaldrive.badge.wifi")
+                    }
+                    .buttonStyle(.glass)
+                    .controlSize(.large)
                 }
-                .buttonStyle(.glassProminent)
-                .tint(.accentColor)
-                .controlSize(.large)
-                .keyboardShortcut(.defaultAction)
 
                 Label(L10n.string("player.drop_subtitle"), systemImage: "arrow.down.doc")
                     .font(.caption)
@@ -408,7 +430,16 @@ struct PlayerView: View {
 
     private var subtitleFileSection: some View {
         Group {
-            if subtitles.detectedSubtitles.isEmpty {
+            if subtitles.isInspectingEmbeddedSubtitles,
+               subtitles.detectedSubtitles.isEmpty,
+               subtitles.embeddedSubtitleTracks.isEmpty {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(L10n.string("subtitle.embedded.inspecting"))
+                }
+                .foregroundStyle(.secondary)
+            } else if subtitles.detectedSubtitles.isEmpty,
+                      subtitles.embeddedSubtitleTracks.isEmpty {
                 Label(L10n.string("subtitle.panel.files_empty"), systemImage: "captions.bubble")
                     .foregroundStyle(.secondary)
             } else {
@@ -430,20 +461,47 @@ struct PlayerView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                ForEach(subtitles.embeddedSubtitleTracks) { track in
+                    Button {
+                        guard let videoURL = playback.currentVideoURL else { return }
+                        subtitles.loadEmbedded(track, from: videoURL)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(subtitles.embeddedTrackLabel(track)).lineLimit(1)
+                                Text(track.codec.uppercased())
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if subtitles.selectedEmbeddedTrackID == track.id {
+                                Image(systemName: "checkmark").foregroundStyle(.tint)
+                            } else if !track.canProvideTimedText {
+                                Image(systemName: "exclamationmark.circle")
+                                    .foregroundStyle(.secondary)
+                                    .help(L10n.string("subtitle.embedded.bitmap_hint"))
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!track.canProvideTimedText)
+                }
             }
         }
     }
 
     private var playlistPanel: some View {
         List(playlistStore.items, selection: Binding<String?>(
-            get: { playback.currentVideoURL?.path },
-            set: { path in
-                guard let item = playlistStore.items.first(where: { $0.url.path == path }) else { return }
+            get: { playback.currentVideoURL?.absoluteString },
+            set: { identifier in
+                guard let item = playlistStore.items.first(where: { $0.url.absoluteString == identifier }) else { return }
                 loadVideo(item.url, playlist: playlistStore.items, shouldStartPlayback: true)
             }
         )) { item in
-            Label(item.displayName, systemImage: playback.currentVideoURL?.path == item.url.path ? "play.fill" : "film")
-                .tag(item.url.path)
+            Label(item.displayName, systemImage: playback.currentVideoURL?.absoluteString == item.url.absoluteString ? "play.fill" : "film")
+                .tag(item.url.absoluteString)
         }
         .safeAreaInset(edge: .top) {
             inspectorTitleBar("playlist.panel.title", detail: playlistSummary)
@@ -575,6 +633,7 @@ struct PlayerView: View {
             loadVideo(originalURL: originalURL, playbackURL: remuxedURL, playlist: playlistStore.items, shouldStartPlayback: true)
         }
         subtitles.onGenerationFinished = { mediaAssets.markSubtitleGenerated() }
+        subtitles.onEmbeddedSubtitleLoaded = { mediaAssets.markSubtitleEmbeddedLoaded() }
     }
 
     private func handlePlaybackEnd(_ notification: Notification) {
@@ -611,28 +670,78 @@ struct PlayerView: View {
         revealControls()
     }
 
-    private func loadVideo(_ url: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
+    private func openNetworkMedia(_ resource: NetworkMediaResource, server: NetworkMediaServer) {
+        let item = MediaPlaylistItem(url: resource.playbackURL)
+        loadVideo(
+            item.url,
+            playlist: [item],
+            shouldStartPlayback: true,
+            resource: .network(resource),
+            source: .dlna(serverID: server.id, serverName: server.friendlyName)
+        )
+        activePanel = nil
+        revealControls()
+    }
+
+    private func loadVideo(
+        _ url: URL,
+        playlist nextPlaylist: [MediaPlaylistItem],
+        shouldStartPlayback: Bool,
+        resource: MediaResource? = nil,
+        source: MediaLibrarySource = .localFolder
+    ) {
         switch PlaybackEngineRouter.preferredEngine(for: url) {
         case .nativeVLC:
             playback.loadWithNativeEngine(url)
-            prepareCurrentMediaState(originalURL: url, playlist: nextPlaylist)
+            prepareCurrentMediaState(
+                originalURL: url,
+                playlist: nextPlaylist,
+                resource: resource,
+                source: source
+            )
         case .avkit, .none:
-            loadVideo(originalURL: url, playbackURL: url, playlist: nextPlaylist, shouldStartPlayback: shouldStartPlayback)
+            loadVideo(
+                originalURL: url,
+                playbackURL: url,
+                playlist: nextPlaylist,
+                shouldStartPlayback: shouldStartPlayback,
+                resource: resource,
+                source: source
+            )
         }
     }
 
-    private func loadVideo(originalURL: URL, playbackURL: URL, playlist nextPlaylist: [MediaPlaylistItem], shouldStartPlayback: Bool) {
+    private func loadVideo(
+        originalURL: URL,
+        playbackURL: URL,
+        playlist nextPlaylist: [MediaPlaylistItem],
+        shouldStartPlayback: Bool,
+        resource: MediaResource? = nil,
+        source: MediaLibrarySource = .localFolder
+    ) {
         playback.loadWithAVKit(originalURL: originalURL, playbackURL: playbackURL, shouldStartPlayback: shouldStartPlayback)
-        prepareCurrentMediaState(originalURL: originalURL, playlist: nextPlaylist)
+        prepareCurrentMediaState(
+            originalURL: originalURL,
+            playlist: nextPlaylist,
+            resource: resource,
+            source: source
+        )
     }
 
-    private func prepareCurrentMediaState(originalURL: URL, playlist nextPlaylist: [MediaPlaylistItem]) {
+    private func prepareCurrentMediaState(
+        originalURL: URL,
+        playlist nextPlaylist: [MediaPlaylistItem],
+        resource: MediaResource? = nil,
+        source: MediaLibrarySource = .localFolder
+    ) {
         playlistStore.setInitial(nextPlaylist)
         subtitles.prepareForNewVideo(url: originalURL)
         mediaAssets.prepareForNewVideo(
             url: originalURL,
             hasDetectedSubtitles: !subtitles.detectedSubtitles.isEmpty,
             engine: playback.activePlaybackEngine,
+            resource: resource,
+            source: source,
             isStillCurrent: { playback.currentVideoURL == originalURL }
         )
     }

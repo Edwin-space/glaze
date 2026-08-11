@@ -19,6 +19,7 @@
 "assistant.panel.title" = "AI Media Assistant";
 "assistant.panel.toggle" = "AI Media";
 "assistant.subtitle.external_loaded" = "External subtitles connected";
+"assistant.subtitle.embedded_loaded" = "Embedded subtitles connected";
 "assistant.subtitle.generated" = "Original subtitles generated";
 "assistant.subtitle.missing" = "Subtitles need prep";
 "assistant.subtitle.not_checked" = "Not checked";
@@ -28,6 +29,19 @@
 "media.source.icloud" = "iCloud";
 "media.source.local" = "Local Folder";
 "media.source.nas" = "NAS";
+"media.source.dlna" = "DLNA Media Server";
+"network.browser.back" = "Back";
+"network.browser.close" = "Close";
+"network.browser.discovering" = "Looking for media servers";
+"network.browser.empty" = "No media servers found";
+"network.browser.empty_hint" = "Check that your NAS DLNA/UPnP media server is enabled and on the same network as this Mac.";
+"network.browser.error" = "Couldn’t load network media";
+"network.browser.folder_empty" = "No playable videos in this folder";
+"network.browser.loading" = "Loading folder";
+"network.browser.open" = "Network Media";
+"network.browser.refresh" = "Refresh";
+"network.browser.retry" = "Try Again";
+"network.browser.title" = "Network Media";
 "media.source.server" = "Media Server";
 "open_panel.title" = "Choose a video";
 "media.error.title" = "Media info issue";
@@ -81,6 +95,8 @@
 "subtitle.generate" = "Generate Subtitles";
 "subtitle.generate.cancel" = "Cancel Generation";
 "subtitle.error.audio_extraction_failed" = "Failed to extract audio.";
+"subtitle.error.embedded_extraction_failed" = "Could not load subtitles embedded in this video.";
+"subtitle.error.embedded_inspection_failed" = "Could not inspect subtitles embedded in this video.";
 "subtitle.error.empty_file" = "This subtitle file has no readable cues.";
 "subtitle.error.generation_failed" = "Subtitle generation failed.";
 "subtitle.error.model_unavailable" = "Couldn't prepare the AI model. Check your internet connection.";
@@ -92,6 +108,10 @@
 "subtitle.generating.stage.extracting_audio" = "Extracting audio";
 "subtitle.generating.stage.preparing_model" = "Preparing AI model";
 "subtitle.generating.stage.transcribing" = "Transcribing speech";
+"subtitle.embedded.bitmap_hint" = "Image-based embedded subtitles are not yet available for extraction or translation preparation.";
+"subtitle.embedded.inspecting" = "Checking subtitles embedded in this video.";
+"subtitle.embedded.language_format" = "Embedded Subtitle · %@";
+"subtitle.embedded.track_format" = "Embedded Subtitle · Track %d";
 "subtitle.import" = "Import Subtitle File";
 "subtitle.import_panel.title" = "Choose a subtitle file";
 "subtitle.kind.korean" = "Korean";
@@ -116,6 +136,7 @@
 "subtitle.panel.toggle" = "Subtitles";
 "subtitle.status.hint" = "Subtitle generation starts only when you ask for it.";
 "subtitle.status.detected_hint_format" = "Detected: %@";
+"subtitle.status.embedded_translation_ready_format" = "Embedded subtitle cues are ready as the %@ translation source.";
 "subtitle.status.generating" = "Generating subtitles";
 "subtitle.status.generate_or_import_hint" = "No matching subtitles found. Generate subtitles or import a file when needed.";
 "subtitle.status.hidden_hint_format" = "Hidden: %@";
