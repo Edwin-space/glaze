@@ -135,6 +135,25 @@
 | `subtitle.visibility.hide` | 자막 숨기기 | Hide Subtitles | 버튼 | 구현 |
 | `subtitle.visibility.show` | 자막 보이기 | Show Subtitles | 버튼 | 구현 |
 | `subtitle.visibility.toggle` | 자막 표시 | Display subtitles | 설정 | 구현 |
+| `assistant.subtitle.embedded_loaded` | 내장 자막 연결됨 | Embedded subtitles connected | 상태 | 구현 |
+| `media.source.dlna` | DLNA 미디어 서버 | DLNA Media Server | 출처 | 구현 |
+| `subtitle.embedded.inspecting` | 영상의 내장 자막을 확인하는 중입니다. | Checking subtitles embedded in this video. | 상태 | 구현 |
+| `subtitle.embedded.language_format` | 내장 자막 · %@ | Embedded Subtitle · %@ | 트랙 | 구현 |
+| `subtitle.embedded.track_format` | 내장 자막 · 트랙 %d | Embedded Subtitle · Track %d | 트랙 | 구현 |
+| `subtitle.embedded.bitmap_hint` | 이미지 기반 내장 자막은 추출·번역 준비를 아직 지원하지 않습니다. | Image-based embedded subtitles are not yet available for extraction or translation preparation. | 안내 | 구현 |
+| `subtitle.status.embedded_translation_ready_format` | 내장 자막 구간을 %@ 번역 입력으로 준비했습니다. | Embedded subtitle cues are ready as the %@ translation source. | 상태 | 구현 |
+| `subtitle.error.embedded_inspection_failed` | 영상의 내장 자막을 확인하지 못했습니다. | Could not inspect subtitles embedded in this video. | 오류 | 구현 |
+| `subtitle.error.embedded_extraction_failed` | 영상의 내장 자막을 불러오지 못했습니다. | Could not load subtitles embedded in this video. | 오류 | 구현 |
+| `NSLocalNetworkUsageDescription` | 글레이즈는 Synology NAS 같은 미디어 서버에서 영상을 찾고 재생하기 위해 로컬 네트워크를 사용합니다. | Glaze uses your local network to find and play videos from media servers such as Synology NAS. | 시스템 권한 | 구현 |
+| `network.browser.open` | 네트워크 미디어 | Network Media | 버튼 | 구현 |
+| `network.browser.title` | 네트워크 미디어 | Network Media | 시트 제목 | 구현 |
+| `network.browser.discovering` | 미디어 서버를 찾는 중입니다 | Looking for media servers | 상태 | 구현 |
+| `network.browser.empty` | 미디어 서버를 찾지 못했습니다 | No media servers found | 빈 상태 | 구현 |
+| `network.browser.empty_hint` | NAS의 DLNA/UPnP 미디어 서버가 켜져 있고 Mac과 같은 네트워크인지 확인하세요. | Check that your NAS DLNA/UPnP media server is enabled and on the same network as this Mac. | 안내 | 구현 |
+| `network.browser.loading` | 폴더를 불러오는 중입니다 | Loading folder | 상태 | 구현 |
+| `network.browser.folder_empty` | 이 폴더에 재생 가능한 영상이 없습니다 | No playable videos in this folder | 빈 상태 | 구현 |
+| `network.browser.error` | 네트워크 미디어를 불러오지 못했습니다 | Couldn’t load network media | 오류 | 구현 |
+| `network.browser.back/close/refresh/retry` | 뒤로/닫기/새로고침/다시 시도 | Back/Close/Refresh/Try Again | 탐색 버튼 | 구현 |
 
 ## 앞으로 필요한 텍스트 그룹
 

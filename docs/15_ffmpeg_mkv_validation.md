@@ -142,6 +142,13 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - MKV / 내장 자막 트랙
 - HDR 샘플
 
+내장 자막 검증 매트릭스:
+
+- 텍스트: SubRip, WebVTT, ASS/SSA — ffprobe 메타데이터와 캐시 SRT 추출·표시 확인
+- 이미지: PGS, DVD/VobSub — 트랙 감지와 안전한 미지원 안내, 음성 인식 fallback 확인
+- 언어: ISO 639-1/2 코드(`ko`/`kor`, `en`/`eng`) 정규화와 기본/강제 트랙 우선순위 확인
+- 원격: DLNA HTTP URL을 ffprobe/ffmpeg 입력으로 사용했을 때 서버 seek/range 지원과 추출 시간 확인
+
 기록 필드:
 
 | 샘플 | 컨테이너 | 비디오 코덱 | 오디오 코덱 | 자막 트랙 | 해상도 | AVKit 재생 | 자막 감지 | 오디오 추출 | FFmpeg 필요 | 비고 |

@@ -170,7 +170,8 @@ Submarine Player 대비 차별화 축:
 
 - 앱: SwiftUI
 - 모듈 구조: 플랫폼 독립 `GlazeCore`(미디어 자산 모델, 자막 파싱, AI 자막/번역 엔진 인터페이스, Job Queue)와 macOS 전용 `GlazeMac`(AppKit/AVKit/VLC 재생 표면)으로 분리해, iOS 확장이 아키텍처를 막지 않도록 지금부터 반영한다
-- 영상 재생: MP4/MOV는 AVKit, MKV/WebM/AVI 등은 네이티브 VLC 엔진. 재생 엔진 고도화(4K 첫 프레임 튜닝, 다중 오디오 트랙, 내장 자막 트랙 등)는 현재 수준에서 동결하고, AI 자막 생성(Phase 4)을 우선한다
+- 영상 재생: MP4/MOV는 AVKit, MKV/WebM/AVI 등은 네이티브 VLC 엔진. 텍스트 기반 내장 자막은 감지·추출·표시하며, 사용자 언어 트랙이 없으면 내장 cue를 번역 입력으로 우선 재사용한다
+- 네트워크 미디어: 로컬 파일과 DLNA/UPnP 리소스를 동일한 `MediaResource` 경계로 다루고, macOS가 NAS 탐색·자막 준비의 중심, iOS/iPadOS/tvOS가 감상의 중심이 되는 구조를 유지한다
 - 재생 엔진 배포 리스크: VLC/libVLC dlopen 동적 로딩 방식의 App Store 심사 통과 여부와 GPL 라이선스 정책을 다른 작업보다 먼저 조기 검증한다. 검증 결과에 따라 재생 엔진 선택이 바뀔 수 있다
 - 음성 인식: Whisper 계열 온디바이스 모델 검토
 - 모델 실행: Core ML, Metal, Neural Engine 활용

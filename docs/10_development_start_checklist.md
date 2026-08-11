@@ -173,6 +173,16 @@ scripts/
 - 여러 자막 파일의 선택/전환은 MVP 기본 UI를 구현했으며, 추후 검색/정렬/언어 필터가 필요하면 확장한다.
 - 파일 읽기 오류는 기본 안내를 구현했으며, 추후 권한 문제, 파일 이동/삭제, App Sandbox 보안 범위 오류를 더 세분화한다.
 
+### 내장 자막 기반 작업 (2026-08-11)
+
+- [x] ffprobe 기반 내장 자막 스트림·언어·기본/강제 트랙 감지
+- [x] SRT/ASS/SSA/WebVTT 등 텍스트 트랙을 캐시 SRT로 추출해 기존 오버레이에 표시
+- [x] 사용자 선호 언어 트랙 자동 선택
+- [x] 선호 언어가 없을 때 텍스트 내장 cue를 번역 입력으로 준비
+- [x] PGS/VobSub 등 이미지 기반 트랙 표시 및 음성 인식 fallback
+- [ ] 번역 엔진에 `SubtitleTranslationRequest` 실제 연결
+- [ ] 이미지 기반 자막 OCR 검증
+
 ## Phase 3. FFmpeg 검증
 
 ### 목표
@@ -321,6 +331,26 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 
 - 짧은 샘플 영상에서 SRT 형태의 원어 자막을 생성한다.
 - 후보별 장단점이 문서화된다.
+
+## Phase 3C. NAS / DLNA 기반 (2026-08-11)
+
+### 구현 완료
+
+- [x] SSDP MediaServer 탐색 요청·응답 파싱
+- [x] UPnP Device Description과 ContentDirectory 제어 URL 파싱
+- [x] SOAP Browse와 DIDL-Lite 컨테이너/영상 리소스 파싱
+- [x] 로컬/네트워크 공통 `MediaResource` 모델
+- [x] 원격 URL용 VLC `libvlc_media_new_location` 재생 경로
+- [x] 로컬 네트워크 사용 목적 한국어/영어 문구
+- [x] 네트워크 미디어 시트에서 서버 탐색·폴더 이동·영상 선택/재생
+
+### 출시 전 검증
+
+- [ ] Synology Media Server 실기기 탐색·Browse·재생 회귀 테스트
+- [ ] NAS sleep/wake, IP 변경, 서버 중복 응답, 연결 손실 복구
+- [ ] DLNA가 제공하지 않는 sidecar 자막의 앱 내부 저장·연결 정책
+- [ ] iOS/iPadOS multicast entitlement 신청 및 실기기 검증
+- [ ] tvOS 타겟, focus engine UI, Top Shelf/이어보기 범위 결정
 
 ## Phase 5. 번역 기술 검증
 

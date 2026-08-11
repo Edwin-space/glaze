@@ -1,7 +1,7 @@
 # 플랫폼 및 글로벌 확장 계획
 
 작성일: 2026-06-18  
-최종 수정: 2026-08-10 (기초 재설계 결정 반영, 근거: `16_foundation_redesign_audit.md`)  
+최종 수정: 2026-08-11 (내장 자막·DLNA/UPnP·Apple TV 기반 반영)
 프로젝트명: 글레이즈
 
 ## 문서 목적
@@ -117,6 +117,20 @@ Apple TV 앱과 NAS/자체 미디어 서버는 장기 프리미엄 확장의 핵
 - NAS/SMB/WebDAV 또는 자체 서버 라이브러리 스캔
 - Plex처럼 포스터/시즌/에피소드 기반 탐색 제공
 - AI 자막 준비 상태를 거실 화면에서도 확인
+
+2026-08-11 기반 작업:
+
+- `GlazeCore`에 로컬/네트워크 미디어를 통합하는 `MediaResource`와 DLNA 서버·컨테이너·영상 모델을 추가했다.
+- SSDP M-SEARCH 응답, UPnP Device Description, ContentDirectory SOAP Browse, DIDL-Lite 파싱을 플랫폼 공통 계층으로 분리했다.
+- macOS에 동일 네트워크의 MediaServer 탐색 서비스와 원격 HTTP URL의 VLC 재생 경로를 추가했다.
+- 내장 텍스트 자막의 언어 선택·추출·표시 및 번역 입력 계획을 공통 모델로 분리했다.
+- tvOS 타겟과 NAS 탐색 UI는 아직 추가하지 않는다. 실제 Synology 장비의 인증·폴더 구조·전송 안정성 검증 후 감상 앱 타겟을 시작한다.
+
+Apple 플랫폼 네트워크 계약:
+
+- macOS 15 이상 로컬 네트워크 접근 설명을 `NSLocalNetworkUsageDescription`으로 제공한다.
+- iOS/iPadOS 실기기에서 SSDP 멀티캐스트를 사용할 때는 Apple의 multicast entitlement 승인 절차를 별도 진행한다.
+- tvOS에서는 FFmpeg 실행 파일에 의존하지 않고, 네이티브 재생 트랙 또는 macOS에서 미리 준비한 SRT/VTT 자산을 소비한다.
 
 ## 플랫폼별 제품 역할
 
