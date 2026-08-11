@@ -126,13 +126,13 @@ Figma Community의 media player, video player, music player 템플릿은 분위�
 상세 근거와 레퍼런스는 [크로스플랫폼 플레이어 UI 레퍼런스 연구](16_cross_platform_player_ui_research.md), 편집 가능한 설계 구조는 Figma [Cross-platform Player System](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=28-2)을 기준으로 한다.
 
 - 공통: 재생 상태, 자막 준비 상태, 명시적 자막 생성 계약을 공유한다.
-- macOS: native toolbar + transient transport controls + trailing Inspector
+- macOS: native toolbar + transient clustered transport controls + trailing Inspector
 - iPadOS regular width: 영상 + trailing Inspector
 - iPadOS compact width: Inspector 내용을 resizable Sheet로 전환
 - iOS: edge-to-edge player + medium/large detent Sheet
 - production design은 현재 deployment baseline과 맞는 macOS 26 / iOS·iPadOS 26 UI Kit를 사용한다. Apple 27 UI Kit는 forward exploration에만 사용한다.
 
-Liquid Glass는 영상 위 controls와 navigation 같은 기능 레이어에 제한한다. 영상·설정 내용 자체를 Glass content layer로 만들지 않으며, 텍스트가 많은 Inspector와 Sheet에는 regular material 또는 standard material을 사용한다.
+Liquid Glass는 영상 위 controls와 navigation 같은 기능 레이어에 제한한다. 영상·설정 내용 자체를 Glass content layer로 만들지 않으며, 텍스트가 많은 Inspector와 Sheet에는 regular material 또는 standard material을 사용한다. 영상 위에서는 넓은 Glass bar를 만들지 않고 실제 조작 버튼을 묶은 작은 island에만 clear variant를 적용한다.
 
 ## 플레이어 크롬 기준
 
@@ -199,7 +199,7 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 - 창 툴바 중앙: 현재 파일명
 - 창 툴바 우측: 자막, 보조 패널 메뉴, 영상 열기
 - 중앙: 창 너비를 우선 사용하는 검정 영상 스테이지
-- 영상 하단: 시간축, 재생/일시정지, ±15초 탐색, 이전/다음, 자막, 볼륨, 전체 화면을 묶은 Liquid Glass transport controls
+- 영상 하단: 컨테이너 없는 얇은 시간축 + 좌측 primary playback island + 우측 viewing/subtitle island
 - 우측: 자막/재생목록/미디어 정보/AI 미디어를 전환하는 시스템 Inspector(300–420pt 가변 폭)
 
 우측 Inspector는 기본적으로 닫혀 있으며, 사용자가 툴바나 transport controls의 자막 액션을 선택할 때만 열린다. 내부 정보는 `Form`, `Section`, `LabeledContent`, `List`, segmented `Picker`로 구성한다.
@@ -219,13 +219,16 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 
 ### Transport Controls
 
-영상이 열린 경우에만 하단에 시스템 transport controls의 조작 순서를 따르는 단일 Glass surface를 둔다.
+영상이 열린 경우에만 하단에 transient controls를 표시한다. 전체를 감싸는 단일 Glass surface는 사용하지 않고, 정보와 조작을 다음 세 레이어로 분리한다.
 
-구성 순서:
+구성:
 
-- 현재 시간 / scrubber / 남은 시간
-- 이전 영상 / 15초 뒤로 / 재생·일시정지 / 15초 앞으로 / 다음 영상
-- 자막 상태·표시 / 명시적 자막 생성 / 볼륨 / 전체 화면
+- 독립 시간축: Glass 컨테이너 없이 얇은 track, scrubber, 현재/전체 시간만 표시
+- 좌측 primary island: 15초 뒤로, 재생·일시정지, 15초 앞으로. macOS만 볼륨을 직접 노출
+- 우측 viewing/subtitle island: CC, PiP, 전체 화면, 더보기. 좁은 폭에서는 낮은 빈도 action을 더보기로 축약
+- 자막 생성·불러오기·언어·품질: transport controls에서 제외하고 Inspector 또는 Sheet에서 제공
+
+두 island에는 `clear` Liquid Glass를 적용하고 밝은 영상에서는 컨트롤 주변에만 최대 35% 수준의 국부 dimming을 더한다. `Reduce Transparency`가 활성화되면 더 불투명한 regular material로 대체한다. macOS hit area는 최소 28–32pt, iOS/iPadOS touch target은 최소 44pt를 확보하며 실제 아이콘은 SF Symbols를 사용한다.
 
 재생 중에는 2.5초 비활동 후 controls를 숨기고 포인터 이동·Space 입력·일시정지 시 다시 표시한다. 자막은 controls가 표시될 때만 충돌하지 않도록 위로 이동한다.
 
@@ -290,13 +293,14 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 ## 현재 코드 반영 상태 (2026-08-10)
 
 1. 어두운 edge-to-edge 미디어 스테이지와 unified compact 창 툴바 적용 완료
-2. 시간축, 재생/일시정지, ±15초 탐색, 이전/다음, 볼륨, 전체 화면을 단일 Liquid Glass transport surface로 구현 완료
+2. 기존 구현은 시간축, 재생/일시정지, ±15초 탐색, 이전/다음, 볼륨, 전체 화면을 단일 Liquid Glass transport surface로 제공
 3. 재생 중 controls 자동 숨김과 Space/더블클릭 입력 적용 완료
 4. 직접 만든 `PlayerInspectorLayout` 제거, SwiftUI `inspector` + `Form`/`List` 기반 가변 Inspector 적용 완료
 5. VLC/libVLC의 재생 상태·시간·길이·탐색·볼륨 API를 공통 playback 상태에 연결 완료
 6. VLC 시간 갱신을 자막 cue 동기화에도 연결 완료
 7. 어두운 미디어 빈 상태와 강조색 Glass 기본 액션 적용 완료
 8. 한국어/영어 재생 조작 텍스트 동기화 완료
+9. 독립 시간축 + 좌·우 control island 개편안은 Figma와 설계 문서에 반영 완료, SwiftUI 구현 전환은 대기
 
 ## 참고 출처
 

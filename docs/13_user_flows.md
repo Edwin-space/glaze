@@ -105,6 +105,8 @@
 - AVKit/VLC 공통 재생/일시정지, scrubber, ±15초 탐색, 볼륨, 전체 화면 controls 구현
 - Space로 재생/일시정지, 영상 더블클릭으로 전체 화면 전환
 - 재생 중 2.5초 비활동 시 transport controls 자동 숨김, 포인터 이동·일시정지 시 복귀
+- 승인된 후속 UX: 단일 Glass bar를 독립 시간축 + primary playback island + viewing/subtitle island로 분리
+- 자막 생성·불러오기·언어·품질은 transport controls에 넣지 않고 Inspector/Sheet로 연결
 - macOS 드래그앤드롭 직후 SwiftUI `VideoPlayer` 재구성 크래시를 피하기 위해 `AVPlayerView` 기반 재생 표면으로 전환
 - `AVPlayerItem` 준비 완료 후 재생을 시작하고, 실패/대기 상태를 사용자에게 표시
 - MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 포맷을 VLC/libVLC 네이티브 엔진 대상으로 라우팅하는 재생 엔진 경계 구현

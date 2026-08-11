@@ -232,6 +232,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - 재생/일시정지/±15초 탐색/scrubber/볼륨 제어를 AVKit·VLC 공통 플레이어 상태로 연결 완료
 - VLC 재생 시간 갱신을 외부 자막 cue 동기화에 연결 완료
 - Space 재생/일시정지, 더블클릭 전체 화면, 재생 중 transport controls 자동 숨김 구현
+- [설계 완료·구현 대기] 단일 transport Glass bar를 독립 시간축 + 좌측 primary island + 우측 viewing/subtitle island로 전환
 - 다중 오디오 트랙, 내장 자막 트랙, ASS/SSA 자막 대응
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 오디오 추출 작업으로 재분류
 
@@ -274,7 +275,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 ### 진행 중 구현
 
 - `MediaAsset` 기초 모델 추가: 파일 위치, 보관 소스, 작품 메타데이터, 자막 준비 상태, 시청 위치
-- macOS unified compact 툴바 + edge-to-edge 영상 스테이지 + Liquid Glass transport controls로 Player Shell 전면 재설계
+- macOS unified compact 툴바 + edge-to-edge 영상 스테이지 + 독립 시간축·Liquid Glass control islands로 Player Shell 재설계
 - 자막/재생목록/미디어 정보/AI 미디어 패널을 네이티브 SwiftUI `inspector`와 단일 `activePanel` 상태로 통합
 - 상시 노출 AI 미디어 버블 제거, 툴바 패널 메뉴로 진입점 이동
 - 카드형 커스텀 Inspector 제거, `Form`/`Section`/`LabeledContent`/`List`/segmented `Picker` 적용
