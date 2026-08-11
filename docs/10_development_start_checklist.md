@@ -279,11 +279,14 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - 상시 노출 AI 미디어 버블 제거, 툴바 패널 메뉴로 진입점 이동
 - 카드형 커스텀 Inspector 제거, `Form`/`Section`/`LabeledContent`/`List`/segmented `Picker` 적용
 - 콘텐츠는 어두운 미디어 스테이지, 조작은 `glassEffect`/glass button style과 SF Symbols로 분리
+- Apple HIG·Apple 26 UI Kit 기반 macOS/iPadOS/iOS adaptive player architecture 조사 및 Figma `Cross-platform Player System` 페이지 작성
 - 작품 정보 찾기, 자막 준비, 파일 정보 반영 액션 자리 표시
 - 원본 파일 쓰기는 기본값이 아니라 명시적 액션으로 분리
 
 ### 다음 작업
 
+- Figma P0: macOS Inspector 닫힘·열림·생성 중 production frame 3종
+- Figma P1: iPadOS regular/compact, iOS medium/large detent production frame
 - TMDB/IMDb/TVDB 등 메타데이터 공급자 추상화 설계
 - sidecar metadata 저장 포맷 결정
 - 포스터/줄거리/시즌/에피소드 매칭 UI 설계

@@ -1,7 +1,7 @@
 # UI 레퍼런스 및 디자인 방향
 
 작성일: 2026-06-18  
-최종 수정: 2026-08-10 (플레이어 UI 전면 재설계 구현)
+최종 수정: 2026-08-11 (Apple 26 기반 크로스플랫폼 플레이어 구조 추가)
 프로젝트명: 글레이즈 / Glaze
 
 ## 확정된 브랜드 (2026-08-10)
@@ -120,6 +120,19 @@ Figma Community의 media player, video player, music player 템플릿은 분위�
 - 웹 대시보드 스타일을 네이티브 플레이어에 그대로 이식하지 않는다.
 
 ## 글레이즈 UI 핵심 원칙
+
+## Apple 플랫폼 공통 구조 (2026-08-11)
+
+상세 근거와 레퍼런스는 [크로스플랫폼 플레이어 UI 레퍼런스 연구](16_cross_platform_player_ui_research.md), 편집 가능한 설계 구조는 Figma [Cross-platform Player System](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=28-2)을 기준으로 한다.
+
+- 공통: 재생 상태, 자막 준비 상태, 명시적 자막 생성 계약을 공유한다.
+- macOS: native toolbar + transient transport controls + trailing Inspector
+- iPadOS regular width: 영상 + trailing Inspector
+- iPadOS compact width: Inspector 내용을 resizable Sheet로 전환
+- iOS: edge-to-edge player + medium/large detent Sheet
+- production design은 현재 deployment baseline과 맞는 macOS 26 / iOS·iPadOS 26 UI Kit를 사용한다. Apple 27 UI Kit는 forward exploration에만 사용한다.
+
+Liquid Glass는 영상 위 controls와 navigation 같은 기능 레이어에 제한한다. 영상·설정 내용 자체를 Glass content layer로 만들지 않으며, 텍스트가 많은 Inspector와 Sheet에는 regular material 또는 standard material을 사용한다.
 
 ## 플레이어 크롬 기준
 
@@ -293,5 +306,9 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 - Submarine Player 공식 웹사이트: https://submarineplayer.com/
 - Figma Community: https://www.figma.com/community
 - Apple HIG — Playing video: https://developer.apple.com/design/human-interface-guidelines/playing-video
+- Apple HIG — Materials: https://developer.apple.com/design/human-interface-guidelines/materials
+- Apple HIG — Toolbars: https://developer.apple.com/design/human-interface-guidelines/toolbars
+- Apple HIG — Sheets: https://developer.apple.com/design/human-interface-guidelines/sheets
+- Apple Design Resources: https://developer.apple.com/design/resources/
 - Apple — Build a SwiftUI app with the new design: https://developer.apple.com/videos/play/wwdc2025/323/
 - Apple — Meet Liquid Glass: https://developer.apple.com/videos/play/wwdc2025/219/

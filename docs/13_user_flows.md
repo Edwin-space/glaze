@@ -210,6 +210,15 @@
 7. 사용자가 확인
 8. 자막 생성 작업 시작
 
+### 플랫폼별 presentation
+
+- macOS: 현재 영상에 종속된 trailing Inspector에서 옵션을 확인하고 생성한다.
+- iPadOS regular width: 영상과 trailing Inspector를 동시에 유지한다.
+- iPadOS compact width: 같은 내용을 resizable Sheet로 전환한다.
+- iOS: medium detent에서 상태·핵심 옵션·기본 액션을 보여주고, large detent에서 언어·품질·저장 위치·고급 옵션을 제공한다.
+
+어떤 플랫폼에서도 Sheet나 Inspector를 여는 것만으로 AI 작업을 시작하지 않는다. 사용자가 `자막 만들기`를 명시적으로 선택한 뒤에만 작업을 시작한다.
+
 ### 아직 미구현
 
 - 실제 오디오 추출

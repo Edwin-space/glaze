@@ -137,6 +137,8 @@ MVP는 "영상 재생 + 단일 영상 수동 AI 자막 생성 + 저장 + 자동 
 
 실제 앱 출시는 macOS MVP가 안정화된 뒤 보조 감상 앱으로 확장한다. 모바일에서는 긴 영상 자막 생성보다 macOS에서 준비된 자막과 라이브러리를 이어서 보는 경험을 먼저 제공한다. 다만 아키텍처는 출시 시점을 기다리지 않는다 — `GlazeCore`/`GlazeMac` 모듈 분리는 macOS 개발 단계에서부터 반영한다(상세: `06_platform_global_expansion_plan.md`).
 
+UI 구조는 macOS의 화면을 축소 이식하지 않는다. 공통 playback/subtitle state는 공유하되 iPadOS regular width는 trailing Inspector, compact width는 resizable Sheet, iOS는 medium/large detent Sheet를 사용한다. production design 기준은 Apple 26 UI Kit이며 상세 결정은 `16_cross_platform_player_ui_research.md`를 따른다.
+
 ### 3단계. Android
 
 글로벌 모바일 확장 후보로 둔다. 기기 성능 편차와 AI 모델 최적화 난이도가 크므로 iOS/iPadOS 이후 검토한다.
