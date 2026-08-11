@@ -28,11 +28,13 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: JBN99YZ7KN
-        ENABLE_APP_SANDBOX: NO
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
       configs:
+        Debug:
+          ENABLE_APP_SANDBOX: NO
         Release:
+          ENABLE_APP_SANDBOX: YES
           CODE_SIGN_ENTITLEMENTS: Packaging/Glaze.entitlements
     postbuildScripts:
       - name: "Stage VLC & ffmpeg tools"

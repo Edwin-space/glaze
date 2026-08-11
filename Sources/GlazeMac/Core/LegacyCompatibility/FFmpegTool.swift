@@ -28,6 +28,12 @@ enum FFmpegTool {
     private static func bundledExecutableURLs(named toolName: String) -> [URL] {
         var candidates: [URL] = []
 
+        if let executableDirectory = Bundle.main.executableURL?.deletingLastPathComponent() {
+            candidates.append(executableDirectory.appendingPathComponent(toolName))
+            candidates.append(executableDirectory.appendingPathComponent("Tools/\(toolName)"))
+        }
+
+        // Legacy resource locations remain as development fallbacks for older bundles.
         if let bundledURL = Bundle.main.url(forResource: toolName, withExtension: nil, subdirectory: "Tools") {
             candidates.append(bundledURL)
         }

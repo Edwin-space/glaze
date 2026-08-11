@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # Run as a postbuild script phase (see project.yml) for the GlazeMac Xcode target.
-# Stages the bundled VLC runtime and ffmpeg/ffprobe binaries into the built app's
-# Resources folder, and patches VLC's dylib load paths to be bundle-relative.
+# Stages the bundled VLC runtime and ffmpeg/ffprobe binaries into the built app,
+# signs executable helpers for App Sandbox inheritance, and patches VLC's dylib
+# load paths to be bundle-relative.
 # Mirrors the logic that used to live inline in script/build_and_run.sh.
 
 ROOT_DIR="${SRCROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
@@ -15,6 +16,8 @@ if [[ -z "${BUILT_PRODUCTS_DIR:-}" || -z "${CONTENTS_FOLDER_PATH:-}" ]]; then
 fi
 
 APP_RESOURCES="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Resources"
+APP_EXECUTABLES="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/MacOS"
+HELPER_ENTITLEMENTS="$ROOT_DIR/Packaging/GlazeHelper.entitlements"
 mkdir -p "$APP_RESOURCES"
 
 if [[ ! -d "$LOCAL_TOOLS_DIR" ]]; then
@@ -22,13 +25,38 @@ if [[ ! -d "$LOCAL_TOOLS_DIR" ]]; then
   exit 0
 fi
 
-mkdir -p "$APP_RESOURCES/Tools"
+mkdir -p "$APP_RESOURCES/Tools" "$APP_EXECUTABLES"
 for tool in ffmpeg ffprobe; do
   if [[ -f "$LOCAL_TOOLS_DIR/$tool" ]]; then
-    cp "$LOCAL_TOOLS_DIR/$tool" "$APP_RESOURCES/Tools/$tool"
-    chmod +x "$APP_RESOURCES/Tools/$tool"
+    helper_path="$APP_EXECUTABLES/$tool"
+    cp "$LOCAL_TOOLS_DIR/$tool" "$helper_path"
+    chmod +x "$helper_path"
+
+    if [[ "${CONFIGURATION:-Debug}" == "Release" ]]; then
+      signing_identity="${EXPANDED_CODE_SIGN_IDENTITY:--}"
+      if [[ -z "$signing_identity" ]]; then
+        signing_identity="-"
+      fi
+      codesign \
+        --force \
+        --sign "$signing_identity" \
+        --identifier "${PRODUCT_BUNDLE_IDENTIFIER:-com.edwin.glaze}.$tool" \
+        --options runtime \
+        --entitlements "$HELPER_ENTITLEMENTS" \
+        --generate-entitlement-der \
+        --timestamp=none \
+        "$helper_path"
+    fi
   fi
 done
+
+# Remove helpers staged by older builds so an incremental Archive cannot retain
+# an unsandboxed executable under Contents/Resources.
+rm -f \
+  "$APP_RESOURCES/Tools/ffmpeg" \
+  "$APP_RESOURCES/Tools/ffprobe" \
+  "$APP_EXECUTABLES/Tools/ffmpeg" \
+  "$APP_EXECUTABLES/Tools/ffprobe"
 
 if [[ -d "$LOCAL_TOOLS_DIR/vlc" ]]; then
   rm -rf "$APP_RESOURCES/Tools/vlc"

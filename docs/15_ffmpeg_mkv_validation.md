@@ -125,7 +125,7 @@ AI 자막 준비가 글레이즈의 차별점이지만, 영상 플레이어로 �
 - remux 전 `ffprobe`로 첫 번째 비디오 코덱을 확인하고, AVKit 재생 후보가 아닌 코덱은 음성만 자동 재생하지 않는다.
 - HEVC를 MP4로 remux할 때는 Apple AVKit 호환성을 위해 `-tag:v hvc1`을 적용한다.
 - FFmpeg가 없으면 호환성 도구가 필요하다는 안내를 표시한다.
-- 개발/검증 앱은 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`에 실행 파일이 있으면 앱 번들 `Contents/Resources/Tools`로 복사해 런타임에서 우선 감지한다.
+- 개발/검증 앱은 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`에 실행 파일이 있으면 앱 번들 `Contents/MacOS`로 복사해 런타임에서 우선 감지한다. 기존 `Contents/MacOS/Tools`, `Contents/Resources/Tools` 경로는 과거 개발 번들 호환용 탐색 fallback만 유지한다.
 
 ## 샘플 세트 기준
 
@@ -247,8 +247,8 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 
 구현:
 
-- 앱 내부 `FFmpegTool` 추가: 번들 `Tools/ffmpeg`, 번들 루트 `ffmpeg`, `/opt/homebrew/bin/ffmpeg`, `/usr/local/bin/ffmpeg`, `/usr/bin/ffmpeg` 순서 탐색
-- 개발 앱 번들 스크립트가 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 `Contents/Resources/Tools`로 복사하도록 추가
+- 앱 내부 `FFmpegTool` 추가: 앱 실행 파일 디렉터리의 `ffmpeg`, 레거시 번들 경로, `/opt/homebrew/bin/ffmpeg`, `/usr/local/bin/ffmpeg`, `/usr/bin/ffmpeg` 순서 탐색
+- 앱 번들 스크립트가 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 `Contents/MacOS`로 복사하도록 추가
 - 검증 스크립트가 시스템 PATH보다 프로젝트 `Tools`의 `ffmpeg`/`ffprobe`를 우선 사용하도록 수정
 - 앱 내부 `FFmpegRemuxer` 추가: `-map 0:v:0 -map 0:a? -c copy -movflags +faststart` 방식으로 MP4 캐시 생성
 - `-c:v copy -c:a aac -b:a 192k -ac 2` 방식의 오디오 호환성 보정 remux를 우선 시도하고, 실패 시 stream copy 재시도
@@ -322,3 +322,29 @@ AI 자막 생성을 위해 재생 가능 여부와 별도로 오디오 추출 �
 - 단일 파일 실행 시 재생목록 패널 자동 오픈 없이 전체 영상 표면에서 첫 프레임 표시 확인.
 - 재생목록에서 같은 폴더의 장편 MKV로 전환 후 새 영상 표시 확인.
 - 창 닫기 시 앱 프로세스 종료 확인.
+
+### 2026-08-11 App Store helper sandbox 서명 수정
+
+문제:
+
+- App Store Connect 업로드가 번들 `ffmpeg`, `ffprobe`에 `com.apple.security.app-sandbox`가 없다는 오류로 거부됐다.
+- 실패한 Archive를 직접 확인한 결과 두 실행 파일은 ad-hoc 서명, Team ID 없음, entitlement 없음 상태였다.
+
+수정:
+
+- 실행 가능한 helper를 리소스가 아닌 Apple 권장 실행 파일 위치인 `Contents/MacOS`에 배치한다.
+- Release 빌드에서 각 helper를 앱과 같은 signing identity로 개별 서명한다.
+- helper에는 `com.apple.security.app-sandbox = true`, `com.apple.security.inherit = true`만 적용하고 hardened runtime을 활성화한다.
+- Xcode가 가장 바깥쪽 `Glaze.app`을 서명하기 전에 내부 helper 서명을 완료한다.
+- 증분 빌드에 남을 수 있는 기존 `Contents/Resources/Tools/ffmpeg`, `ffprobe`를 제거한다.
+
+검증:
+
+```bash
+./script/verify_app_sandbox_signing.sh \
+  "/path/to/Glaze.xcarchive/Products/Applications/Glaze.app"
+```
+
+- 2026-08-11 로컬 Release 빌드에서 메인 앱 `app-sandbox`, 두 helper의 `app-sandbox` + `inherit` 확인 완료.
+- 로컬 개발 인증서의 trust chain은 현재 CLI 환경에서 확인되지 않았으므로, 최종 성공 판정은 Xcode Organizer의 새 Archive `Validate App`으로 수행한다.
+- 샌드박스 앱에서 보안 범위로 선택한 외부 미디어를 helper가 실제로 읽고 캐시를 쓰는 경로는 별도 회귀 테스트한다.

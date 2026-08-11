@@ -7,16 +7,17 @@ Tools/ffmpeg
 Tools/ffprobe
 ```
 
-`script/build_and_run.sh` copies executable files from this directory into:
+The Xcode post-build phase copies executable files from this directory into:
 
 ```text
-dist/Glaze.app/Contents/Resources/Tools/
+Glaze.app/Contents/MacOS/
 ```
 
 Runtime lookup order:
 
-1. Bundled app resources under `Contents/Resources/Tools`
-2. Homebrew/system locations such as `/opt/homebrew/bin`
+1. Bundled helpers under `Contents/MacOS`
+2. Legacy bundled locations under `Contents/MacOS/Tools` and `Contents/Resources/Tools`
+3. Homebrew/system locations such as `/opt/homebrew/bin`
 
 Distribution rules:
 
@@ -58,8 +59,10 @@ Structure:
 - `Sources/GlazeMac` — the macOS app's source, wired as the `GlazeMac` target's source folder.
 - `Packaging/Info.plist` — single source of truth for the app's `Info.plist`, referenced directly via the `INFOPLIST_FILE` build setting (not xcodegen's plist-generation feature — that overwrites the file it's pointed at, which is not what we want for a hand-maintained plist).
 - `Packaging/Glaze.entitlements` — App Sandbox entitlements (`app-sandbox`, `files.user-selected.read-write` for the Open Video/Import Subtitle panels, `network.client` for WhisperKit's model download). Applied only to the **Release** configuration (see `project.yml`); Debug builds stay unsandboxed on purpose for a fast dev cycle. **Verified 2026-08-10**: built Release with these entitlements and confirmed via `lldb` attach that VLC's `dlopen` of its bundled dylibs still succeeds under App Sandbox (see `docs/16_foundation_redesign_audit.md` §3.4 for the caveat about Distribution-signed Archive builds, which weren't tested this way).
+- `Packaging/GlazeHelper.entitlements` — minimal sandbox inheritance entitlements for the bundled `ffmpeg` and `ffprobe` command-line helpers. Release builds sign each helper individually with the target signing identity and hardened runtime before Xcode signs the outer app.
 - `Sources/GlazeMac/Resources/Assets.xcassets/AppIcon.appiconset` — real app icon artwork, exported from the Figma brand guideline at all required sizes.
-- `script/xcode_vlc_stage.sh` — a Run Script build phase (wired in `project.yml`) that copies `Tools/vlc` and `Tools/ffmpeg`/`ffprobe` into the built app and patches the VLC dylibs' load paths, since these aren't SwiftPM/Xcode resources in the normal sense.
+- `script/xcode_vlc_stage.sh` — a Run Script build phase (wired in `project.yml`) that copies `Tools/vlc` into resources, stages `ffmpeg`/`ffprobe` under `Contents/MacOS`, signs the Release helpers for sandbox inheritance, and patches the VLC dylibs' load paths.
+- `script/verify_app_sandbox_signing.sh <Glaze.app>` — fails if the app or either bundled helper is missing its required App Sandbox entitlement. Run it against the app inside every new Archive before uploading.
 
 ### First-time setup / regenerating the project
 

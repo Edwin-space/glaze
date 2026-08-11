@@ -202,7 +202,9 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - AAC/ALAC/MP3/AC3/EAC3 오디오 파일은 불필요한 오디오 재인코딩 없이 stream copy를 우선 적용해 초기 지연을 줄임
 - stream copy remux는 fragmented MP4를 생성하고, 재생 가능한 초기 조각이 준비되면 AVPlayer에 먼저 넘겨 첫 화면 지연을 줄임
 - 검증 스크립트 `--remux` 옵션 추가
-- 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 개발 앱 번들 `Contents/Resources/Tools`로 복사하는 drop-in 구조 추가
+- 프로젝트 `Tools/ffmpeg`, `Tools/ffprobe`를 앱 번들 `Contents/MacOS`로 복사하는 drop-in 구조 추가
+- Release/Archive의 `ffmpeg`, `ffprobe`를 앱 서명 ID로 개별 서명하고 `app-sandbox` + `inherit` entitlement를 적용
+- App Store 업로드 전 앱과 helper entitlement를 점검하는 `script/verify_app_sandbox_signing.sh` 추가
 - 검증 스크립트가 프로젝트 `Tools`의 로컬 FFmpeg 도구를 우선 사용하도록 수정
 - 공식 FFmpeg 소스를 `--disable-gpl`, `--disable-nonfree`로 빌드해 `Tools`에 배치하는 로컬 LGPL 빌드 스크립트 추가
 - MKV/WebM/AVI 실패 시 오디오 AAC 보정 remux를 우선 시도하고, 실패하면 stream copy remux를 재시도
@@ -210,6 +212,15 @@ AVFoundation/AVKit만으로 부족한 포맷과 고해상도 MKV 대응 범위�
 - VLC/libVLC 런타임을 개발 앱 번들에 포함해 주요 로컬 영상 포맷을 remux 없이 직접 재생
 - App Store self-contained bundle, sandbox, 외부 코드 다운로드 제한 기준 확인
 - FFmpeg LGPL/GPL/nonfree 빌드 옵션 리스크 기준 확인
+
+### App Store Archive 검증
+
+- [x] 메인 앱의 `com.apple.security.app-sandbox = true` 확인
+- [x] 번들 `ffmpeg`, `ffprobe`의 `com.apple.security.app-sandbox = true` 확인
+- [x] 번들 `ffmpeg`, `ffprobe`의 `com.apple.security.inherit = true` 확인
+- [x] 이전 빌드의 `Contents/Resources/Tools/ffmpeg`, `ffprobe` 제거
+- [ ] Xcode Organizer에서 새 Archive 생성 후 Validate App/Upload 재검증
+- [ ] 샌드박스 Release 앱에서 사용자가 선택한 외부 영상에 대한 ffprobe/ffmpeg 실제 읽기·쓰기 회귀 테스트
 
 ### 현재 판단
 
