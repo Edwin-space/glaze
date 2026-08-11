@@ -105,7 +105,7 @@
 - AVKit/VLC 공통 재생/일시정지, scrubber, ±15초 탐색, 볼륨, 전체 화면 controls 구현
 - Space로 재생/일시정지, 영상 더블클릭으로 전체 화면 전환
 - 재생 중 2.5초 비활동 시 transport controls 자동 숨김, 포인터 이동·일시정지 시 복귀
-- 승인된 후속 UX: 단일 Glass bar를 독립 시간축 + primary playback island + viewing/subtitle island로 분리
+- 승인된 후속 UX: 단일 Glass bar를 독립 시간축 + 좌측 시간·볼륨 + 중앙 ±15초·재생 + 우측 CC·PiP·전체 화면 micro controls로 분리
 - 자막 생성·불러오기·언어·품질은 transport controls에 넣지 않고 Inspector/Sheet로 연결
 - macOS 드래그앤드롭 직후 SwiftUI `VideoPlayer` 재구성 크래시를 피하기 위해 `AVPlayerView` 기반 재생 표면으로 전환
 - `AVPlayerItem` 준비 완료 후 재생을 시작하고, 실패/대기 상태를 사용자에게 표시
@@ -218,6 +218,14 @@
 - iPadOS regular width: 영상과 trailing Inspector를 동시에 유지한다.
 - iPadOS compact width: 같은 내용을 resizable Sheet로 전환한다.
 - iOS: medium detent에서 상태·핵심 옵션·기본 액션을 보여주고, large detent에서 언어·품질·저장 위치·고급 옵션을 제공한다.
+
+### 다국어 동작 계약
+
+- 결과 언어와 품질은 locale 독립 식별자로 저장하고, 현재 UI locale의 번역 문자열만 `Menu`에 표시한다.
+- Inspector의 라벨·값 열은 고정 폭으로 잠그지 않고 번역 문자열이 40% 길어져도 줄바꿈 또는 폭 확장으로 대응한다.
+- `자막 만들기`와 `자막 파일 가져오기`는 icon-only로 축약하지 않고 전체 폭 라벨 버튼으로 유지한다.
+- RTL 언어에서는 Inspector의 의미 구조와 disclosure 방향을 미러링하되, 미디어 시간축과 시간 표기의 진행 방향은 플레이어 관례를 유지한다.
+- 시스템 언어가 지원되지 않으면 영어로 fallback하며 자막 결과 언어 선택은 시스템 UI 언어와 독립적으로 유지한다.
 
 어떤 플랫폼에서도 Sheet나 Inspector를 여는 것만으로 AI 작업을 시작하지 않는다. 사용자가 `자막 만들기`를 명시적으로 선택한 뒤에만 작업을 시작한다.
 

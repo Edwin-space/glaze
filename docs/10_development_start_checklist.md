@@ -232,7 +232,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - 재생/일시정지/±15초 탐색/scrubber/볼륨 제어를 AVKit·VLC 공통 플레이어 상태로 연결 완료
 - VLC 재생 시간 갱신을 외부 자막 cue 동기화에 연결 완료
 - Space 재생/일시정지, 더블클릭 전체 화면, 재생 중 transport controls 자동 숨김 구현
-- [설계 완료·구현 대기] 단일 transport Glass bar를 독립 시간축 + 좌측 primary island + 우측 viewing/subtitle island로 전환
+- [설계 완료·구현 대기] 단일 transport Glass bar를 독립 시간축 + 좌측 시간·볼륨 + 중앙 ±15초·재생 + 우측 CC·PiP·전체 화면 micro controls로 전환
 - 다중 오디오 트랙, 내장 자막 트랙, ASS/SSA 자막 대응
 - FFmpeg remux는 자동 기본 경로가 아니라 비상 fallback 또는 오디오 추출 작업으로 재분류
 
@@ -275,18 +275,20 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 ### 진행 중 구현
 
 - `MediaAsset` 기초 모델 추가: 파일 위치, 보관 소스, 작품 메타데이터, 자막 준비 상태, 시청 위치
-- macOS unified compact 툴바 + edge-to-edge 영상 스테이지 + 독립 시간축·Liquid Glass control islands로 Player Shell 재설계
+- macOS unified compact 툴바 + edge-to-edge 영상 스테이지 + 독립 시간축·Contextual Micro Glass controls로 Player Shell 재설계
 - 자막/재생목록/미디어 정보/AI 미디어 패널을 네이티브 SwiftUI `inspector`와 단일 `activePanel` 상태로 통합
 - 상시 노출 AI 미디어 버블 제거, 툴바 패널 메뉴로 진입점 이동
 - 카드형 커스텀 Inspector 제거, `Form`/`Section`/`LabeledContent`/`List`/segmented `Picker` 적용
 - 콘텐츠는 어두운 미디어 스테이지, 조작은 `glassEffect`/glass button style과 SF Symbols로 분리
-- Apple HIG·Apple 26 UI Kit 기반 macOS/iPadOS/iOS adaptive player architecture 조사 및 Figma `Cross-platform Player System` 페이지 작성
+- Apple HIG·Apple 26 UI Kit 기반 macOS/iPadOS/iOS adaptive player architecture 조사 및 Figma `Architecture / Cross-platform Player` 페이지 작성
+- Figma `Approved / macOS Player UI` 페이지에 macOS 승인 원본, Contextual Micro Glass·Inspector·다국어 구현 계약 등록
 - 작품 정보 찾기, 자막 준비, 파일 정보 반영 액션 자리 표시
 - 원본 파일 쓰기는 기본값이 아니라 명시적 액션으로 분리
 
 ### 다음 작업
 
-- Figma P0: macOS Inspector 닫힘·열림·생성 중 production frame 3종
+- SwiftUI P0: 승인된 macOS Player Shell과 Inspector 기본 상태 구현
+- Figma P0: macOS Inspector 생성 중·완료·오류 production state 확장
 - Figma P1: iPadOS regular/compact, iOS medium/large detent production frame
 - TMDB/IMDb/TVDB 등 메타데이터 공급자 추상화 설계
 - sidecar metadata 저장 포맷 결정

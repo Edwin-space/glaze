@@ -1,7 +1,7 @@
 # UI 레퍼런스 및 디자인 방향
 
 작성일: 2026-06-18  
-최종 수정: 2026-08-11 (Apple 26 기반 크로스플랫폼 플레이어 구조 추가)
+최종 수정: 2026-08-11 (macOS 플레이어 승인 시안 확정)
 프로젝트명: 글레이즈 / Glaze
 
 ## 확정된 브랜드 (2026-08-10)
@@ -123,16 +123,16 @@ Figma Community의 media player, video player, music player 템플릿은 분위�
 
 ## Apple 플랫폼 공통 구조 (2026-08-11)
 
-상세 근거와 레퍼런스는 [크로스플랫폼 플레이어 UI 레퍼런스 연구](16_cross_platform_player_ui_research.md), 편집 가능한 설계 구조는 Figma [Cross-platform Player System](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=28-2)을 기준으로 한다.
+macOS의 시각적 소스 오브 트루스는 [승인된 macOS 플레이어 UI](17_approved_macos_player_ui_spec.md)와 Figma `Approved / macOS Player UI` 페이지다. 크로스플랫폼 구조와 상태 계약은 [크로스플랫폼 플레이어 UI 레퍼런스 연구](16_cross_platform_player_ui_research.md) 및 Figma `Architecture / Cross-platform Player` 페이지를 참고하되, 해당 구조도를 시각적 최종안으로 사용하지 않는다.
 
 - 공통: 재생 상태, 자막 준비 상태, 명시적 자막 생성 계약을 공유한다.
-- macOS: native toolbar + transient clustered transport controls + trailing Inspector
+- macOS: native toolbar + transient contextual micro controls + trailing Inspector
 - iPadOS regular width: 영상 + trailing Inspector
 - iPadOS compact width: Inspector 내용을 resizable Sheet로 전환
 - iOS: edge-to-edge player + medium/large detent Sheet
 - production design은 현재 deployment baseline과 맞는 macOS 26 / iOS·iPadOS 26 UI Kit를 사용한다. Apple 27 UI Kit는 forward exploration에만 사용한다.
 
-Liquid Glass는 영상 위 controls와 navigation 같은 기능 레이어에 제한한다. 영상·설정 내용 자체를 Glass content layer로 만들지 않으며, 텍스트가 많은 Inspector와 Sheet에는 regular material 또는 standard material을 사용한다. 영상 위에서는 넓은 Glass bar를 만들지 않고 실제 조작 버튼을 묶은 작은 island에만 clear variant를 적용한다.
+Liquid Glass는 영상 위 controls와 navigation 같은 기능 레이어에 제한한다. 영상·설정 내용 자체를 Glass content layer로 만들지 않으며, 텍스트가 많은 Inspector와 Sheet에는 regular material 또는 standard material을 사용한다. 영상 위에서는 넓은 Glass bar나 캡슐을 만들지 않고 각 조작의 원형 micro control에만 clear variant를 적용한다.
 
 ## 플레이어 크롬 기준
 
@@ -188,7 +188,7 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 
 ### 5. 한국어/영어 텍스트 길이를 모두 견딘다
 
-한국어 UI는 짧고 명확하게, 영어 UI는 길어질 수 있으므로 버튼과 패널 폭이 텍스트에 의해 깨지지 않게 설계한다.
+한국어 UI는 짧고 명확하게 유지하고 영어·독일어·프랑스어처럼 문자열이 길어지는 언어를 위해 최소 40%의 확장 여유를 둔다. 라벨 열을 고정 폭으로 만들지 않으며 말줄임표보다 줄바꿈, 컨테이너 확장, Inspector 폭 조정을 우선한다. 내부 언어·품질 값은 locale 독립 식별자로 유지하고 화면에만 번역 문자열을 표시한다. RTL 환경에서는 의미 구조를 미러링하되 재생 시간축과 시간 표기의 진행 방향은 미디어 관례를 따른다.
 
 ## 구현된 화면 구조
 
@@ -199,10 +199,10 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 - 창 툴바 중앙: 현재 파일명
 - 창 툴바 우측: 자막, 보조 패널 메뉴, 영상 열기
 - 중앙: 창 너비를 우선 사용하는 검정 영상 스테이지
-- 영상 하단: 컨테이너 없는 얇은 시간축 + 좌측 primary playback island + 우측 viewing/subtitle island
-- 우측: 자막/재생목록/미디어 정보/AI 미디어를 전환하는 시스템 Inspector(300–420pt 가변 폭)
+- 영상 하단: 컨테이너 없는 얇은 시간축 + 좌측 시간·볼륨 + 중앙 ±15초·재생 + 우측 CC·PiP·전체 화면 micro controls
+- 우측: 자막/재생목록/미디어 정보/AI 미디어를 전환하는 시스템 Inspector(380–420pt 가변 폭)
 
-우측 Inspector는 기본적으로 닫혀 있으며, 사용자가 툴바나 transport controls의 자막 액션을 선택할 때만 열린다. 내부 정보는 `Form`, `Section`, `LabeledContent`, `List`, segmented `Picker`로 구성한다.
+우측 Inspector는 기본적으로 닫혀 있으며, 사용자가 툴바의 trailing Inspector 토글이나 transport controls의 CC 액션을 선택할 때만 열린다. 툴바 토글은 선택 상태에서 브랜드 앰버로 강조한다. 내부 정보는 `Form`, `Section`, `LabeledContent`, `List`, `Menu` 기반 입력으로 구성한다.
 
 ### Empty State
 
@@ -219,16 +219,19 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 
 ### Transport Controls
 
-영상이 열린 경우에만 하단에 transient controls를 표시한다. 전체를 감싸는 단일 Glass surface는 사용하지 않고, 정보와 조작을 다음 세 레이어로 분리한다.
+영상이 열린 경우에만 하단에 transient controls를 표시한다. 전체를 감싸는 단일 Glass surface나 좌·우 캡슐을 사용하지 않고, 정보와 조작을 다음 네 그룹으로 분리한다.
 
 구성:
 
-- 독립 시간축: Glass 컨테이너 없이 얇은 track, scrubber, 현재/전체 시간만 표시
-- 좌측 primary island: 15초 뒤로, 재생·일시정지, 15초 앞으로. macOS만 볼륨을 직접 노출
-- 우측 viewing/subtitle island: CC, PiP, 전체 화면, 더보기. 좁은 폭에서는 낮은 빈도 action을 더보기로 축약
+- 독립 시간축: Glass 컨테이너 없이 얇은 track과 scrubber를 전체 폭에 가깝게 표시
+- 좌측 정보·볼륨: 현재/전체 시간과 개별 원형 볼륨 버튼
+- 중앙 재생: 15초 뒤로, 재생·일시정지, 15초 앞으로를 개별 원형 버튼으로 배치하고 재생 버튼만 한 단계 크게 표시
+- 우측 보기·자막: CC, PiP, 전체 화면을 개별 원형 버튼으로 배치. 좁은 폭에서는 낮은 빈도 action을 더보기로 축약
 - 자막 생성·불러오기·언어·품질: transport controls에서 제외하고 Inspector 또는 Sheet에서 제공
 
-두 island에는 `clear` Liquid Glass를 적용하고 밝은 영상에서는 컨트롤 주변에만 최대 35% 수준의 국부 dimming을 더한다. `Reduce Transparency`가 활성화되면 더 불투명한 regular material로 대체한다. macOS hit area는 최소 28–32pt, iOS/iPadOS touch target은 최소 44pt를 확보하며 실제 아이콘은 SF Symbols를 사용한다.
+각 원형 control에는 `clear` Liquid Glass 또는 반투명 material을 적용하고 밝은 영상에서는 컨트롤 주변 하단에만 최대 35% 수준의 국부 dimming을 더한다. `Reduce Transparency`가 활성화되면 더 불투명한 regular material로 대체한다. macOS hit area는 최소 28–32pt, iOS/iPadOS touch target은 최소 44pt를 확보하며 실제 아이콘은 SF Symbols를 사용한다. 여러 버튼을 하나의 `GlassEffectContainer`에 넣더라도 버튼마다 시각적 경계를 유지하고 하나의 캡슐로 합쳐 보이지 않게 한다.
+
+Inspector의 `자막 만들기`와 `자막 파일 가져오기`는 전체 폭 text button을 유지한다. 낯선 AI 액션은 icon-only로 축약하지 않으며, 아이콘은 14–16pt로 제한해 라벨보다 시각적으로 앞서지 않게 한다. 결과 언어와 품질은 `Menu`로 표시해 번역 문자열 길이에 따라 자연스럽게 확장되도록 한다.
 
 재생 중에는 2.5초 비활동 후 controls를 숨기고 포인터 이동·Space 입력·일시정지 시 다시 표시한다. 자막은 controls가 표시될 때만 충돌하지 않도록 위로 이동한다.
 
@@ -300,7 +303,7 @@ AI 기능은 별도 챗봇 앱처럼 전면화하지 않는다. 사용자가 툴
 6. VLC 시간 갱신을 자막 cue 동기화에도 연결 완료
 7. 어두운 미디어 빈 상태와 강조색 Glass 기본 액션 적용 완료
 8. 한국어/영어 재생 조작 텍스트 동기화 완료
-9. 독립 시간축 + 좌·우 control island 개편안은 Figma와 설계 문서에 반영 완료, SwiftUI 구현 전환은 대기
+9. 승인된 Contextual Micro Glass 시안과 다국어 구현 계약을 Figma `Approved / macOS Player UI` 페이지 및 설계 문서에 반영 완료, SwiftUI 구현 전환은 대기
 
 ## 참고 출처
 

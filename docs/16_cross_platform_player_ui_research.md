@@ -4,7 +4,9 @@
 
 대상: Glaze macOS 26 MVP와 이후 iOS 26·iPadOS 26 확장
 
-Figma: [Cross-platform Player System](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=28-2)
+Figma 시각 기준: [Approved / macOS Player UI](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=41-17)
+
+Figma 구조 참고: [Architecture / Cross-platform Player](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=28-2)
 
 ## 조사 결론
 
@@ -15,7 +17,7 @@ Figma: [Cross-platform Player System](https://www.figma.com/design/p1Y9SkEuKnXdf
 - iPadOS compact width: Inspector 내용을 resizable Sheet로 전환
 - iOS: edge-to-edge player + medium/large detent Sheet
 
-재생 컨트롤은 Apple TV와 YouTube에서 이미 학습된 순서를 활용한다. 다만 하나의 큰 bar에 모든 조작을 넣지 않고 `독립 시간축 + primary playback island + viewing/subtitle island`로 분리한다. iPhone·iPad에서는 시스템 음량 조절과 중복되는 상시 볼륨 슬라이더를 제거한다.
+재생 컨트롤은 Apple TV와 YouTube에서 이미 학습된 순서를 활용한다. 다만 하나의 큰 bar나 좌·우 캡슐에 조작을 모으지 않고 `독립 시간축 + 좌측 시간·볼륨 + 중앙 재생 + 우측 보기·자막`으로 분리한다. 각 액션은 Contextual Micro Glass 원형 버튼으로 독립시키며, iPhone·iPad에서는 시스템 음량 조절과 중복되는 상시 볼륨 슬라이더를 제거한다.
 
 ## 조사 범위와 접근 상태
 
@@ -43,7 +45,7 @@ Figma에서 다음 공식 라이브러리를 확인했다.
 - 자막과 오디오는 플레이어의 관련 버튼에서 pop-up menu로 연다.
 - PiP는 작은 resizable viewer로 전환된다.
 
-글레이즈 적용: 시간축은 독립적으로 두고, 재생·탐색·음량은 좌측 primary island, CC·PiP·전체 화면은 우측 viewing/subtitle island로 분리한다. 자막 표시 전환은 CC에서 즉시 처리하고, 생성·불러오기·언어·품질 같은 준비 작업만 Inspector로 넘긴다.
+글레이즈 적용: 시간축은 독립적으로 두고, 시간·볼륨은 좌측, ±15초·재생은 중앙, CC·PiP·전체 화면은 우측에 개별 원형 micro control로 배치한다. 자막 표시 전환은 CC에서 즉시 처리하고, 생성·불러오기·언어·품질 같은 준비 작업만 Inspector로 넘긴다.
 
 ### Apple TV on iPadOS
 
@@ -73,7 +75,7 @@ Figma에서 다음 공식 라이브러리를 확인했다.
 ### Liquid Glass
 
 - Liquid Glass는 content가 아니라 controls와 navigation을 위한 기능 레이어다.
-- 영상처럼 시각적으로 풍부한 배경 위 transient controls에는 clear variant를 적용하되, 작은 control island에만 제한한다.
+- 영상처럼 시각적으로 풍부한 배경 위 transient controls에는 clear variant를 적용하되, 개별 micro control에만 제한한다.
 - 텍스트가 많고 가독성이 중요한 Inspector·popover·Sheet에는 regular variant 또는 standard material을 사용한다.
 - 밝은 영상에서 clear Glass를 쓸 때는 최대 35% 수준의 dimming layer를 검토한다.
 
@@ -89,7 +91,7 @@ Figma에서 다음 공식 라이브러리를 확인했다.
 
 | 계약 | 공통 정의 | 플랫폼 표현 |
 | --- | --- | --- |
-| Player chrome | 독립 시간축, primary island, viewing/subtitle island | Mac hover, iPad/iPhone tap |
+| Player chrome | 독립 시간축, 좌측 시간·볼륨, 중앙 재생, 우측 보기·자막 | Mac hover, iPad/iPhone tap |
 | Subtitle readiness | 없음, 기존 자막, 생성 중, 준비 완료, 오류 | 동일한 상태·카피 유지 |
 | Subtitle preparation | 상태, 출력 언어, 품질, 저장 위치, 명시적 CTA | Inspector 또는 Sheet |
 | Presentation | 현재 영상에 종속된 보조 작업 | Mac Inspector, iPad adaptive, iPhone Sheet |
@@ -102,7 +104,8 @@ Figma에서 다음 공식 라이브러리를 확인했다.
 ### Adopt
 
 - 컨테이너 없는 얇은 독립 시간축
-- 좌측 primary playback island와 우측 viewing/subtitle island
+- 좌측 시간·볼륨, 중앙 ±15초·재생, 우측 CC·PiP·전체 화면
+- 개별 원형 Contextual Micro Glass control
 - 직접 접근 가능한 CC, PiP, 전체 화면
 - 재생 중 자동으로 물러나는 controls
 - 10초 이동과 timeline scrubbing
@@ -110,14 +113,14 @@ Figma에서 다음 공식 라이브러리를 확인했다.
 ### Adapt
 
 - YouTube의 학습된 control order를 Apple native behavior로 변환
-- 영상 위의 작은 island만 clear Liquid Glass, 설정 surface는 regular material로 분리
+- 영상 위의 개별 micro control만 clear Liquid Glass, 설정 surface는 regular material로 분리
 - 밝은 영상에서 전체 bar 대신 control 주변에만 국부 dimming 적용
 - macOS tooltip·keyboard shortcut, iPad pointer·keyboard, iPhone touch·gesture 지원
 - 화면 폭에 따라 Inspector와 Sheet를 전환
 
 ### Avoid
 
-- 시간축·재생·볼륨·CC·PiP를 모두 감싼 full-width monolithic Glass bar
+- 시간축·재생·볼륨·CC·PiP를 모두 감싼 full-width monolithic Glass bar 또는 좌·우 대형 캡슐
 - CC와 `자막 만들기`를 같은 의미로 중복 노출
 - 낯선 AI action의 icon-only 표현
 - 데스크톱 고정 패널을 iPhone에 축소 이식
@@ -128,7 +131,7 @@ Figma에서 다음 공식 라이브러리를 확인했다.
 | 우선순위 | Figma frame | UX 영향 | 구현 공수 |
 | --- | --- | --- | --- |
 | P0 | macOS Inspector 닫힘·열림·생성 중 | 높음 | 낮음~중간 |
-| P0 | macOS 독립 시간축·좌·우 control island interaction states | 높음 | 낮음~중간 |
+| P0 | macOS 독립 시간축·개별 micro control interaction states | 높음 | 낮음~중간 |
 | P1 | iPadOS regular Inspector·compact Sheet | 높음 | 중간 |
 | P1 | iOS portrait medium·large detent·landscape | 높음 | 중간 |
 | P1 | 자막 없음·생성 중·완료·오류 variants | 높음 | 낮음 |
