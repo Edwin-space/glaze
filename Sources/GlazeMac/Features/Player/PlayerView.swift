@@ -68,10 +68,14 @@ struct PlayerView: View {
             ToolbarItem(placement: .principal) {
                 Text(currentFileName)
                     .font(.headline)
+                    .foregroundStyle(.white)
                     .lineLimit(1)
                     .frame(maxWidth: 420)
                     .help(currentFileName)
             }
+            // The title is a label, not a control — drop the toolbar's shared glass
+            // capsule so it doesn't read as a dark pill floating in a dark bar.
+            .sharedBackgroundVisibility(.hidden)
 
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
@@ -219,29 +223,29 @@ struct PlayerView: View {
     }
 
     private var playerChrome: some View {
-        VStack(spacing: 0) {
-            LinearGradient(
-                colors: [.black.opacity(0.52), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 96)
-            .opacity(areControlsVisible ? 1 : 0)
-
-            Spacer()
+        ZStack {
+            // Scrims keep the corner controls and the scrubber legible over bright
+            // footage without dimming the middle of the frame.
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.black.opacity(0.5), .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 108)
+                Spacer(minLength: 0)
+                LinearGradient(colors: [.clear, .black.opacity(0.62)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 168)
+            }
+            .allowsHitTesting(false)
 
             transportControls
-                .padding(.horizontal, 24)
-                .padding(.bottom, 22)
-                .opacity(areControlsVisible ? 1 : 0)
-                .offset(y: areControlsVisible ? 0 : 12)
-                .allowsHitTesting(areControlsVisible)
         }
+        .opacity(areControlsVisible ? 1 : 0)
+        .allowsHitTesting(areControlsVisible)
         .animation(.easeOut(duration: 0.18), value: areControlsVisible)
     }
 
     private var transportControls: some View {
         PlayerTransportControls(
+            title: currentFileName,
+            contextLine: playbackContextLine,
             isPlaying: playback.displayedIsPlaying,
             currentTime: playback.displayedCurrentTime,
             duration: playback.displayedDuration,
@@ -299,7 +303,7 @@ struct PlayerView: View {
                     .padding(.vertical, 11)
                     .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.card)
                     .padding(.horizontal, 32)
-                    .padding(.bottom, areControlsVisible ? 166 : 34)
+                    .padding(.bottom, areControlsVisible ? 124 : 34)
                     .transition(.opacity)
             }
         }
@@ -840,6 +844,22 @@ struct PlayerView: View {
 
     private func panelMenuButton(_ panel: PlayerPanel, key: String, systemImage: String) -> some View {
         Button { togglePanel(panel) } label: { Label(L10n.string(key), systemImage: systemImage) }
+    }
+
+    /// Caption above the title in the bottom bar — playlist position when there is
+    /// one to report, otherwise where the video came from.
+    private var playbackContextLine: String? {
+        if playlistStore.items.count > 1, let index = currentPlaylistIndex {
+            return String(
+                format: L10n.string("playlist.panel.position_format"),
+                index + 1,
+                playlistStore.items.count
+            )
+        }
+        if let source = mediaAssets.currentMediaAsset?.source {
+            return L10n.string(source.labelKey)
+        }
+        return nil
     }
 
     private var playlistSummary: String {

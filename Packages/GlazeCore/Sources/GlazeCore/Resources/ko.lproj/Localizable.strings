@@ -90,6 +90,7 @@
 "player.status.waiting" = "재생을 기다리는 중입니다.";
 "playlist.panel.count_format" = "%d개 영상";
 "playlist.panel.empty" = "재생목록에 추가된 영상이 없습니다.";
+"playlist.panel.position_format" = "%1$d / %2$d";
 "playlist.panel.title" = "재생목록";
 "playlist.panel.toggle" = "재생목록";
 "subtitle.generate" = "자막 생성";

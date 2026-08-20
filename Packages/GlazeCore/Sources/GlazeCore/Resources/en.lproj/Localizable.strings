@@ -90,6 +90,7 @@
 "player.status.waiting" = "Waiting to play.";
 "playlist.panel.count_format" = "%d videos";
 "playlist.panel.empty" = "No videos have been added to the playlist.";
+"playlist.panel.position_format" = "%1$d of %2$d";
 "playlist.panel.title" = "Playlist";
 "playlist.panel.toggle" = "Playlist";
 "subtitle.generate" = "Generate Subtitles";

@@ -65,14 +65,10 @@ enum GlazeGlass {
 }
 
 private struct GlazeGlassSurface: ViewModifier {
-    let cornerRadius: CGFloat
+    let shape: AnyShape
     let depth: GlazeGlass.Depth
     let tint: Color?
     let isStroked: Bool
-
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-    }
 
     func body(content: Content) -> some View {
         content
@@ -108,7 +104,7 @@ private struct GlazeGlassSurface: ViewModifier {
                         if isStroked {
                             // Hairline that catches light on the top edge and fades
                             // out at the bottom — the detail that sells an edge of glass.
-                            shape.strokeBorder(
+                            shape.stroke(
                                 LinearGradient(
                                     colors: [
                                         .white.opacity(0.42),
@@ -142,10 +138,25 @@ extension View {
     ) -> some View {
         modifier(
             GlazeGlassSurface(
-                cornerRadius: cornerRadius,
+                shape: AnyShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)),
                 depth: depth,
                 tint: tint,
                 isStroked: stroked
+            )
+        )
+    }
+
+    /// Circular glass, for the round transport buttons over video.
+    func glazeGlassCircle(
+        _ depth: GlazeGlass.Depth = .floating,
+        tint: Color? = nil
+    ) -> some View {
+        modifier(
+            GlazeGlassSurface(
+                shape: AnyShape(Circle()),
+                depth: depth,
+                tint: tint,
+                isStroked: true
             )
         )
     }
