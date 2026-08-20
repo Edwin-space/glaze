@@ -40,7 +40,13 @@ struct NetworkMediaBrowserView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .toolbarBackground(.hidden, for: .windowToolbar)
         .frame(minWidth: 620, minHeight: 460)
+        // Replaces the sheet's own chrome rather than painting inside it, so the
+        // backdrop runs edge to edge instead of leaving opaque bands top and bottom.
+        .presentationBackground { GlazeAmbientBackdrop(isAnimated: false) }
+        .preferredColorScheme(.dark)
         .task { await model.discoverIfNeeded() }
     }
 
@@ -79,7 +85,9 @@ struct NetworkMediaBrowserView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .glazeGlassRow()
             }
+            .listStyle(.inset)
         }
     }
 
@@ -117,7 +125,9 @@ struct NetworkMediaBrowserView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .glazeGlassRow()
             }
+            .listStyle(.inset)
         }
     }
 

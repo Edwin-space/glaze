@@ -23,6 +23,9 @@ struct PlayerView: View {
                     .inspectorColumnWidth(min: 300, ideal: 340, max: 420)
             }
             .toolbar { playerToolbar }
+            // Let the backdrop run up under the title bar instead of stopping at
+            // an opaque strip — without this the glass reads as a pasted-on panel.
+            .toolbarBackground(.hidden, for: .windowToolbar)
             .sheet(isPresented: $isNetworkBrowserPresented) {
                 NetworkMediaBrowserView(onOpen: openNetworkMedia)
             }
@@ -116,7 +119,13 @@ struct PlayerView: View {
 
     private var videoStage: some View {
         ZStack {
-            Color.black
+            // Video needs a true black ground; the empty stage needs colour behind
+            // it or every glass surface on top would render as flat grey.
+            if playback.currentVideoURL == nil {
+                GlazeAmbientBackdrop()
+            } else {
+                Color.black
+            }
 
             if playback.activePlaybackEngine == .nativeVLC, let currentVideoURL = playback.currentVideoURL {
                 NativeVLCSurfaceView(url: currentVideoURL, session: playback.nativeVLCSession) { message in
@@ -142,7 +151,6 @@ struct PlayerView: View {
                 dropTargetOverlay
             }
         }
-        .background(.black)
         .clipped()
         .focusable()
         .onKeyPress(.space) {
@@ -164,55 +172,50 @@ struct PlayerView: View {
     }
 
     private var emptyStage: some View {
-        ZStack {
-            RadialGradient(
-                colors: [Color.white.opacity(0.075), Color.clear],
-                center: .center,
-                startRadius: 20,
-                endRadius: 420
-            )
+        VStack(spacing: 22) {
+            Image(systemName: "play.rectangle.on.rectangle")
+                .font(.system(size: 46, weight: .light))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.white.opacity(0.86))
+                .frame(width: 92, height: 92)
+                .glazeGlass(.card, cornerRadius: 26, tint: GlazeGlass.amber)
 
-            VStack(spacing: 20) {
-                Image(systemName: "play.rectangle.on.rectangle")
-                    .font(.system(size: 48, weight: .light))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.white.opacity(0.72))
+            VStack(spacing: 8) {
+                Text(L10n.string("player.empty_title"))
+                    .font(.system(size: 25, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
 
-                VStack(spacing: 7) {
-                    Text(L10n.string("player.empty_title"))
-                        .font(.system(size: 24, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-
-                    Text(L10n.string("player.empty_subtitle"))
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.56))
-                        .multilineTextAlignment(.center)
-                }
-
-                HStack(spacing: 10) {
-                    Button(action: openVideo) {
-                        Label(L10n.string("player.open_video"), systemImage: "folder")
-                            .padding(.horizontal, 6)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(.accentColor)
-                    .controlSize(.large)
-                    .keyboardShortcut(.defaultAction)
-
-                    Button { isNetworkBrowserPresented = true } label: {
-                        Label(L10n.string("network.browser.open"), systemImage: "externaldrive.badge.wifi")
-                    }
-                    .buttonStyle(.glass)
-                    .controlSize(.large)
-                }
-
-                Label(L10n.string("player.drop_subtitle"), systemImage: "arrow.down.doc")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.42))
+                Text(L10n.string("player.empty_subtitle"))
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.62))
+                    .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: 520)
-            .padding(48)
+
+            HStack(spacing: 10) {
+                Button(action: openVideo) {
+                    Label(L10n.string("player.open_video"), systemImage: "folder")
+                        .padding(.horizontal, 6)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(.accentColor)
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
+
+                Button { isNetworkBrowserPresented = true } label: {
+                    Label(L10n.string("network.browser.open"), systemImage: "externaldrive.badge.wifi")
+                }
+                .buttonStyle(.glass)
+                .controlSize(.large)
+            }
+
+            Label(L10n.string("player.drop_subtitle"), systemImage: "arrow.down.doc")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.5))
         }
+        .padding(.horizontal, 52)
+        .padding(.vertical, 44)
+        .frame(maxWidth: 560)
+        .glazeGlass(.pane, cornerRadius: GlazeGlass.Radius.stage)
     }
 
     private var playerChrome: some View {
@@ -292,10 +295,9 @@ struct PlayerView: View {
                     .font(.title3.weight(.semibold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 9)
-                    .background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 8))
-                    .shadow(radius: 3)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 11)
+                    .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.card)
                     .padding(.horizontal, 32)
                     .padding(.bottom, areControlsVisible ? 166 : 34)
                     .transition(.opacity)
@@ -307,21 +309,29 @@ struct PlayerView: View {
 
     private var dropTargetOverlay: some View {
         ZStack {
-            Rectangle().fill(.black.opacity(0.62))
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(.white.opacity(0.68), style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
-                .padding(28)
+            Rectangle().fill(.black.opacity(0.34))
 
-            VStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: GlazeGlass.Radius.stage, style: .continuous)
+                .strokeBorder(
+                    GlazeGlass.amber.opacity(0.85),
+                    style: StrokeStyle(lineWidth: 2, dash: [9, 7])
+                )
+                .padding(26)
+
+            VStack(spacing: 11) {
                 Image(systemName: "arrow.down.doc.fill")
-                    .font(.system(size: 36, weight: .medium))
+                    .font(.system(size: 34, weight: .medium))
+                    .foregroundStyle(GlazeGlass.amber)
                 Text(L10n.string("player.drop_hint"))
                     .font(.title3.weight(.semibold))
                 Text(L10n.string("player.drop_subtitle"))
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.62))
             }
             .foregroundStyle(.white)
+            .padding(.horizontal, 40)
+            .padding(.vertical, 30)
+            .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.panel, tint: GlazeGlass.amber)
         }
     }
 
@@ -341,9 +351,9 @@ struct PlayerView: View {
                     Label(L10n.string("media.panel.toggle"), systemImage: "info.circle")
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.horizontal, 15)
+            .padding(.vertical, 12)
+            .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.card, tint: .orange)
             .padding(18)
             Spacer()
         }
@@ -361,9 +371,15 @@ struct PlayerView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .padding(12)
+            .glazeGlass(.floating, cornerRadius: 0, stroked: false)
 
-            Divider()
             panelView(for: activePanel ?? .subtitles)
+                .scrollContentBackground(.hidden)
+        }
+        // The inspector is a separate column from the video, so it gets its own
+        // (unanimated — it sits still next to moving footage) backdrop to refract.
+        .background {
+            GlazeAmbientBackdrop(isAnimated: false)
         }
     }
 
@@ -384,15 +400,18 @@ struct PlayerView: View {
             } header: {
                 inspectorHeader("subtitle.panel.title", detailKey: "subtitle.panel.subtitle")
             }
+            .glazeGlassRow()
 
             Section(L10n.string("subtitle.panel.files")) {
                 subtitleFileSection
                 Toggle(L10n.string("subtitle.visibility.toggle"), isOn: $subtitles.isSubtitleVisible)
                     .disabled(subtitles.subtitleCues.isEmpty)
             }
+            .glazeGlassRow()
 
             if let errorMessage = subtitles.errorMessage {
                 Section { issueLabel(titleKey: "subtitle.error.title", message: errorMessage) }
+                    .glazeGlassRow()
             }
         }
         .formStyle(.grouped)
@@ -420,12 +439,12 @@ struct PlayerView: View {
                     Button(action: generateSubtitle) {
                         Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.glassProminent)
                 }
             }
         }
         .padding(12)
-        .background(.bar)
+        .glazeGlass(.floating, cornerRadius: 0, stroked: false)
     }
 
     private var subtitleFileSection: some View {
@@ -502,7 +521,9 @@ struct PlayerView: View {
         )) { item in
             Label(item.displayName, systemImage: playback.currentVideoURL?.absoluteString == item.url.absoluteString ? "play.fill" : "film")
                 .tag(item.url.absoluteString)
+                .glazeGlassRow()
         }
+        .listStyle(.inset)
         .safeAreaInset(edge: .top) {
             inspectorTitleBar("playlist.panel.title", detail: playlistSummary)
         }
@@ -529,6 +550,7 @@ struct PlayerView: View {
             } header: {
                 inspectorHeader("media.panel.title", detailKey: "media.panel.subtitle")
             }
+            .glazeGlassRow()
 
             if let inspection = mediaAssets.mediaInspection, !inspection.tracks.isEmpty {
                 Section(L10n.string("media.panel.tracks")) {
@@ -540,10 +562,12 @@ struct PlayerView: View {
                         }
                     }
                 }
+                .glazeGlassRow()
             }
 
             if let message = mediaAssets.mediaInspection?.errorMessage {
                 Section { issueLabel(titleKey: "media.error.title", message: message) }
+                    .glazeGlassRow()
             }
         }
         .formStyle(.grouped)
@@ -563,6 +587,7 @@ struct PlayerView: View {
             } header: {
                 inspectorHeader("assistant.panel.title", detailKey: "assistant.panel.subtitle")
             }
+            .glazeGlassRow()
 
             if mediaAssets.currentMediaAsset != nil {
                 Section(L10n.string("assistant.panel.suggestions")) {
@@ -570,6 +595,7 @@ struct PlayerView: View {
                     assistantAction("assistant.action.prepare_subtitles", detailKey: "assistant.action.prepare_subtitles_hint", icon: "captions.bubble")
                     assistantAction("assistant.action.write_metadata", detailKey: "assistant.action.write_metadata_hint", icon: "square.and.pencil")
                 }
+                .glazeGlassRow()
             }
         }
         .formStyle(.grouped)
@@ -592,7 +618,7 @@ struct PlayerView: View {
             Spacer()
         }
         .padding(16)
-        .background(.bar)
+        .glazeGlass(.floating, cornerRadius: 0, stroked: false)
     }
 
     private func issueLabel(titleKey: String, message: String) -> some View {

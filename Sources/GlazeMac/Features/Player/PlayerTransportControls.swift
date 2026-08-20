@@ -38,7 +38,7 @@ struct PlayerTransportControls: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
         .foregroundStyle(.white)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.panel)
         .frame(maxWidth: 760)
         .frame(maxWidth: .infinity)
     }
