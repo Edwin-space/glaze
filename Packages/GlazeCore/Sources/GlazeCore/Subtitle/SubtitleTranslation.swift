@@ -98,7 +98,10 @@ public enum SubtitleTranslationAssembler {
             }
 
             let sourceTexts = segment.cueIndices.map { cues[$0].text }
-            let pieces = SubtitleRedistributor.redistribute(translated: translated, across: sourceTexts)
+            let pieces = SubtitleRedistributor.redistribute(
+                translated: normalizeLineBreaks(translated),
+                across: sourceTexts
+            )
 
             for (offset, cueIndex) in segment.cueIndices.enumerated() where offset < pieces.count {
                 translatedByCueIndex[cueIndex] = pieces[offset]
@@ -120,6 +123,17 @@ public enum SubtitleTranslationAssembler {
 
             return SubtitleCue(startTime: cue.startTime, endTime: cue.endTime, text: text)
         }
+    }
+
+    /// Engines translating a two-speaker cue tend to return the lines separated by a
+    /// blank line, which on screen becomes a gap wide enough to push the subtitle out
+    /// of its safe area. Collapse runs of newlines back to a single break.
+    static func normalizeLineBreaks(_ text: String) -> String {
+        text
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
     }
 
     static func isUsable(translated: String, source: String) -> Bool {

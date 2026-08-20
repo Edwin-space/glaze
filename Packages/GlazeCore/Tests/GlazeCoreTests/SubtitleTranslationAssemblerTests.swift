@@ -113,3 +113,19 @@ struct SubtitleTranslationAssemblerTests {
         #expect(assembled[0].text == "Hello")
     }
 }
+
+extension SubtitleTranslationAssemblerTests {
+    /// Engines commonly return a two-speaker cue with a blank line between the lines,
+    /// which renders as a gap that pushes the subtitle out of its safe area.
+    @Test func collapsesBlankLinesInsideATranslation() {
+        #expect(
+            SubtitleTranslationAssembler.normalizeLineBreaks("- 그를 믿었나요?\n\n- 그래야만 했어요.")
+                == "- 그를 믿었나요?\n- 그래야만 했어요."
+        )
+        #expect(SubtitleTranslationAssembler.normalizeLineBreaks("한 줄") == "한 줄")
+        #expect(
+            SubtitleTranslationAssembler.normalizeLineBreaks("  앞줄  \n \n\n  뒷줄 ")
+                == "앞줄\n뒷줄"
+        )
+    }
+}
