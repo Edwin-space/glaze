@@ -225,6 +225,10 @@ struct GlazeAmbientBackdrop: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipped()
+            // Four large blurs are expensive to composite on the CPU every frame.
+            // Rasterising the whole backdrop moves the work to Metal and keeps the
+            // drift animation off the main thread's critical path.
+            .drawingGroup()
         }
         .ignoresSafeArea()
         .onAppear {

@@ -7,6 +7,14 @@ BUNDLE_ID="com.edwin.glaze"
 CONFIGURATION="${GLAZE_CONFIGURATION:-Debug}"
 SCHEME="GlazeMac"
 
+# `release` builds and runs the optimised configuration. Debug is built -Onone and
+# SwiftUI does far more per-frame bookkeeping in it, so judge real-world responsiveness
+# here rather than from a Debug run.
+if [[ "$MODE" == "release" ]]; then
+  CONFIGURATION="Release"
+  MODE="run"
+fi
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_SPEC="$ROOT_DIR/project.yml"
 XCODEPROJ="$ROOT_DIR/Glaze.xcodeproj"
@@ -77,7 +85,7 @@ case "$MODE" in
     pgrep -x "$APP_NAME" >/dev/null
     ;;
   *)
-    echo "usage: $0 [run|--bundle|--debug|--logs|--telemetry|--verify]" >&2
+    echo "usage: $0 [run|release|--bundle|--debug|--logs|--telemetry|--verify]" >&2
     exit 2
     ;;
 esac

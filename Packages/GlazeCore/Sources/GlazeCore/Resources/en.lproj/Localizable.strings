@@ -151,3 +151,14 @@
 "subtitle.visibility.hide" = "Hide Subtitles";
 "subtitle.visibility.show" = "Show Subtitles";
 "subtitle.visibility.toggle" = "Display subtitles";
+"subtitle.status.translating" = "Translating subtitles";
+"subtitle.translate.action" = "Translate Subtitles";
+"subtitle.translate.cancel" = "Stop Translating";
+"subtitle.translate.section" = "Translation";
+"subtitle.translate.output" = "Output";
+"subtitle.translate.output.translated_only" = "Translation only";
+"subtitle.translate.output.bilingual" = "Original + translation";
+"subtitle.translate.available_format" = "This video has %1$@ subtitles. Glaze can translate them to %2$@ on this Mac.";
+"subtitle.translate.progress_format" = "Translating… %d%%";
+"subtitle.error.translation_failed" = "Could not translate the subtitles. Try again.";
+"subtitle.error.translation_unavailable" = "This language pair is not available for on-device translation. Add the languages in System Settings ▸ General ▸ Language & Region ▸ Translation Languages.";

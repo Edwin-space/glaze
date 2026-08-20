@@ -32,3 +32,6 @@ Tools/vlc/share/
 # Local environment
 .env
 .env.*
+
+# Resolved by `swift test` in the local package; the app resolves through Xcode.
+Packages/GlazeCore/Package.resolved

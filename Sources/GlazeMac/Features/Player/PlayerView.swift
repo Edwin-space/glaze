@@ -1,6 +1,7 @@
 import AVKit
 import GlazeCore
 import SwiftUI
+@preconcurrency import Translation
 import UniformTypeIdentifiers
 
 struct PlayerView: View {
@@ -35,6 +36,26 @@ struct PlayerView: View {
             .toolbarBackground(.hidden, for: .windowToolbar)
             .sheet(isPresented: $isNetworkBrowserPresented) {
                 NetworkMediaBrowserView(onOpen: openNetworkMedia)
+            }
+            // The only way to obtain a TranslationSession: SwiftUI vends one whenever
+            // the configuration changes, which is what starts a translation run. The
+            // session stays inside this closure — only Sendable data crosses to the
+            // controller, since TranslationSession is a non-Sendable class.
+            .translationTask(subtitles.translationConfiguration) { session in
+                guard let input = await subtitles.translationInput() else { return }
+                do {
+                    let translated = try await AppleSubtitleTranslator.translate(
+                        cues: input.cues,
+                        output: input.output,
+                        using: session,
+                        onProgress: { progress in
+                            subtitles.updateTranslationProgress(progress)
+                        }
+                    )
+                    await subtitles.applyTranslation(cues: translated, videoURL: input.videoURL)
+                } catch {
+                    await subtitles.failTranslating(error)
+                }
             }
             .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
             .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime), perform: handlePlaybackEnd)
@@ -163,7 +184,11 @@ struct PlayerView: View {
             }
         }
         .clipped()
+        // Focusable for the space-bar shortcut, but without AppKit's focus ring:
+        // on a view this size the ring draws an accent-coloured line across the top
+        // of the picture for the whole of playback.
         .focusable()
+        .focusEffectDisabled()
         .onKeyPress(.space) {
             playback.togglePlayback()
             revealControls()
@@ -443,6 +468,13 @@ struct PlayerView: View {
             }
             .glazeGlassRow()
 
+            if subtitles.pendingTranslationRequest != nil || subtitles.isTranslating {
+                Section(L10n.string("subtitle.translate.section")) {
+                    translationSection
+                }
+                .glazeGlassRow()
+            }
+
             if let errorMessage = subtitles.errorMessage {
                 Section { issueLabel(titleKey: "subtitle.error.title", message: errorMessage) }
                     .glazeGlassRow()
@@ -479,6 +511,61 @@ struct PlayerView: View {
         }
         .padding(12)
         .glazeGlass(.floating, cornerRadius: 0, stroked: false)
+    }
+
+    /// Offered when a subtitle is loaded in a language the viewer did not ask for —
+    /// `SubtitlePreparationPlanner` marks that case and leaves the request pending.
+    @ViewBuilder
+    private var translationSection: some View {
+        if subtitles.isTranslating {
+            VStack(alignment: .leading, spacing: 8) {
+                ProgressView(value: subtitles.translationProgress)
+                Text(
+                    String(
+                        format: L10n.string("subtitle.translate.progress_format"),
+                        Int((subtitles.translationProgress * 100).rounded())
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            Button(role: .cancel) {
+                subtitles.cancelTranslating()
+            } label: {
+                Label(L10n.string("subtitle.translate.cancel"), systemImage: "xmark.circle")
+            }
+        } else {
+            if let request = subtitles.pendingTranslationRequest {
+                Text(
+                    String(
+                        format: L10n.string("subtitle.translate.available_format"),
+                        subtitles.embeddedTrackLabel(request.sourceTrack),
+                        languageDisplayName(request.targetLanguageCode)
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            Picker(L10n.string("subtitle.translate.output"), selection: $subtitles.translationOutput) {
+                ForEach(SubtitleTranslationOutput.allCases, id: \.self) { output in
+                    Text(L10n.string(output.labelKey)).tag(output)
+                }
+            }
+
+            Button {
+                guard let videoURL = playback.currentVideoURL else { return }
+                subtitles.startTranslating(for: videoURL)
+            } label: {
+                Label(L10n.string("subtitle.translate.action"), systemImage: "character.bubble")
+            }
+            .disabled(!subtitles.canTranslate || playback.currentVideoURL == nil)
+        }
+    }
+
+    private func languageDisplayName(_ code: String) -> String {
+        Locale.current.localizedString(forLanguageCode: code) ?? code.uppercased()
     }
 
     private var subtitleFileSection: some View {

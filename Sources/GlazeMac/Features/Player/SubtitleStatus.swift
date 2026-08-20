@@ -8,6 +8,7 @@ enum SubtitleStatus {
     case subtitleLoaded
     case readyToGenerate
     case generating
+    case translating
 
     var titleKey: String {
         switch self {
@@ -25,6 +26,8 @@ enum SubtitleStatus {
             "subtitle.status.ready_to_generate"
         case .generating:
             "subtitle.status.generating"
+        case .translating:
+            "subtitle.status.translating"
         }
     }
 
@@ -44,6 +47,8 @@ enum SubtitleStatus {
             "sparkles"
         case .generating:
             "sparkles"
+        case .translating:
+            "character.bubble"
         }
     }
 
@@ -62,6 +67,8 @@ enum SubtitleStatus {
         case .readyToGenerate:
             .accentColor
         case .generating:
+            .accentColor
+        case .translating:
             .accentColor
         }
     }

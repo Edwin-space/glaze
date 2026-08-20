@@ -1,6 +1,7 @@
 import Foundation
 import GlazeCore
 import Observation
+import Translation
 
 @MainActor
 @Observable
@@ -22,17 +23,29 @@ final class SubtitleController {
     var isGenerating = false
     var generationStage: SubtitleGenerator.Stage?
     var generationProgress: Double = 0
+
+    var isTranslating = false
+    var translationProgress: Double = 0
+    var translationOutput: SubtitleTranslationOutput = .bilingual
+    /// Set to start a translation. SwiftUI's `.translationTask` observes this and
+    /// hands back a session, which is the only way to obtain one.
+    var translationConfiguration: TranslationSession.Configuration?
     /// Fired after a generated subtitle is saved, loaded, and attached — so the view can update the media asset.
     var onGenerationFinished: (() -> Void)?
     var onEmbeddedSubtitleLoaded: (() -> Void)?
 
     private var generationTask: Task<Void, Never>?
     private var embeddedSubtitleTask: Task<Void, Never>?
+    private var translationTask: Task<Void, Never>?
     private let embeddedSubtitleService = EmbeddedSubtitleService()
+    /// Video the pending translation belongs to, so a late result cannot be written
+    /// against a file the user has already moved on from.
+    private var translationVideoURL: URL?
 
     /// Resets subtitle state for a newly loaded video and auto-loads the best sidecar match, if any.
     func prepareForNewVideo(url: URL) {
         embeddedSubtitleTask?.cancel()
+        cancelTranslating()
         detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
         embeddedSubtitleTracks = []
         subtitleCues = []
@@ -188,6 +201,133 @@ final class SubtitleController {
                 errorMessage = L10n.string("subtitle.error.embedded_inspection_failed")
             }
         }
+    }
+
+    // MARK: - Translation
+
+    /// True when there is a loaded subtitle in another language that we could turn
+    /// into the viewer's language.
+    var canTranslate: Bool {
+        pendingTranslationRequest != nil && !subtitleCues.isEmpty && !isTranslating
+    }
+
+    var translationTargetLanguageCode: String? {
+        pendingTranslationRequest?.targetLanguageCode
+    }
+
+    /// Arms the translation. The actual work starts when `.translationTask` responds
+    /// to the configuration change by handing back a session.
+    func startTranslating(for videoURL: URL) {
+        guard let request = pendingTranslationRequest, !subtitleCues.isEmpty else { return }
+
+        translationTask?.cancel()
+        translationVideoURL = videoURL
+        errorMessage = nil
+        translationProgress = 0
+        isTranslating = true
+        status = .translating
+
+        let source = request.sourceTrack.languageCode.map(Locale.Language.init(identifier:))
+        let target = Locale.Language(identifier: request.targetLanguageCode)
+        // A fresh Configuration each run; reusing an equal one would not retrigger
+        // the task, so a repeat translation would silently do nothing.
+        translationConfiguration = TranslationSession.Configuration(source: source, target: target)
+    }
+
+    func cancelTranslating() {
+        translationTask?.cancel()
+        translationTask = nil
+        translationConfiguration = nil
+        translationVideoURL = nil
+        isTranslating = false
+        translationProgress = 0
+        if status == .translating {
+            status = computeStatus(for: detectedSubtitles)
+        }
+    }
+
+    /// Everything the translator needs, in Sendable form — the session itself never
+    /// crosses onto this actor.
+    struct TranslationInput: Sendable {
+        let cues: [SubtitleCue]
+        let output: SubtitleTranslationOutput
+        let videoURL: URL
+    }
+
+    /// Snapshot taken as a run begins; nil when there is nothing to translate.
+    func translationInput() -> TranslationInput? {
+        guard isTranslating, let videoURL = translationVideoURL, !subtitleCues.isEmpty else {
+            return nil
+        }
+        return TranslationInput(cues: subtitleCues, output: translationOutput, videoURL: videoURL)
+    }
+
+    func updateTranslationProgress(_ progress: Double) {
+        guard isTranslating else { return }
+        translationProgress = progress
+    }
+
+    func applyTranslation(cues: [SubtitleCue], videoURL: URL) {
+        // A result that arrived after the user moved on must not overwrite the new video.
+        guard translationVideoURL == videoURL else { return }
+        finishTranslating(cues: cues, videoURL: videoURL)
+    }
+
+    func failTranslating(_ error: Error) {
+        if error is CancellationError {
+            cancelTranslating()
+            return
+        }
+        isTranslating = false
+        translationConfiguration = nil
+        status = computeStatus(for: detectedSubtitles)
+        errorMessage = translationErrorMessage(for: error)
+    }
+
+    private func finishTranslating(cues: [SubtitleCue], videoURL: URL) {
+        isTranslating = false
+        translationConfiguration = nil
+
+        let outputURL = Self.translatedSubtitleURL(
+            for: videoURL,
+            languageCode: pendingTranslationRequest?.targetLanguageCode ?? "translated"
+        )
+
+        do {
+            try SubtitleWriter.writeSRT(cues: cues, to: outputURL)
+            let subtitle = SubtitleFile.manual(url: outputURL)
+
+            if !detectedSubtitles.contains(where: { $0.url.path == subtitle.url.path }) {
+                detectedSubtitles.append(subtitle)
+            }
+
+            load(subtitle)
+            // The gap it filled is closed, so stop offering the same translation.
+            pendingTranslationRequest = nil
+            onGenerationFinished?()
+        } catch {
+            status = computeStatus(for: detectedSubtitles)
+            errorMessage = L10n.string("subtitle.error.save_failed")
+        }
+    }
+
+    private func translationErrorMessage(for error: Error) -> String {
+        if let translationError = error as? SubtitleTranslationError {
+            switch translationError {
+            case .languagePairUnavailable:
+                return L10n.string("subtitle.error.translation_unavailable")
+            case .translationFailed:
+                return L10n.string("subtitle.error.translation_failed")
+            }
+        }
+        return L10n.string("subtitle.error.translation_failed")
+    }
+
+    private static func translatedSubtitleURL(for videoURL: URL, languageCode: String) -> URL {
+        generatedSubtitleURL(for: videoURL)
+            .deletingPathExtension()
+            .appendingPathExtension(languageCode)
+            .appendingPathExtension("srt")
     }
 
     private func extractAndLoadEmbedded(
