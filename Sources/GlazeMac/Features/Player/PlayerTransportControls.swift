@@ -86,7 +86,7 @@ struct PlayerTransportControls: View {
     // MARK: - Centre
 
     private var centerTransport: some View {
-        HStack(spacing: 18) {
+        HStack(spacing: 26) {
             if canPlayPrevious || canPlayNext {
                 circleButton(
                     L10n.string("player.previous_video"),
@@ -109,9 +109,11 @@ struct PlayerTransportControls: View {
                 systemImage: isPlaying ? "pause.fill" : "play.fill",
                 diameter: 86,
                 glyph: 33,
-                isPrimary: true,
                 action: onPlayPause
             )
+            // Extra room so the skip discs read as separate targets rather than
+            // one crowded cluster around play/pause.
+            .padding(.horizontal, 20)
 
             circleButton(
                 L10n.string("player.forward"),
@@ -137,21 +139,42 @@ struct PlayerTransportControls: View {
         systemImage: String,
         diameter: CGFloat,
         glyph: CGFloat,
-        isPrimary: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: glyph, weight: .medium))
+                // Centring the glyph's bounding box is not the same as centring how
+                // it looks: a play triangle is left-heavy, and the arrow-and-numeral
+                // skip glyphs sit low. Nudge each back onto the disc's optical centre.
+                .offset(
+                    x: Self.opticalOffset(for: systemImage).width * glyph,
+                    y: Self.opticalOffset(for: systemImage).height * glyph
+                )
+                // Keeps the glyph readable when the disc happens to sit over a
+                // bright frame, without needing to make the disc itself opaque.
+                .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
                 .frame(width: diameter, height: diameter)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        // The primary control earns emphasis from size and a brighter pane rather
-        // than an accent colour — a tinted disc fights the footage behind it.
-        .glazeGlassCircle(.floating, tint: isPrimary ? .white : nil)
+        // Every disc keeps the same transparency; size alone marks the primary.
+        // Tinting it lighter turned it opaque grey and broke that consistency.
+        .glazeGlassCircle(.transport)
         .accessibilityLabel(title)
         .help(title)
+    }
+
+    /// Optical corrections expressed as a fraction of the glyph's point size, so
+    /// they hold at every disc size.
+    private static func opticalOffset(for systemImage: String) -> CGSize {
+        switch systemImage {
+        case "play.fill": CGSize(width: 0.09, height: 0)
+        case "backward.end.fill": CGSize(width: -0.03, height: 0)
+        case "forward.end.fill": CGSize(width: 0.03, height: 0)
+        case "gobackward.10", "goforward.10": CGSize(width: 0, height: -0.03)
+        default: .zero
+        }
     }
 
     // MARK: - Bottom

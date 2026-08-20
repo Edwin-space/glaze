@@ -28,13 +28,15 @@ enum GlazeGlass {
     enum Depth {
         case pane      // structural surfaces: inspector, sheets
         case card      // grouped content inside a surface
-        case floating  // controls over video
+        case floating  // chrome over video: scrubber bar, notices
+        case transport // transport discs: the picture should read through them
 
         var material: Material {
             switch self {
             case .pane: .ultraThinMaterial
             case .card: .ultraThinMaterial
             case .floating: .thinMaterial
+            case .transport: .ultraThinMaterial
             }
         }
 
@@ -43,6 +45,7 @@ enum GlazeGlass {
             case .pane: 0.10
             case .card: 0.14
             case .floating: 0.18
+            case .transport: 0.08
             }
         }
 
@@ -51,6 +54,7 @@ enum GlazeGlass {
             case .pane: 24
             case .card: 10
             case .floating: 26
+            case .transport: 20
             }
         }
 
@@ -59,6 +63,8 @@ enum GlazeGlass {
             case .pane: 0.34
             case .card: 0.18
             case .floating: 0.42
+            // A deeper shadow is what lifts a near-transparent disc off the footage.
+            case .transport: 0.52
             }
         }
     }

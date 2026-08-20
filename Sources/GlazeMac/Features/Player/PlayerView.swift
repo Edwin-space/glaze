@@ -16,6 +16,13 @@ struct PlayerView: View {
     @State private var isSeeking = false
     @State private var hideControlsTask: Task<Void, Never>?
 
+    @Environment(\.controlActiveState) private var controlActiveState
+
+    /// How long the controls linger after the pointer stops moving over the video.
+    private static let controlsIdleDelay = Duration.seconds(2.5)
+    /// Shorter grace period once the pointer has left the video entirely.
+    private static let controlsExitDelay = Duration.milliseconds(400)
+
     var body: some View {
         videoStage
             .inspector(isPresented: inspectorPresentation) {
@@ -167,8 +174,21 @@ struct PlayerView: View {
             case .active:
                 revealControls()
             case .ended:
-                scheduleControlsToHide()
+                // Pointer left the video — no reason to keep waiting the full idle delay.
+                scheduleControlsToHide(after: PlayerView.controlsExitDelay)
             }
+        }
+        .onChange(of: controlActiveState) { _, state in
+            // Clicking outside the player should leave nothing but the picture.
+            if state == .inactive {
+                hideControlsTask?.cancel()
+                areControlsVisible = false
+            } else {
+                revealControls()
+            }
+        }
+        .onChange(of: playback.displayedIsPlaying) { _, _ in
+            revealControls()
         }
         .onTapGesture(count: 2) {
             NSApp.keyWindow?.toggleFullScreen(nil)
@@ -277,18 +297,28 @@ struct PlayerView: View {
     }
 
     private func revealControls() {
+        hideControlsTask?.cancel()
         areControlsVisible = true
         scheduleControlsToHide()
     }
 
-    private func scheduleControlsToHide() {
+    /// Controls only auto-hide during playback: while paused they are what the
+    /// viewer is looking for, so they stay until the window goes inactive.
+    private func scheduleControlsToHide(after delay: Duration = PlayerView.controlsIdleDelay) {
         hideControlsTask?.cancel()
         guard playback.displayedIsPlaying, !isSeeking else { return }
         hideControlsTask = Task {
-            try? await Task.sleep(for: .seconds(2.5))
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
-            areControlsVisible = false
+            hideControls()
         }
+    }
+
+    private func hideControls() {
+        areControlsVisible = false
+        // Take the pointer with them; it returns on the next mouse move, which is
+        // the same gesture that brings the controls back.
+        NSCursor.setHiddenUntilMouseMoves(true)
     }
 
     private var subtitleOverlay: some View {
