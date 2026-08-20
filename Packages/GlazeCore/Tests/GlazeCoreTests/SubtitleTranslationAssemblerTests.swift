@@ -10,57 +10,106 @@ struct SubtitleTranslationAssemblerTests {
         ]
     }
 
+    private func singleCueSegments(_ count: Int, from cues: [SubtitleCue]) -> [SubtitleSegment] {
+        (0..<count).map { SubtitleSegment(cueIndices: [$0], text: cues[$0].text) }
+    }
+
     @Test func replacesTextWhenTranslatedOnly() {
-        let merged = SubtitleTranslationAssembler.merge(
-            cues: cues(),
-            translations: [0: "안녕", 1: "세계", 2: "다시"],
+        let cues = cues()
+        let assembled = SubtitleTranslationAssembler.assemble(
+            cues: cues,
+            segments: singleCueSegments(3, from: cues),
+            translations: ["안녕", "세계", "다시"],
             output: .translatedOnly
         )
 
-        #expect(merged.map(\.text) == ["안녕", "세계", "다시"])
+        #expect(assembled.map(\.text) == ["안녕", "세계", "다시"])
     }
 
     @Test func keepsSourceAboveTranslationWhenBilingual() {
-        let merged = SubtitleTranslationAssembler.merge(
-            cues: cues(),
-            translations: [1: "세계"],
+        let cues = cues()
+        let assembled = SubtitleTranslationAssembler.assemble(
+            cues: cues,
+            segments: singleCueSegments(3, from: cues),
+            translations: [nil, "세계", nil],
             output: .bilingual
         )
 
-        #expect(merged[1].text == "World\n세계")
+        #expect(assembled[1].text == "World\n세계")
     }
 
     @Test func preservesTimings() {
-        let merged = SubtitleTranslationAssembler.merge(
-            cues: cues(),
-            translations: [0: "안녕"],
+        let cues = cues()
+        let assembled = SubtitleTranslationAssembler.assemble(
+            cues: cues,
+            segments: singleCueSegments(3, from: cues),
+            translations: ["안녕", nil, nil],
             output: .translatedOnly
         )
 
-        #expect(merged[0].startTime == 0)
-        #expect(merged[0].endTime == 1)
+        #expect(assembled[0].startTime == 0)
+        #expect(assembled[0].endTime == 1)
     }
 
-    /// A skipped line must not pull later translations onto its timestamp — the
-    /// reason results are keyed by index instead of zipped.
-    @Test func untranslatedCuesKeepSourceTextAndDoNotShift() {
-        let merged = SubtitleTranslationAssembler.merge(
-            cues: cues(),
-            translations: [2: "다시"],
+    /// A segment the engine skipped keeps its source text, and must not pull later
+    /// translations onto its timestamp.
+    @Test func untranslatedSegmentsKeepSourceTextAndDoNotShift() {
+        let cues = cues()
+        let assembled = SubtitleTranslationAssembler.assemble(
+            cues: cues,
+            segments: singleCueSegments(3, from: cues),
+            translations: [nil, nil, "다시"],
             output: .translatedOnly
         )
 
-        #expect(merged.map(\.text) == ["Hello", "World", "다시"])
+        #expect(assembled.map(\.text) == ["Hello", "World", "다시"])
     }
 
-    @Test func ignoresBlankAndUnchangedTranslations() {
-        let merged = SubtitleTranslationAssembler.merge(
-            cues: cues(),
-            translations: [0: "   ", 1: "World"],
+    /// A sentence spanning two cues is translated once and split back across both.
+    @Test func distributesAMultiCueSegmentBackOntoItsCues() {
+        let cues = [
+            SubtitleCue(startTime: 0, endTime: 1, text: "I didn't leave"),
+            SubtitleCue(startTime: 1, endTime: 2, text: "because he asked me to.")
+        ]
+        let segments = [
+            SubtitleSegment(cueIndices: [0, 1], text: "I didn't leave because he asked me to.")
+        ]
+
+        let assembled = SubtitleTranslationAssembler.assemble(
+            cues: cues,
+            segments: segments,
+            translations: ["그가 부탁했기 때문에 나는 떠나지 않았어요."],
+            output: .translatedOnly
+        )
+
+        #expect(assembled.count == 2)
+        #expect(assembled[0].text != cues[0].text)
+        #expect(assembled[1].text != cues[1].text)
+        #expect(assembled[0].endTime == 1)
+        #expect(assembled[1].startTime == 1)
+    }
+
+    /// Guards against an engine echoing its prompt or rambling: wildly mismatched
+    /// output is discarded in favour of the source.
+    @Test func rejectsTranslationsWithImplausibleLength() {
+        #expect(!SubtitleTranslationAssembler.isUsable(
+            translated: String(repeating: "말 ", count: 200),
+            source: "Hi."
+        ))
+        #expect(!SubtitleTranslationAssembler.isUsable(translated: "  ", source: "Hello"))
+        #expect(SubtitleTranslationAssembler.isUsable(translated: "안녕하세요", source: "Hello"))
+    }
+
+    @Test func ignoresTranslationsIdenticalToSource() {
+        let cues = cues()
+        let assembled = SubtitleTranslationAssembler.assemble(
+            cues: cues,
+            segments: singleCueSegments(3, from: cues),
+            translations: ["Hello", nil, nil],
             output: .bilingual
         )
 
-        #expect(merged[0].text == "Hello")
-        #expect(merged[1].text == "World")
+        // Unchanged text must not be duplicated onto two lines.
+        #expect(assembled[0].text == "Hello")
     }
 }

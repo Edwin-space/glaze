@@ -43,16 +43,16 @@ struct PlayerView: View {
             // controller, since TranslationSession is a non-Sendable class.
             .translationTask(subtitles.translationConfiguration) { session in
                 guard let input = await subtitles.translationInput() else { return }
+                let engine = AppleTranslationEngine(session: session)
                 do {
-                    let translated = try await AppleSubtitleTranslator.translate(
-                        cues: input.cues,
-                        output: input.output,
-                        using: session,
+                    let translations = try await engine.translate(
+                        segments: input.segments,
+                        targetLanguageCode: input.targetLanguageCode,
                         onProgress: { progress in
                             subtitles.updateTranslationProgress(progress)
                         }
                     )
-                    await subtitles.applyTranslation(cues: translated, videoURL: input.videoURL)
+                    await subtitles.applyTranslation(translations, for: input)
                 } catch {
                     await subtitles.failTranslating(error)
                 }
@@ -547,6 +547,14 @@ struct PlayerView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
+
+            // Only the system engine ships today; on-device AI and an external
+            // endpoint are the planned tiers, so the row states which one is running
+            // rather than offering a choice that does not exist yet.
+            LabeledContent(
+                L10n.string("subtitle.translate.engine"),
+                value: L10n.string(SubtitleTranslationEngineID.appleTranslation.labelKey)
+            )
 
             Picker(L10n.string("subtitle.translate.output"), selection: $subtitles.translationOutput) {
                 ForEach(SubtitleTranslationOutput.allCases, id: \.self) { output in

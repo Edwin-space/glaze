@@ -162,3 +162,9 @@
 "subtitle.translate.progress_format" = "번역 중… %d%%";
 "subtitle.error.translation_failed" = "자막을 번역하지 못했습니다. 다시 시도해 주세요.";
 "subtitle.error.translation_unavailable" = "이 언어 조합은 온디바이스 번역을 지원하지 않습니다. 시스템 설정 ▸ 일반 ▸ 언어 및 지역 ▸ 번역 언어에서 언어를 추가해 주세요.";
+"subtitle.translate.engine" = "엔진";
+"subtitle.translate.engine.system" = "시스템 번역";
+"subtitle.translate.engine.on_device_ai" = "온디바이스 AI";
+"subtitle.translate.engine.external" = "외부 모델";
+"subtitle.translate.engine.system_hint" = "macOS 내장. 설치가 필요 없고 지원 언어가 가장 넓습니다.";
+"subtitle.translate.sentences_format" = "문장 %d개";

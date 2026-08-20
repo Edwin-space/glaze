@@ -162,3 +162,9 @@
 "subtitle.translate.progress_format" = "Translating… %d%%";
 "subtitle.error.translation_failed" = "Could not translate the subtitles. Try again.";
 "subtitle.error.translation_unavailable" = "This language pair is not available for on-device translation. Add the languages in System Settings ▸ General ▸ Language & Region ▸ Translation Languages.";
+"subtitle.translate.engine" = "Engine";
+"subtitle.translate.engine.system" = "System translation";
+"subtitle.translate.engine.on_device_ai" = "On-device AI";
+"subtitle.translate.engine.external" = "External model";
+"subtitle.translate.engine.system_hint" = "Built into macOS. No setup, widest language coverage.";
+"subtitle.translate.sentences_format" = "%d sentences";

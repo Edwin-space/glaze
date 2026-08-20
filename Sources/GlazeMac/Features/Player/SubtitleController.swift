@@ -246,20 +246,44 @@ final class SubtitleController {
         }
     }
 
-    /// Everything the translator needs, in Sendable form — the session itself never
+    /// Everything the engine needs, in Sendable form — the session itself never
     /// crosses onto this actor.
     struct TranslationInput: Sendable {
         let cues: [SubtitleCue]
+        /// Cues regrouped into sentences, so the engine never sees a bare fragment.
+        let segments: [SubtitleSegment]
         let output: SubtitleTranslationOutput
+        let targetLanguageCode: String
         let videoURL: URL
     }
 
     /// Snapshot taken as a run begins; nil when there is nothing to translate.
     func translationInput() -> TranslationInput? {
-        guard isTranslating, let videoURL = translationVideoURL, !subtitleCues.isEmpty else {
+        guard isTranslating,
+              let videoURL = translationVideoURL,
+              let targetLanguageCode = pendingTranslationRequest?.targetLanguageCode,
+              !subtitleCues.isEmpty else {
             return nil
         }
-        return TranslationInput(cues: subtitleCues, output: translationOutput, videoURL: videoURL)
+
+        return TranslationInput(
+            cues: subtitleCues,
+            segments: SubtitleSegmenter.segments(from: subtitleCues),
+            output: translationOutput,
+            targetLanguageCode: targetLanguageCode,
+            videoURL: videoURL
+        )
+    }
+
+    /// Reassembles engine output onto the original cue timings and saves the result.
+    func applyTranslation(_ translations: [String?], for input: TranslationInput) {
+        let cues = SubtitleTranslationAssembler.assemble(
+            cues: input.cues,
+            segments: input.segments,
+            translations: translations,
+            output: input.output
+        )
+        applyTranslation(cues: cues, videoURL: input.videoURL)
     }
 
     func updateTranslationProgress(_ progress: Double) {
