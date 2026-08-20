@@ -454,7 +454,33 @@ struct PlayerView: View {
             Section {
                 LabeledContent(L10n.string("subtitle.panel.language"), value: L10n.string("subtitle.panel.auto_detect"))
                 LabeledContent(L10n.string("subtitle.panel.output"), value: subtitles.panelOutputValue)
-                LabeledContent(L10n.string("subtitle.panel.mode"), value: L10n.string("subtitle.panel.mode_standard"))
+                Picker(L10n.string("subtitle.model.tier"), selection: $subtitles.transcriptionTier) {
+                    ForEach(TranscriptionModelTier.allCases, id: \.self) { tier in
+                        Text(L10n.string(tier.labelKey)).tag(tier)
+                    }
+                }
+                .disabled(subtitles.isGenerating)
+
+                Text(
+                    String(
+                        format: L10n.string("subtitle.model.download_format"),
+                        subtitles.transcriptionTier.approximateDownloadMegabytes
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                // Both timings live here rather than beside their own controls: the
+                // translation section disappears once a translation succeeds, and a
+                // measurement that vanishes the moment you take it is no use for
+                // comparing model tiers.
+                if let duration = subtitles.lastGenerationDuration {
+                    measuredDuration("subtitle.measured.generation_format", duration)
+                }
+
+                if let duration = subtitles.lastTranslationDuration {
+                    measuredDuration("subtitle.measured.translation_format", duration)
+                }
                 LabeledContent(L10n.string("subtitle.panel.storage"), value: L10n.string("subtitle.panel.storage_ask"))
             } header: {
                 inspectorHeader("subtitle.panel.title", detailKey: "subtitle.panel.subtitle")
@@ -556,6 +582,12 @@ struct PlayerView: View {
                 value: L10n.string(SubtitleTranslationEngineID.appleTranslation.labelKey)
             )
 
+            Picker(L10n.string("subtitle.translate.quality"), selection: $subtitles.translationQuality) {
+                ForEach(SubtitleTranslationQuality.allCases, id: \.self) { quality in
+                    Text(L10n.string(quality.labelKey)).tag(quality)
+                }
+            }
+
             Picker(L10n.string("subtitle.translate.output"), selection: $subtitles.translationOutput) {
                 ForEach(SubtitleTranslationOutput.allCases, id: \.self) { output in
                     Text(L10n.string(output.labelKey)).tag(output)
@@ -570,6 +602,20 @@ struct PlayerView: View {
             }
             .disabled(!subtitles.canTranslate || playback.currentVideoURL == nil)
         }
+    }
+
+    private func measuredDuration(_ formatKey: String, _ duration: TimeInterval) -> some View {
+        Text(String(format: L10n.string(formatKey), formattedDuration(duration)))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
+    /// Comparing model tiers only means anything against a measured number.
+    private func formattedDuration(_ duration: TimeInterval) -> String {
+        let seconds = Int(duration.rounded())
+        return seconds >= 60
+            ? String(format: "%d:%02d", seconds / 60, seconds % 60)
+            : "\(seconds)s"
     }
 
     private func languageDisplayName(_ code: String) -> String {

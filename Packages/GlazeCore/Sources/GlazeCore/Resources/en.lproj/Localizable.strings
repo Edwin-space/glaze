@@ -168,3 +168,14 @@
 "subtitle.translate.engine.external" = "External model";
 "subtitle.translate.engine.system_hint" = "Built into macOS. No setup, widest language coverage.";
 "subtitle.translate.sentences_format" = "%d sentences";
+"subtitle.model.tier" = "Transcription model";
+"subtitle.model.tier.fast" = "Fast";
+"subtitle.model.tier.balanced" = "Balanced";
+"subtitle.model.tier.accurate" = "Accurate";
+"subtitle.model.tier.maximum" = "Maximum accuracy";
+"subtitle.model.download_format" = "About %d MB, downloaded once";
+"subtitle.translate.quality" = "Quality";
+"subtitle.translate.quality.fast" = "Fast";
+"subtitle.translate.quality.high" = "High fidelity";
+"subtitle.measured.generation_format" = "Last transcription: %@";
+"subtitle.measured.translation_format" = "Last translation: %@";

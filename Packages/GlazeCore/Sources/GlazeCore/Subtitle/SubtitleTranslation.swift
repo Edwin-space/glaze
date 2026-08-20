@@ -28,6 +28,25 @@ public enum SubtitleTranslationError: Error, Equatable, Sendable {
     case translationFailed
 }
 
+/// How hard the translation engine should work per line.
+///
+/// Apple's translator exposes this as a strategy; the higher tier is slower and, on
+/// Apple's own description, more faithful. Which one is running is worth surfacing
+/// because it is the only quality lever the system translator offers.
+public enum SubtitleTranslationQuality: String, Equatable, Sendable, CaseIterable, Codable {
+    case fast
+    case highFidelity
+
+    public static let `default` = SubtitleTranslationQuality.highFidelity
+
+    public var labelKey: String {
+        switch self {
+        case .fast: "subtitle.translate.quality.fast"
+        case .highFidelity: "subtitle.translate.quality.high"
+        }
+    }
+}
+
 /// Identifies which engine produced a translation. Engines are added over time —
 /// the system translator ships first, with an on-device LLM and a user-supplied
 /// endpoint planned — so the rest of the app refers to them through this.

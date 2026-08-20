@@ -28,12 +28,19 @@ public final class SubtitleGenerator {
         case transcriptionFailed
     }
 
-    public init() {}
+    /// Which Whisper model to run. Set at init so a run cannot change model midway.
+    public let modelTier: TranscriptionModelTier
 
+    public init(modelTier: TranscriptionModelTier = .default) {
+        self.modelTier = modelTier
+    }
+
+    /// - Returns: the cues, plus how long the run took so tiers can be compared.
     public func generate(
         from videoURL: URL,
         onProgress: @escaping @Sendable (Progress) -> Void
-    ) async throws -> [SubtitleCue] {
+    ) async throws -> (cues: [SubtitleCue], duration: TimeInterval) {
+        let startedAt = Date()
         onProgress(Progress(stage: .extractingAudio, fraction: 0))
         let audioURL = try await extractAudio(from: videoURL)
         defer { try? FileManager.default.removeItem(at: audioURL) }
@@ -41,7 +48,7 @@ public final class SubtitleGenerator {
         onProgress(Progress(stage: .preparingModel, fraction: 0))
         let whisperKit: WhisperKit
         do {
-            whisperKit = try await WhisperKit()
+            whisperKit = try await WhisperKit(WhisperKitConfig(model: modelTier.whisperModelName))
         } catch {
             throw GenerationError.modelUnavailable
         }
@@ -82,7 +89,7 @@ public final class SubtitleGenerator {
             throw GenerationError.transcriptionFailed
         }
 
-        return cues
+        return (cues, Date().timeIntervalSince(startedAt))
     }
 
     private func extractAudio(from videoURL: URL) async throws -> URL {

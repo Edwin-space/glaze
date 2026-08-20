@@ -24,6 +24,20 @@ final class SubtitleController {
     var generationStage: SubtitleGenerator.Stage?
     var generationProgress: Double = 0
 
+    /// Which Whisper model transcription runs on. Persisted so an A/B comparison
+    /// survives a relaunch.
+    var transcriptionTier: TranscriptionModelTier = SubtitleController.storedTranscriptionTier {
+        didSet { SubtitleController.storedTranscriptionTier = transcriptionTier }
+    }
+    var translationQuality: SubtitleTranslationQuality = SubtitleController.storedTranslationQuality {
+        didSet { SubtitleController.storedTranslationQuality = translationQuality }
+    }
+
+    /// Wall-clock cost of the last run of each stage, so tiers can be compared on
+    /// something measured rather than remembered.
+    var lastGenerationDuration: TimeInterval?
+    var lastTranslationDuration: TimeInterval?
+
     var isTranslating = false
     var translationProgress: Double = 0
     var translationOutput: SubtitleTranslationOutput = .bilingual
@@ -41,6 +55,7 @@ final class SubtitleController {
     /// Video the pending translation belongs to, so a late result cannot be written
     /// against a file the user has already moved on from.
     private var translationVideoURL: URL?
+    private var translationStartedAt: Date?
 
     /// Resets subtitle state for a newly loaded video and auto-loads the best sidecar match, if any.
     func prepareForNewVideo(url: URL) {
@@ -119,10 +134,10 @@ final class SubtitleController {
         status = .generating
         errorMessage = nil
 
-        generationTask = Task {
-            let generator = SubtitleGenerator()
+        generationTask = Task { [transcriptionTier] in
+            let generator = SubtitleGenerator(modelTier: transcriptionTier)
             do {
-                let cues = try await generator.generate(from: videoURL) { [weak self] progress in
+                let result = try await generator.generate(from: videoURL) { [weak self] progress in
                     Task { @MainActor in
                         self?.generationStage = progress.stage
                         self?.generationProgress = progress.fraction
@@ -131,7 +146,8 @@ final class SubtitleController {
                 guard !Task.isCancelled else {
                     return
                 }
-                finishGenerating(cues: cues, videoURL: videoURL)
+                lastGenerationDuration = result.duration
+                finishGenerating(cues: result.cues, videoURL: videoURL)
             } catch {
                 guard !Task.isCancelled else {
                     return
@@ -203,6 +219,29 @@ final class SubtitleController {
         }
     }
 
+    // MARK: - Persisted model choices
+
+    private enum DefaultsKey {
+        static let transcriptionTier = "subtitle.transcriptionTier"
+        static let translationQuality = "subtitle.translationQuality"
+    }
+
+    private static var storedTranscriptionTier: TranscriptionModelTier {
+        get {
+            UserDefaults.standard.string(forKey: DefaultsKey.transcriptionTier)
+                .flatMap(TranscriptionModelTier.init(rawValue:)) ?? .default
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.transcriptionTier) }
+    }
+
+    private static var storedTranslationQuality: SubtitleTranslationQuality {
+        get {
+            UserDefaults.standard.string(forKey: DefaultsKey.translationQuality)
+                .flatMap(SubtitleTranslationQuality.init(rawValue:)) ?? .default
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.translationQuality) }
+    }
+
     // MARK: - Translation
 
     /// True when there is a loaded subtitle in another language that we could turn
@@ -224,6 +263,7 @@ final class SubtitleController {
         translationVideoURL = videoURL
         errorMessage = nil
         translationProgress = 0
+        translationStartedAt = Date()
         isTranslating = true
         status = .translating
 
@@ -231,7 +271,21 @@ final class SubtitleController {
         let target = Locale.Language(identifier: request.targetLanguageCode)
         // A fresh Configuration each run; reusing an equal one would not retrigger
         // the task, so a repeat translation would silently do nothing.
-        translationConfiguration = TranslationSession.Configuration(source: source, target: target)
+        if #available(macOS 26.4, *) {
+            // Strategy is the system translator's only quality lever, and it only
+            // exists from 26.4 — below that the system picks for us.
+            let strategy: TranslationSession.Strategy = switch translationQuality {
+            case .fast: .lowLatency
+            case .highFidelity: .highFidelity
+            }
+            translationConfiguration = TranslationSession.Configuration(
+                source: source,
+                target: target,
+                preferredStrategy: strategy
+            )
+        } else {
+            translationConfiguration = TranslationSession.Configuration(source: source, target: target)
+        }
     }
 
     func cancelTranslating() {
@@ -311,6 +365,10 @@ final class SubtitleController {
     private func finishTranslating(cues: [SubtitleCue], videoURL: URL) {
         isTranslating = false
         translationConfiguration = nil
+        if let translationStartedAt {
+            lastTranslationDuration = Date().timeIntervalSince(translationStartedAt)
+        }
+        translationStartedAt = nil
 
         let outputURL = Self.translatedSubtitleURL(
             for: videoURL,

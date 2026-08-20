@@ -168,3 +168,14 @@
 "subtitle.translate.engine.external" = "외부 모델";
 "subtitle.translate.engine.system_hint" = "macOS 내장. 설치가 필요 없고 지원 언어가 가장 넓습니다.";
 "subtitle.translate.sentences_format" = "문장 %d개";
+"subtitle.model.tier" = "전사 모델";
+"subtitle.model.tier.fast" = "빠름";
+"subtitle.model.tier.balanced" = "균형";
+"subtitle.model.tier.accurate" = "정확";
+"subtitle.model.tier.maximum" = "최고 정확도";
+"subtitle.model.download_format" = "약 %dMB, 최초 1회 다운로드";
+"subtitle.translate.quality" = "품질";
+"subtitle.translate.quality.fast" = "빠름";
+"subtitle.translate.quality.high" = "고품질";
+"subtitle.measured.generation_format" = "최근 전사: %@";
+"subtitle.measured.translation_format" = "최근 번역: %@";
