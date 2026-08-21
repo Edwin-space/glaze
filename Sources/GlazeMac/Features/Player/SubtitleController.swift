@@ -32,6 +32,9 @@ final class SubtitleController {
     var translationQuality: SubtitleTranslationQuality = SubtitleController.storedTranslationQuality {
         didSet { SubtitleController.storedTranslationQuality = translationQuality }
     }
+    var translationEngineID: SubtitleTranslationEngineID = SubtitleController.storedTranslationEngine {
+        didSet { SubtitleController.storedTranslationEngine = translationEngineID }
+    }
 
     /// Wall-clock cost of the last run of each stage, so tiers can be compared on
     /// something measured rather than remembered.
@@ -224,6 +227,7 @@ final class SubtitleController {
     private enum DefaultsKey {
         static let transcriptionTier = "subtitle.transcriptionTier"
         static let translationQuality = "subtitle.translationQuality"
+        static let translationEngine = "subtitle.translationEngine"
     }
 
     private static var storedTranscriptionTier: TranscriptionModelTier {
@@ -232,6 +236,14 @@ final class SubtitleController {
                 .flatMap(TranscriptionModelTier.init(rawValue:)) ?? .default
         }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.transcriptionTier) }
+    }
+
+    private static var storedTranslationEngine: SubtitleTranslationEngineID {
+        get {
+            UserDefaults.standard.string(forKey: DefaultsKey.translationEngine)
+                .flatMap(SubtitleTranslationEngineID.init(rawValue:)) ?? .appleTranslation
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.translationEngine) }
     }
 
     private static var storedTranslationQuality: SubtitleTranslationQuality {
@@ -267,6 +279,13 @@ final class SubtitleController {
         isTranslating = true
         status = .translating
 
+        // The on-device model needs no session from SwiftUI, so it runs straight from
+        // here. Only the system translator has to go out through `.translationTask`.
+        guard translationEngineID != .appleFoundationModel else {
+            runOnDeviceModelTranslation()
+            return
+        }
+
         let source = request.sourceTrack.languageCode.map(Locale.Language.init(identifier:))
         let target = Locale.Language(identifier: request.targetLanguageCode)
         // A fresh Configuration each run; reusing an equal one would not retrigger
@@ -285,6 +304,48 @@ final class SubtitleController {
             )
         } else {
             translationConfiguration = TranslationSession.Configuration(source: source, target: target)
+        }
+    }
+
+    private func runOnDeviceModelTranslation() {
+        guard let input = translationInput() else { return }
+
+        translationTask = Task { [weak self] in
+            guard let self else { return }
+            let engine = FoundationModelTranslationEngine(
+                targetLanguageDisplayName: input.targetLanguageDisplayName
+            )
+            do {
+                let translations = try await engine.translate(
+                    segments: input.segments,
+                    targetLanguageCode: input.targetLanguageCode,
+                    onProgress: { progress in
+                        self.updateTranslationProgress(progress)
+                    }
+                )
+                guard !Task.isCancelled else { return }
+                applyTranslation(translations, for: input)
+            } catch {
+                guard !Task.isCancelled else { return }
+                failTranslating(error)
+            }
+            translationTask = nil
+        }
+    }
+
+    /// Why the on-device model cannot be used right now, if it cannot.
+    var onDeviceModelUnavailableReason: String? {
+        switch FoundationModelTranslationEngine.availability() {
+        case .available:
+            nil
+        case .unavailable(.appleIntelligenceNotEnabled):
+            L10n.string("subtitle.translate.engine.unavailable_not_enabled")
+        case .unavailable(.deviceNotEligible):
+            L10n.string("subtitle.translate.engine.unavailable_device")
+        case .unavailable(.modelNotReady):
+            L10n.string("subtitle.translate.engine.unavailable_not_ready")
+        case .unavailable:
+            L10n.string("subtitle.translate.engine.unavailable_generic")
         }
     }
 
@@ -308,6 +369,9 @@ final class SubtitleController {
         let segments: [SubtitleSegment]
         let output: SubtitleTranslationOutput
         let targetLanguageCode: String
+        /// The language named the way a person would say it, for the model's instructions.
+        let targetLanguageDisplayName: String
+        let engineID: SubtitleTranslationEngineID
         let videoURL: URL
     }
 
@@ -325,6 +389,9 @@ final class SubtitleController {
             segments: SubtitleSegmenter.segments(from: subtitleCues),
             output: translationOutput,
             targetLanguageCode: targetLanguageCode,
+            targetLanguageDisplayName: Locale.current
+                .localizedString(forLanguageCode: targetLanguageCode) ?? targetLanguageCode,
+            engineID: translationEngineID,
             videoURL: videoURL
         )
     }

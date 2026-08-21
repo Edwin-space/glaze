@@ -43,19 +43,7 @@ struct PlayerView: View {
             // controller, since TranslationSession is a non-Sendable class.
             .translationTask(subtitles.translationConfiguration) { session in
                 guard let input = await subtitles.translationInput() else { return }
-                let engine = AppleTranslationEngine(session: session)
-                do {
-                    let translations = try await engine.translate(
-                        segments: input.segments,
-                        targetLanguageCode: input.targetLanguageCode,
-                        onProgress: { progress in
-                            subtitles.updateTranslationProgress(progress)
-                        }
-                    )
-                    await subtitles.applyTranslation(translations, for: input)
-                } catch {
-                    await subtitles.failTranslating(error)
-                }
+                await runTranslation(input: input, engine: AppleTranslationEngine(session: session))
             }
             .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
             .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime), perform: handlePlaybackEnd)
@@ -594,18 +582,37 @@ struct PlayerView: View {
             // Only the system engine ships today; on-device AI and an external
             // endpoint are the planned tiers, so the row states which one is running
             // rather than offering a choice that does not exist yet.
-            LabeledContent {
+            Picker(selection: $subtitles.translationEngineID) {
                 Text(L10n.string(SubtitleTranslationEngineID.appleTranslation.labelKey))
+                    .tag(SubtitleTranslationEngineID.appleTranslation)
+                Text(L10n.string(SubtitleTranslationEngineID.appleFoundationModel.labelKey))
+                    .tag(SubtitleTranslationEngineID.appleFoundationModel)
             } label: {
                 GlazeHelpLabel("subtitle.translate.engine", help: "help.subtitle.translate_engine")
             }
 
-            Picker(selection: $subtitles.translationQuality) {
-                ForEach(SubtitleTranslationQuality.allCases, id: \.self) { quality in
-                    Text(L10n.string(quality.labelKey)).tag(quality)
+            if subtitles.translationEngineID == .appleFoundationModel {
+                if let reason = subtitles.onDeviceModelUnavailableReason {
+                    Label(reason, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(L10n.string("subtitle.translate.engine.on_device_ai_hint"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-            } label: {
-                GlazeHelpLabel("subtitle.translate.quality", help: "help.subtitle.translate_quality")
+            }
+
+            // Strategy is a lever on the system translator only; the on-device model
+            // is steered by its instructions instead.
+            if subtitles.translationEngineID == .appleTranslation {
+                Picker(selection: $subtitles.translationQuality) {
+                    ForEach(SubtitleTranslationQuality.allCases, id: \.self) { quality in
+                        Text(L10n.string(quality.labelKey)).tag(quality)
+                    }
+                } label: {
+                    GlazeHelpLabel("subtitle.translate.quality", help: "help.subtitle.translate_quality")
+                }
             }
 
             Picker(selection: $subtitles.translationOutput) {
@@ -622,7 +629,12 @@ struct PlayerView: View {
             } label: {
                 Label(L10n.string("subtitle.translate.action"), systemImage: "character.bubble")
             }
-            .disabled(!subtitles.canTranslate || playback.currentVideoURL == nil)
+            .disabled(
+                !subtitles.canTranslate
+                    || playback.currentVideoURL == nil
+                    || (subtitles.translationEngineID == .appleFoundationModel
+                        && subtitles.onDeviceModelUnavailableReason != nil)
+            )
         }
     }
 
@@ -1057,6 +1069,27 @@ struct PlayerView: View {
 
     private func panelMenuButton(_ panel: PlayerPanel, key: String, systemImage: String) -> some View {
         Button { togglePanel(panel) } label: { Label(L10n.string(key), systemImage: systemImage) }
+    }
+
+    /// Runs one translation pass through whichever engine was chosen. The system
+    /// translator arrives via `.translationTask` because its session can only be
+    /// vended by SwiftUI; the on-device model is constructed directly.
+    private func runTranslation(
+        input: SubtitleController.TranslationInput,
+        engine: some SubtitleTranslationEngine
+    ) async {
+        do {
+            let translations = try await engine.translate(
+                segments: input.segments,
+                targetLanguageCode: input.targetLanguageCode,
+                onProgress: { progress in
+                    subtitles.updateTranslationProgress(progress)
+                }
+            )
+            subtitles.applyTranslation(translations, for: input)
+        } catch {
+            subtitles.failTranslating(error)
+        }
     }
 
     /// Caption above the title in the bottom bar — playlist position when there is

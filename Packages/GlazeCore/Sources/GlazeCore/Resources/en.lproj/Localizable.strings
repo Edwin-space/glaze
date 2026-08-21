@@ -195,3 +195,8 @@
 "help.assistant.source" = "Where this video came from — a folder on your Mac, or a NAS on your network.";
 "help.network.browser" = "Finds and plays videos from a NAS or media server on your network. The NAS needs its DLNA (or UPnP) media server switched on before it will appear.";
 "help.subtitle.current" = "What subtitles are ready for this video right now. This is a status, not a setting.";
+"subtitle.translate.engine.unavailable_not_enabled" = "Turn on Apple Intelligence in System Settings to use this.";
+"subtitle.translate.engine.unavailable_device" = "This Mac does not support on-device AI translation.";
+"subtitle.translate.engine.unavailable_not_ready" = "The on-device model is still getting ready. Try again shortly.";
+"subtitle.translate.engine.unavailable_generic" = "On-device AI translation is unavailable right now.";
+"subtitle.translate.engine.on_device_ai_hint" = "Keeps one consistent tone across the whole film, which system translation cannot do.";
