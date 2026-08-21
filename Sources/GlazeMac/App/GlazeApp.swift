@@ -10,7 +10,14 @@ struct GlazeApp: App {
         WindowGroup {
             ContentView()
                 .frame(minWidth: 960, minHeight: 620)
+                // Opening a video from Finder while Glaze was running made a *second*
+                // window and played the file there, behind the one the viewer was
+                // already looking at — so nothing appeared to happen. Declaring that
+                // this window accepts any external event routes the open to the window
+                // that is already up.
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         }
+        .handlesExternalEvents(matching: ["*"])
         .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(replacing: .newItem) {
@@ -62,10 +69,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func enqueueOpenMedia(_ url: URL) {
         Task { @MainActor in
             PendingOpenMediaURLs.append(url)
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            if PendingOpenMediaURLs.contains(url) {
-                NotificationCenter.default.post(name: .openMediaURL, object: url)
-            }
         }
     }
 }

@@ -8,6 +8,12 @@ import GlazeCore
 /// returned the surrounding context translated as well, and redistribution then spread
 /// four sentences across two cues. A schema removes the option at the decoder rather
 /// than relying on the model to obey.
+///
+/// The schema alone did not settle it. As long as neighbouring lines appeared in the
+/// prompt as background, the model would sometimes translate one of them instead of
+/// the line it was asked for — the first line of a test file came back as the third
+/// line's translation. The prompt is now the source line and nothing else; continuity
+/// comes from the session transcript, which the model already carries between turns.
 @Generable
 private struct TranslatedLine {
     @Guide(description: "The translated line only. No original text, no notes, no quotes.")
@@ -29,10 +35,14 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
 
     let targetLanguageDisplayName: String
 
-    /// How many neighbouring sentences to show the model as context. Enough for
-    /// pronouns and register to carry, small enough to stay well inside the context
-    /// window across a feature-length file.
-    private static let contextWindow = 2
+    /// The session is rebuilt this often.
+    ///
+    /// One session per file would be ideal — the model would remember the whole film —
+    /// but the transcript grows with every line and a feature-length subtitle file runs
+    /// to well over a thousand of them, which overruns the context window partway
+    /// through. Rebuilding periodically bounds it; the instructions, which is where the
+    /// register rule lives, are restated each time.
+    private static let segmentsPerSession = 40
 
     /// A model that wanders off-task can produce something far longer than the line
     /// it was given; cap it rather than letting one bad response stall the run.
@@ -56,9 +66,7 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
             throw SubtitleTranslationError.languagePairUnavailable
         }
 
-        // One session for the whole file: the instructions are stated once, and the
-        // model keeps the same register from the first line to the last.
-        let session = LanguageModelSession(instructions: instructions)
+        var session = LanguageModelSession(instructions: instructions)
         let options = GenerationOptions(
             // Deterministic — a translation should not change between runs of the
             // same file, and sampling buys nothing here.
@@ -73,6 +81,10 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
         for (position, segment) in segments.enumerated() {
             try Task.checkCancellation()
 
+            if position > 0, position % Self.segmentsPerSession == 0 {
+                session = LanguageModelSession(instructions: instructions)
+            }
+
             let source = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !source.isEmpty else {
                 results.append(nil)
@@ -82,7 +94,7 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
 
             do {
                 let response = try await session.respond(
-                    to: prompt(for: source, at: position, in: segments),
+                    to: source,
                     generating: TranslatedLine.self,
                     options: options
                 )
@@ -114,33 +126,6 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
         Translate meaning exactly, including negation.
         Use one consistent, natural level of politeness for the whole film.
         """
-    }
-
-    /// Neighbouring lines go in as context so pronouns, tense, and register have
-    /// something to agree with — the thing the system translator cannot be given.
-    private func prompt(for source: String, at position: Int, in segments: [SubtitleSegment]) -> String {
-        let start = max(0, position - Self.contextWindow)
-        let end = min(segments.count - 1, position + Self.contextWindow)
-
-        let before = (start..<position)
-            .map { segments[$0].text.replacingOccurrences(of: "\n", with: " ") }
-            .joined(separator: "\n")
-        let after = ((position + 1)...max(position + 1, end))
-            .filter { $0 <= end && $0 < segments.count }
-            .map { segments[$0].text.replacingOccurrences(of: "\n", with: " ") }
-            .joined(separator: "\n")
-
-        // Context is labelled as background and kept away from the instruction, so
-        // there is one unambiguous sentence to act on at the end of the prompt.
-        var prompt = ""
-        if !before.isEmpty || !after.isEmpty {
-            let surrounding = [before, after].filter { !$0.isEmpty }.joined(separator: "\n")
-            prompt += "Background — nearby dialogue, for tone only, do not translate:\n"
-            prompt += surrounding
-            prompt += "\n\n"
-        }
-        prompt += "Translate this sentence:\n\(source)"
-        return prompt
     }
 
     /// Models sometimes wrap a reply in quotes or prefix it with a label even when

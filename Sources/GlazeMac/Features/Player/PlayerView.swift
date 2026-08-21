@@ -50,6 +50,14 @@ struct PlayerView: View {
             .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in openVideo() }
             .onReceive(NotificationCenter.default.publisher(for: .openMediaURL)) { notification in
                 guard let url = notification.object as? URL else { return }
+                PendingOpenMediaURLs.consume(url)
+                openMedia(from: url)
+            }
+            // How a file opened from Finder actually arrives. The app delegate declares
+            // application(_:openFiles:), but under the SwiftUI App lifecycle AppKit never
+            // calls it — opening a second video while Glaze was running did nothing.
+            .onOpenURL { url in
+                PendingOpenMediaURLs.consume(url)
                 openMedia(from: url)
             }
             .onAppear {
