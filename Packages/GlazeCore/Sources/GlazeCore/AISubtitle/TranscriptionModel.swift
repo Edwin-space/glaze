@@ -38,14 +38,19 @@ public enum TranscriptionModelTier: String, Equatable, Sendable, CaseIterable, C
         }
     }
 
-    /// Rough on-disk size of the download, so the cost of switching tiers is visible
-    /// before the user commits to it.
+    /// On-disk size of the download, so the cost of switching tiers is visible before
+    /// the user commits to it.
+    ///
+    /// Measured, not estimated: `base` and `balanced` were checked against the cache
+    /// WhisperKit actually writes. The first published guesses were well under —
+    /// `balanced` alone is 464 MB, not the 250 MB first written here — and a number
+    /// shown next to a download has to be one the user can trust.
     public var approximateDownloadMegabytes: Int {
         switch self {
-        case .fast: 150
-        case .balanced: 250
-        case .accurate: 640
-        case .maximum: 1_600
+        case .fast: 140       // measured
+        case .balanced: 465   // measured
+        case .accurate: 950   // estimated from the turbo weights; confirm when first fetched
+        case .maximum: 1_900  // estimated; confirm when first fetched
         }
     }
 }

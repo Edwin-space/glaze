@@ -162,10 +162,19 @@ PGS, VobSub 같은 이미지 기반 내장 자막은 트랙 존재를 표시하�
 
 | 티어 | 모델 | 최초 다운로드 |
 |---|---|---|
-| 빠름 | `openai_whisper-base` | 약 150MB |
-| 균형(기본) | `openai_whisper-small` | 약 250MB |
-| 정확 | `openai_whisper-large-v3-v20240930_turbo` | 약 640MB |
-| 최고 정확도 | `openai_whisper-large-v3` | 약 1.6GB |
+| 빠름 | `openai_whisper-base` | 140MB (실측) |
+| 균형(기본) | `openai_whisper-small` | 465MB (실측) |
+| 정확 | `openai_whisper-large-v3-v20240930_turbo` | 약 950MB (추정) |
+| 최고 정확도 | `openai_whisper-large-v3` | 약 1.9GB (추정) |
+
+**측정값 (2026-08-21, M시리즈, 12초 음성 클립)**
+
+| | 소요 |
+|---|---|
+| 첫 실행 (모델 내려받기 포함) | 103.5초 |
+| 이후 실행 (모델 캐시됨) | 7.4초 |
+
+12초 오디오에 7.4초이므로 대략 **재생 시간의 0.6배**다. 두 시간짜리 영화면 `균형` 기준 한 시간 안팎이 걸린다는 뜻이고, 이 값이 백그라운드 처리 정책과 진행률 표시 설계의 근거가 된다.
 
 turbo는 large-v3의 정확도를 유지하면서 디코더가 작아 Apple Silicon에서 초당 정확도가 가장 좋은 지점이다.
 
