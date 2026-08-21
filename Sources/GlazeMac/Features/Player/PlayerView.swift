@@ -452,12 +452,22 @@ struct PlayerView: View {
     private var subtitlePanel: some View {
         Form {
             Section {
-                LabeledContent(L10n.string("subtitle.panel.language"), value: L10n.string("subtitle.panel.auto_detect"))
-                LabeledContent(L10n.string("subtitle.panel.output"), value: subtitles.panelOutputValue)
-                Picker(L10n.string("subtitle.model.tier"), selection: $subtitles.transcriptionTier) {
+                LabeledContent {
+                    Text(L10n.string("subtitle.panel.auto_detect"))
+                } label: {
+                    GlazeHelpLabel("subtitle.panel.language", help: "help.subtitle.language")
+                }
+                LabeledContent {
+                    Text(subtitles.panelOutputValue)
+                } label: {
+                    GlazeHelpLabel("subtitle.panel.output", help: "help.subtitle.current")
+                }
+                Picker(selection: $subtitles.transcriptionTier) {
                     ForEach(TranscriptionModelTier.allCases, id: \.self) { tier in
                         Text(L10n.string(tier.labelKey)).tag(tier)
                     }
+                } label: {
+                    GlazeHelpLabel("subtitle.model.tier", help: "help.subtitle.model_tier")
                 }
                 .disabled(subtitles.isGenerating)
 
@@ -481,16 +491,23 @@ struct PlayerView: View {
                 if let duration = subtitles.lastTranslationDuration {
                     measuredDuration("subtitle.measured.translation_format", duration)
                 }
-                LabeledContent(L10n.string("subtitle.panel.storage"), value: L10n.string("subtitle.panel.storage_ask"))
+                LabeledContent {
+                    Text(L10n.string("subtitle.panel.storage_ask"))
+                } label: {
+                    GlazeHelpLabel("subtitle.panel.storage", help: "help.subtitle.storage")
+                }
             } header: {
                 inspectorHeader("subtitle.panel.title", detailKey: "subtitle.panel.subtitle")
             }
             .glazeGlassRow()
 
-            Section(L10n.string("subtitle.panel.files")) {
+            Section {
                 subtitleFileSection
                 Toggle(L10n.string("subtitle.visibility.toggle"), isOn: $subtitles.isSubtitleVisible)
                     .disabled(subtitles.subtitleCues.isEmpty)
+            } header: {
+                GlazeHelpLabel("subtitle.panel.files", help: "help.subtitle.files")
+                    .textCase(nil)
             }
             .glazeGlassRow()
 
@@ -577,21 +594,26 @@ struct PlayerView: View {
             // Only the system engine ships today; on-device AI and an external
             // endpoint are the planned tiers, so the row states which one is running
             // rather than offering a choice that does not exist yet.
-            LabeledContent(
-                L10n.string("subtitle.translate.engine"),
-                value: L10n.string(SubtitleTranslationEngineID.appleTranslation.labelKey)
-            )
+            LabeledContent {
+                Text(L10n.string(SubtitleTranslationEngineID.appleTranslation.labelKey))
+            } label: {
+                GlazeHelpLabel("subtitle.translate.engine", help: "help.subtitle.translate_engine")
+            }
 
-            Picker(L10n.string("subtitle.translate.quality"), selection: $subtitles.translationQuality) {
+            Picker(selection: $subtitles.translationQuality) {
                 ForEach(SubtitleTranslationQuality.allCases, id: \.self) { quality in
                     Text(L10n.string(quality.labelKey)).tag(quality)
                 }
+            } label: {
+                GlazeHelpLabel("subtitle.translate.quality", help: "help.subtitle.translate_quality")
             }
 
-            Picker(L10n.string("subtitle.translate.output"), selection: $subtitles.translationOutput) {
+            Picker(selection: $subtitles.translationOutput) {
                 ForEach(SubtitleTranslationOutput.allCases, id: \.self) { output in
                     Text(L10n.string(output.labelKey)).tag(output)
                 }
+            } label: {
+                GlazeHelpLabel("subtitle.translate.output", help: "help.subtitle.translate_output")
             }
 
             Button {
@@ -715,9 +737,17 @@ struct PlayerView: View {
                 if mediaAssets.isInspectingMedia {
                     HStack { ProgressView().controlSize(.small); Text(L10n.string("media.panel.inspecting")) }
                 } else if let inspection = mediaAssets.mediaInspection {
-                    LabeledContent(L10n.string("media.panel.container"), value: inspection.containerHint.isEmpty ? "–" : inspection.containerHint)
+                    LabeledContent {
+                        Text(inspection.containerHint.isEmpty ? "–" : inspection.containerHint)
+                    } label: {
+                        GlazeHelpLabel("media.panel.container", help: "help.media.container")
+                    }
                     LabeledContent(L10n.string("media.panel.duration"), value: inspection.duration)
-                    LabeledContent(L10n.string("media.panel.avkit"), value: avKitSupportText(for: inspection.isPlayable))
+                    LabeledContent {
+                        Text(avKitSupportText(for: inspection.isPlayable))
+                    } label: {
+                        GlazeHelpLabel("media.panel.avkit", help: "help.media.playback")
+                    }
                 } else {
                     Label(L10n.string("media.panel.empty"), systemImage: "info.circle")
                         .foregroundStyle(.secondary)
@@ -728,7 +758,7 @@ struct PlayerView: View {
             .glazeGlassRow()
 
             if let inspection = mediaAssets.mediaInspection, !inspection.tracks.isEmpty {
-                Section(L10n.string("media.panel.tracks")) {
+                Section {
                     ForEach(inspection.tracks) { track in
                         LabeledContent {
                             Text(track.detail).foregroundStyle(.secondary).lineLimit(2)
@@ -736,6 +766,9 @@ struct PlayerView: View {
                             Label("\(track.title) · \(track.codec)", systemImage: mediaTrackIcon(for: track.title))
                         }
                     }
+                } header: {
+                    GlazeHelpLabel("media.panel.tracks", help: "help.media.tracks")
+                        .textCase(nil)
                 }
                 .glazeGlassRow()
             }
@@ -752,9 +785,17 @@ struct PlayerView: View {
         Form {
             Section {
                 if let asset = mediaAssets.currentMediaAsset {
-                    LabeledContent(L10n.string("assistant.metadata.status"), value: L10n.string(asset.metadata.matchStatus.labelKey))
+                    LabeledContent {
+                        Text(L10n.string(asset.metadata.matchStatus.labelKey))
+                    } label: {
+                        GlazeHelpLabel("assistant.metadata.status", help: "help.assistant.metadata")
+                    }
                     LabeledContent(L10n.string("assistant.subtitle.status"), value: L10n.string(asset.subtitleReadiness.labelKey))
-                    LabeledContent(L10n.string("assistant.media.source"), value: L10n.string(asset.source.labelKey))
+                    LabeledContent {
+                        Text(L10n.string(asset.source.labelKey))
+                    } label: {
+                        GlazeHelpLabel("assistant.media.source", help: "help.assistant.source")
+                    }
                 } else {
                     Label(L10n.string("assistant.panel.empty"), systemImage: "sparkles")
                         .foregroundStyle(.secondary)

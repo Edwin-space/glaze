@@ -22,6 +22,14 @@ struct NetworkMediaBrowserView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.string("network.browser.close")) { dismiss() }
                 }
+                // DLNA/UPnP is the one concept a viewer has to understand before this
+                // sheet can do anything for them, so the explanation lives in it.
+                ToolbarItem(placement: .automatic) {
+                    GlazeHelpButton(
+                        titleKey: "network.browser.title",
+                        bodyKey: "help.network.browser"
+                    )
+                }
                 if model.canNavigateBack {
                     ToolbarItem(placement: .navigation) {
                         Button(action: model.navigateBack) {
