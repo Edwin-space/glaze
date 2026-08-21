@@ -148,9 +148,11 @@ turbo는 large-v3의 정확도를 유지하면서 디코더가 작아 Apple Sili
 
 | 티어 | 엔진 | 설치 | 시점 |
 |---|---|---|---|
-| 기본 | Apple Translation (시스템 번역) | 없음 | v1 |
-| 고품질 | Apple Foundation Models (온디바이스 LLM) | 없음, Apple Intelligence 필요 | v1.x |
-| 확장 | 사용자가 직접 운영하는 OpenAI 호환 엔드포인트 | 사용자 | v2 (Pro 후보) |
+| 기본 | Apple Translation (시스템 번역) | 없음 | v1.0 |
+| 고품질 | Apple Foundation Models (온디바이스 LLM) | 없음, Apple Intelligence 필요 | v1.0 |
+| 확장 | 사용자가 직접 운영하는 OpenAI 호환 엔드포인트 | 사용자 | v3 (Pro 후보) |
+
+Foundation Models를 v1.0에 넣는 이유는 확장이 아니라 **결함 보완**이기 때문이다. 시스템 번역으로는 한국어 말투를 지정할 수 없어 한 편 안에서 문체가 뒤섞인다(실측 확인). 플랫폼 확장 순서는 `06_platform_global_expansion_plan.md` 참고.
 
 `SubtitleTranslationEngine` 프로토콜로 추상화되어 있어 엔진 추가는 교체이지 재작성이 아니다.
 
