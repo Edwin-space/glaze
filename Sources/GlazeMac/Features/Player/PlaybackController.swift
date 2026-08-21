@@ -21,6 +21,10 @@ final class PlaybackController {
     var onTimeUpdate: ((TimeInterval) -> Void)?
     /// Fired when a playback failure can't be auto-recovered via compatibility remux, so the view can surface it.
     var onPlaybackFailureNeedsAttention: (() -> Void)?
+    /// Fired when the current media finishes, whichever engine played it. The AVKit
+    /// path reaches this through AVPlayerItemDidPlayToEndTime in the view; the VLC
+    /// path routes its polled end state here.
+    var onPlaybackEnded: (() -> Void)?
     /// Fired when a compatibility remux succeeds, so the view can re-run the full "load new video" orchestration.
     var onCompatibilityRemuxSucceeded: ((_ originalURL: URL, _ remuxedURL: URL) -> Void)?
 
@@ -36,6 +40,9 @@ final class PlaybackController {
         beginNewPlaybackSession()
         nativeVLCSession.onTimeUpdate = { [weak self] time in
             self?.onTimeUpdate?(time)
+        }
+        nativeVLCSession.onPlaybackEnded = { [weak self] in
+            self?.onPlaybackEnded?()
         }
         player = nil
         activePlaybackEngine = .nativeVLC

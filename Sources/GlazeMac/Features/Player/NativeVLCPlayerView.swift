@@ -35,6 +35,9 @@ final class NativeVLCPlaybackSession {
     private(set) var duration: TimeInterval = 0
     var volume: Double = 1
     var onTimeUpdate: ((TimeInterval) -> Void)?
+    /// Fired once when the media reaches its end, so the playlist can advance.
+    /// AVKit gets this from AVPlayerItemDidPlayToEndTime; the VLC path has to poll for it.
+    var onPlaybackEnded: (() -> Void)?
 
     fileprivate weak var playerView: NativeVLCPlayerView?
 
@@ -71,6 +74,10 @@ final class NativeVLCPlaybackSession {
         onTimeUpdate?(currentTime)
     }
 
+    fileprivate func reportPlaybackEnded() {
+        onPlaybackEnded?()
+    }
+
     fileprivate func reset() {
         isPlaying = false
         currentTime = 0
@@ -88,6 +95,9 @@ final class NativeVLCPlayerView: NSView {
     private var loadedURL: URL?
     private var securityScopedURL: URL?
     private var progressTask: Task<Void, Never>?
+    /// The end state persists while the player sits on the finished media, so the
+    /// callback has to be latched to fire once rather than on every poll.
+    private var hasReportedEnd = false
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -107,6 +117,7 @@ final class NativeVLCPlayerView: NSView {
         }
 
         stopCurrentMedia()
+        hasReportedEnd = false
         loadedURL = url
         if url.isFileURL, url.startAccessingSecurityScopedResource() {
             securityScopedURL = url
@@ -210,6 +221,16 @@ final class NativeVLCPlayerView: NSView {
             duration: duration,
             volume: volume
         )
+
+        let state = NativeVLCLibrary.PlayerState(rawValue: library.getState(player))
+        if state == .ended {
+            guard !hasReportedEnd else { return }
+            hasReportedEnd = true
+            session?.reportPlaybackEnded()
+        } else if state == .playing || state == .opening {
+            // Re-arm for the next item once playback has genuinely restarted.
+            hasReportedEnd = false
+        }
     }
 
     private func reusablePlayer(using library: NativeVLCLibrary, instance: NativeVLCLibrary.InstanceHandle) -> NativeVLCLibrary.MediaPlayerHandle? {

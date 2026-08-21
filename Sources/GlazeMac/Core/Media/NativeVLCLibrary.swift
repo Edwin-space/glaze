@@ -37,6 +37,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
     typealias Play = @convention(c) (MediaPlayerHandle?) -> Int32
     typealias SetPause = @convention(c) (MediaPlayerHandle?, Int32) -> Void
     typealias IsPlaying = @convention(c) (MediaPlayerHandle?) -> Int32
+    typealias GetState = @convention(c) (MediaPlayerHandle?) -> Int32
     typealias GetTime = @convention(c) (MediaPlayerHandle?) -> Int64
     typealias SetTime = @convention(c) (MediaPlayerHandle?, Int64) -> Int32
     typealias GetLength = @convention(c) (MediaPlayerHandle?) -> Int64
@@ -44,6 +45,20 @@ final class NativeVLCLibrary: @unchecked Sendable {
     typealias SetVolume = @convention(c) (MediaPlayerHandle?, Int32) -> Int32
     typealias Stop = @convention(c) (MediaPlayerHandle?) -> Void
     typealias ReleasePlayer = @convention(c) (MediaPlayerHandle?) -> Void
+
+    /// `libvlc_state_t` from the bundled libVLC 3.0.21. The numbering changed in
+    /// libVLC 4, so this is tied to the runtime we ship in `Tools/vlc` — check it
+    /// again if that is ever updated.
+    enum PlayerState: Int32 {
+        case nothingSpecial = 0
+        case opening = 1
+        case buffering = 2
+        case playing = 3
+        case paused = 4
+        case stopped = 5
+        case ended = 6
+        case error = 7
+    }
 
     private static var cachedLibrary: NativeVLCLibrary?
 
@@ -80,6 +95,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
     let play: Play
     let setPause: SetPause
     let isPlaying: IsPlaying
+    let getState: GetState
     let getTime: GetTime
     let setTime: SetTime
     let getLength: GetLength
@@ -125,6 +141,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
         play = try Self.loadSymbol("libvlc_media_player_play", from: libraryHandle)
         setPause = try Self.loadSymbol("libvlc_media_player_set_pause", from: libraryHandle)
         isPlaying = try Self.loadSymbol("libvlc_media_player_is_playing", from: libraryHandle)
+        getState = try Self.loadSymbol("libvlc_media_player_get_state", from: libraryHandle)
         getTime = try Self.loadSymbol("libvlc_media_player_get_time", from: libraryHandle)
         setTime = try Self.loadSymbol("libvlc_media_player_set_time", from: libraryHandle)
         getLength = try Self.loadSymbol("libvlc_media_player_get_length", from: libraryHandle)

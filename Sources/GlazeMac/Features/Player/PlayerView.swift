@@ -871,6 +871,7 @@ struct PlayerView: View {
     private func configureControllers() {
         playback.onTimeUpdate = { time in subtitles.updateActiveCue(at: time) }
         playback.onPlaybackFailureNeedsAttention = { activePanel = .media }
+        playback.onPlaybackEnded = { playNextPlaylistItem() }
         playback.onCompatibilityRemuxSucceeded = { originalURL, remuxedURL in
             loadVideo(originalURL: originalURL, playbackURL: remuxedURL, playlist: playlistStore.items, shouldStartPlayback: true)
         }
