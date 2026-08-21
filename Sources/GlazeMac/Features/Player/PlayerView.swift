@@ -42,7 +42,7 @@ struct PlayerView: View {
             // session stays inside this closure — only Sendable data crosses to the
             // controller, since TranslationSession is a non-Sendable class.
             .translationTask(subtitles.translationConfiguration) { session in
-                guard let input = await subtitles.translationInput() else { return }
+                guard let input = subtitles.translationInput() else { return }
                 await runTranslation(input: input, engine: AppleTranslationEngine(session: session))
             }
             .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)

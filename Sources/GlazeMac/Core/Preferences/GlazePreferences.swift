@@ -61,7 +61,9 @@ final class GlazePreferences {
 
     private static func read<T: RawRepresentable>(_ defaults: UserDefaults, _ key: String) -> T?
     where T.RawValue == String {
-        defaults.string(forKey: key).flatMap(T.init(rawValue:))
+        // Written as a closure rather than `T.init(rawValue:)`: passing the
+        // initializer itself is a value crossing isolation, which Swift 6 warns about.
+        defaults.string(forKey: key).flatMap { T(rawValue: $0) }
     }
 
     private func store(_ value: String, _ key: String) {
