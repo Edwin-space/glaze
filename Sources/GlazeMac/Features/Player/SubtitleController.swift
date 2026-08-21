@@ -105,8 +105,38 @@ final class SubtitleController {
     func loadEmbedded(_ track: EmbeddedSubtitleTrack, from videoURL: URL) {
         embeddedSubtitleTask?.cancel()
         embeddedSubtitleTask = Task {
-            await extractAndLoadEmbedded(track, from: videoURL, translationTarget: nil)
+            await extractAndLoadEmbedded(track, from: videoURL)
         }
+    }
+
+    /// The language the viewer reads, which is what anything else gets translated into.
+    static var preferredTargetLanguageCode: String {
+        Locale.preferredLanguages.compactMap(SubtitleLanguageCode.normalized).first ?? "en"
+    }
+
+    /// Decides whether the subtitle now loaded is worth offering to translate.
+    ///
+    /// Translation used to be offered only for subtitles extracted from the video
+    /// container, so a `.srt` sitting next to the file — the ordinary case — could not be
+    /// translated at all. The offer now follows the loaded subtitle rather than where it
+    /// came from.
+    private func offerTranslation(displayName: String, sourceLanguageCode: String?) {
+        let target = Self.preferredTargetLanguageCode
+
+        // Nothing to translate, or it already reads in the viewer's language.
+        guard !subtitleCues.isEmpty, sourceLanguageCode != target else {
+            pendingTranslationRequest = nil
+            return
+        }
+
+        pendingTranslationRequest = SubtitleTranslationRequest(
+            source: SubtitleTranslationSource(
+                displayName: displayName,
+                languageCode: sourceLanguageCode
+            ),
+            targetLanguageCode: target,
+            cues: subtitleCues
+        )
     }
 
     func updateActiveCue(at time: TimeInterval) {
@@ -126,7 +156,15 @@ final class SubtitleController {
         return subtitle
     }
 
-    func load(_ subtitle: SubtitleFile) {
+    /// - Parameters:
+    ///   - sourceLanguageCode: what the subtitle is written in, when the caller knows —
+    ///     an embedded track carries its own tag. Otherwise the file name is read.
+    ///   - displayName: what to call this subtitle when offering to translate it.
+    func load(
+        _ subtitle: SubtitleFile,
+        sourceLanguageCode: String? = nil,
+        displayName: String? = nil
+    ) {
         do {
             subtitleCues = try SubtitleParser.parse(url: subtitle.url)
             selectedSubtitleName = subtitle.displayName
@@ -136,6 +174,10 @@ final class SubtitleController {
             isSubtitleVisible = true
             status = computeStatus(for: detectedSubtitles)
             errorMessage = nil
+            offerTranslation(
+                displayName: displayName ?? subtitle.displayName,
+                sourceLanguageCode: sourceLanguageCode ?? subtitle.languageCode
+            )
         } catch {
             subtitleCues = []
             selectedSubtitleName = nil
@@ -144,6 +186,7 @@ final class SubtitleController {
             activeSubtitleText = ""
             status = computeStatus(for: detectedSubtitles)
             errorMessage = subtitleErrorMessage(for: error)
+            pendingTranslationRequest = nil
         }
     }
 
@@ -172,7 +215,11 @@ final class SubtitleController {
                     return
                 }
                 lastGenerationDuration = result.duration
-                finishGenerating(cues: result.cues, videoURL: videoURL)
+                finishGenerating(
+                    cues: result.cues,
+                    videoURL: videoURL,
+                    languageCode: result.languageCode
+                )
             } catch {
                 guard !Task.isCancelled else {
                     return
@@ -219,18 +266,7 @@ final class SubtitleController {
                     return
                 }
 
-                let translationTarget: String?
-                if case .translateEmbedded(_, let targetLanguageCode) = plan {
-                    translationTarget = targetLanguageCode
-                } else {
-                    translationTarget = nil
-                }
-
-                await extractAndLoadEmbedded(
-                    track,
-                    from: videoURL,
-                    translationTarget: translationTarget
-                )
+                await extractAndLoadEmbedded(track, from: videoURL)
             } catch is CancellationError {
                 return
             } catch EmbeddedSubtitleService.ServiceError.toolUnavailable {
@@ -276,7 +312,7 @@ final class SubtitleController {
             return
         }
 
-        let source = request.sourceTrack.languageCode.map(Locale.Language.init(identifier:))
+        let source = request.source.languageCode.map(Locale.Language.init(identifier:))
         let target = Locale.Language(identifier: request.targetLanguageCode)
         // A fresh Configuration each run; reusing an equal one would not retrigger
         // the task, so a repeat translation would silently do nothing.
@@ -442,9 +478,9 @@ final class SubtitleController {
                 detectedSubtitles.append(subtitle)
             }
 
+            // The file is named for the language it is in, so loading it clears the
+            // offer that produced it.
             load(subtitle)
-            // The gap it filled is closed, so stop offering the same translation.
-            pendingTranslationRequest = nil
             onGenerationFinished?()
         } catch {
             status = computeStatus(for: detectedSubtitles)
@@ -466,8 +502,7 @@ final class SubtitleController {
 
     private func extractAndLoadEmbedded(
         _ track: EmbeddedSubtitleTrack,
-        from videoURL: URL,
-        translationTarget: String?
+        from videoURL: URL
     ) async {
         do {
             let extractedURL = try await embeddedSubtitleService.extract(track: track, from: videoURL)
@@ -476,19 +511,13 @@ final class SubtitleController {
             if !detectedSubtitles.contains(where: { $0.url.path == subtitle.url.path }) {
                 detectedSubtitles.append(subtitle)
             }
-            load(subtitle)
+            load(
+                subtitle,
+                sourceLanguageCode: track.languageCode,
+                displayName: embeddedTrackLabel(track)
+            )
             selectedEmbeddedTrackID = track.id
             onEmbeddedSubtitleLoaded?()
-
-            if let translationTarget {
-                pendingTranslationRequest = SubtitleTranslationRequest(
-                    sourceTrack: track,
-                    targetLanguageCode: translationTarget,
-                    cues: subtitleCues
-                )
-            } else {
-                pendingTranslationRequest = nil
-            }
         } catch is CancellationError {
             return
         } catch {
@@ -496,7 +525,7 @@ final class SubtitleController {
         }
     }
 
-    private func finishGenerating(cues: [SubtitleCue], videoURL: URL) {
+    private func finishGenerating(cues: [SubtitleCue], videoURL: URL, languageCode: String?) {
         isGenerating = false
 
         do {
@@ -512,7 +541,13 @@ final class SubtitleController {
                 detectedSubtitles.append(subtitle)
             }
 
-            load(subtitle)
+            // The saved name carries no language tag, so pass what Whisper heard —
+            // otherwise a Korean film would be offered for translation into Korean.
+            load(
+                subtitle,
+                sourceLanguageCode: languageCode,
+                displayName: L10n.string("subtitle.source.generated")
+            )
             onGenerationFinished?()
         } catch {
             status = computeStatus(for: detectedSubtitles)

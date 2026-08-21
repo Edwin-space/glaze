@@ -571,7 +571,7 @@ struct PlayerView: View {
                 Text(
                     String(
                         format: L10n.string("subtitle.translate.available_format"),
-                        subtitles.embeddedTrackLabel(request.sourceTrack),
+                        request.source.displayName,
                         languageDisplayName(request.targetLanguageCode)
                     )
                 )

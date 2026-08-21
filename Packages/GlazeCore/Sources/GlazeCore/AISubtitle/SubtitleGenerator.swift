@@ -39,7 +39,7 @@ public final class SubtitleGenerator {
     public func generate(
         from videoURL: URL,
         onProgress: @escaping @Sendable (Progress) -> Void
-    ) async throws -> (cues: [SubtitleCue], duration: TimeInterval) {
+    ) async throws -> (cues: [SubtitleCue], duration: TimeInterval, languageCode: String?) {
         let startedAt = Date()
         onProgress(Progress(stage: .extractingAudio, fraction: 0))
         let audioURL = try await extractAudio(from: videoURL)
@@ -89,7 +89,11 @@ public final class SubtitleGenerator {
             throw GenerationError.transcriptionFailed
         }
 
-        return (cues, Date().timeIntervalSince(startedAt))
+        // Whisper reports what it heard. Without it the app cannot tell a Korean film
+        // transcribed for a Korean viewer from one that still needs translating.
+        let spokenLanguage = SubtitleLanguageCode.normalized(results.first?.language)
+
+        return (cues, Date().timeIntervalSince(startedAt), spokenLanguage)
     }
 
     private func extractAudio(from videoURL: URL) async throws -> URL {

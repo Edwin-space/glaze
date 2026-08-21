@@ -17,13 +17,32 @@ public enum SubtitlePreparationPlan: Equatable, Sendable {
     }
 }
 
+/// What is about to be translated.
+///
+/// This used to be an `EmbeddedSubtitleTrack`, which quietly limited translation to
+/// subtitles lifted out of the video container — a subtitle file dropped next to the
+/// video, or one Glaze transcribed itself, had no way to describe itself and so could
+/// never be translated. Naming the source by what the reader sees, rather than by where
+/// it came from, lets all three paths through.
+public struct SubtitleTranslationSource: Equatable, Sendable {
+    /// Shown in the panel, e.g. an embedded track's title or a subtitle file's name.
+    public let displayName: String
+    /// nil when the language is unknown; the translator detects it instead.
+    public let languageCode: String?
+
+    public init(displayName: String, languageCode: String?) {
+        self.displayName = displayName
+        self.languageCode = SubtitleLanguageCode.normalized(languageCode)
+    }
+}
+
 public struct SubtitleTranslationRequest: Equatable, Sendable {
-    public let sourceTrack: EmbeddedSubtitleTrack
+    public let source: SubtitleTranslationSource
     public let targetLanguageCode: String
     public let cues: [SubtitleCue]
 
-    public init(sourceTrack: EmbeddedSubtitleTrack, targetLanguageCode: String, cues: [SubtitleCue]) {
-        self.sourceTrack = sourceTrack
+    public init(source: SubtitleTranslationSource, targetLanguageCode: String, cues: [SubtitleCue]) {
+        self.source = source
         self.targetLanguageCode = targetLanguageCode
         self.cues = cues
     }

@@ -40,6 +40,13 @@ Debug는 `-Onone`이고 SwiftUI가 프레임마다 훨씬 많은 일을 한다. 
 
 지금은 `Info.plist`가 `$(MARKETING_VERSION)` / `$(CURRENT_PROJECT_VERSION)`을 쓰고 실제 값은 `project.yml`에 있다. 버전을 올릴 때 `Info.plist`는 건드리지 않는다.
 
+**기능의 진입 조건을 한 경로에만 매달지 않는다.**
+자막 번역은 `pendingTranslationRequest`가 있을 때만 화면에 나타났는데, 그 값은 **컨테이너에서 내장 트랙을 추출하는 경로에서만** 설정됐다. 그래서 영상 옆에 `.srt`를 두거나 AI로 자막을 만든 사용자에게는 번역 기능이 아예 존재하지 않았다. 빌드도 되고 테스트도 통과했다.
+
+원인은 요청 타입이 `sourceTrack: EmbeddedSubtitleTrack`이었다는 것 — 자료구조가 "어디서 왔는가"를 요구하니 다른 출처는 자기를 설명할 방법이 없었다. 지금은 `SubtitleTranslationSource(displayName:languageCode:)`로 바뀌어 세 경로 모두 통과한다.
+
+기능을 붙일 때는 그 기능에 도달하는 **모든** 경로를 세어본다.
+
 ## 3. UI 검증
 
 **UI를 바꿨으면 실행 중인 앱을 캡처해서 눈으로 확인한다.**
@@ -116,6 +123,5 @@ Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze
 
 작업 전에 상태를 확인해야 하는 항목이다.
 
-- Apple `TranslationSession.Strategy.highFidelity`가 온디바이스인지 서버 경유인지 확인되지 않았다. 온디바이스 포지셔닝과 직결된다(`03_ai_subtitle_workflow.md`).
 - Distribution 서명 Archive에서 VLC dylib의 `dlopen`이 통과하는지 확인되지 않았다. Development 서명에서만 검증했다(`16_foundation_redesign_audit.md`).
 - 그림 자막(PGS·VobSub)은 감지만 하고 읽지 못한다. OCR 미지원.
