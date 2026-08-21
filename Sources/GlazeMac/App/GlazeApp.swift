@@ -20,6 +20,12 @@ struct GlazeApp: App {
                 .keyboardShortcut("o")
             }
         }
+
+        // Reachable with ⌘, whether or not a video is open — the subtitle inspector
+        // needs one, so it could not be the only home for these.
+        Settings {
+            GlazeSettingsView()
+        }
     }
 }
 

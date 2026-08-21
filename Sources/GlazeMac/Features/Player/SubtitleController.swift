@@ -24,21 +24,25 @@ final class SubtitleController {
     var generationStage: SubtitleGenerator.Stage?
     var generationProgress: Double = 0
 
-    /// Which Whisper model transcription runs on. Persisted so an A/B comparison
-    /// survives a relaunch.
-    var transcriptionTier: TranscriptionModelTier = SubtitleController.storedTranscriptionTier {
-        didSet { SubtitleController.storedTranscriptionTier = transcriptionTier }
+    /// Settings that outlive a video live in `GlazePreferences`, so the Settings
+    /// window and this panel edit the same values instead of each holding a copy.
+    private let preferences: GlazePreferences
+
+    var transcriptionTier: TranscriptionModelTier {
+        get { preferences.transcriptionTier }
+        set { preferences.transcriptionTier = newValue }
     }
-    var translationQuality: SubtitleTranslationQuality = SubtitleController.storedTranslationQuality {
-        didSet { SubtitleController.storedTranslationQuality = translationQuality }
+    var translationQuality: SubtitleTranslationQuality {
+        get { preferences.translationQuality }
+        set { preferences.translationQuality = newValue }
     }
-    var translationEngineID: SubtitleTranslationEngineID = SubtitleController.storedTranslationEngine {
-        didSet { SubtitleController.storedTranslationEngine = translationEngineID }
+    var translationEngineID: SubtitleTranslationEngineID {
+        get { preferences.translationEngineID }
+        set { preferences.translationEngineID = newValue }
     }
-    /// Where finished subtitles are written. Beside the video by default, which on a
-    /// mounted NAS means the NAS — see `21_media_server_vision.md`.
-    var storageLocation: SubtitleStorageLocation = SubtitleController.storedStorageLocation {
-        didSet { SubtitleController.storedStorageLocation = storageLocation }
+    var storageLocation: SubtitleStorageLocation {
+        get { preferences.storageLocation }
+        set { preferences.storageLocation = newValue }
     }
     /// The resource currently loaded, so subtitles are keyed on what is playing rather
     /// than on a local path a streamed video does not have.
@@ -51,7 +55,10 @@ final class SubtitleController {
 
     var isTranslating = false
     var translationProgress: Double = 0
-    var translationOutput: SubtitleTranslationOutput = .bilingual
+    var translationOutput: SubtitleTranslationOutput {
+        get { preferences.translationOutput }
+        set { preferences.translationOutput = newValue }
+    }
     /// Set to start a translation. SwiftUI's `.translationTask` observes this and
     /// hands back a session, which is the only way to obtain one.
     var translationConfiguration: TranslationSession.Configuration?
@@ -70,6 +77,10 @@ final class SubtitleController {
     /// against a file the user has already moved on from.
     private var translationVideoURL: URL?
     private var translationStartedAt: Date?
+
+    init(preferences: GlazePreferences = .shared) {
+        self.preferences = preferences
+    }
 
     /// Resets subtitle state for a newly loaded video and auto-loads the best sidecar match, if any.
     func prepareForNewVideo(url: URL) {
@@ -231,47 +242,6 @@ final class SubtitleController {
                 errorMessage = L10n.string("subtitle.error.embedded_inspection_failed")
             }
         }
-    }
-
-    // MARK: - Persisted model choices
-
-    private enum DefaultsKey {
-        static let transcriptionTier = "subtitle.transcriptionTier"
-        static let translationQuality = "subtitle.translationQuality"
-        static let translationEngine = "subtitle.translationEngine"
-        static let storageLocation = "subtitle.storageLocation"
-    }
-
-    private static var storedTranscriptionTier: TranscriptionModelTier {
-        get {
-            UserDefaults.standard.string(forKey: DefaultsKey.transcriptionTier)
-                .flatMap(TranscriptionModelTier.init(rawValue:)) ?? .default
-        }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.transcriptionTier) }
-    }
-
-    private static var storedStorageLocation: SubtitleStorageLocation {
-        get {
-            UserDefaults.standard.string(forKey: DefaultsKey.storageLocation)
-                .flatMap(SubtitleStorageLocation.init(rawValue:)) ?? .default
-        }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.storageLocation) }
-    }
-
-    private static var storedTranslationEngine: SubtitleTranslationEngineID {
-        get {
-            UserDefaults.standard.string(forKey: DefaultsKey.translationEngine)
-                .flatMap(SubtitleTranslationEngineID.init(rawValue:)) ?? .appleTranslation
-        }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.translationEngine) }
-    }
-
-    private static var storedTranslationQuality: SubtitleTranslationQuality {
-        get {
-            UserDefaults.standard.string(forKey: DefaultsKey.translationQuality)
-                .flatMap(SubtitleTranslationQuality.init(rawValue:)) ?? .default
-        }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.translationQuality) }
     }
 
     // MARK: - Translation

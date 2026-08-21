@@ -992,7 +992,9 @@ struct PlayerView: View {
         source: MediaLibrarySource = .localFolder
     ) {
         playlistStore.setInitial(nextPlaylist)
-        subtitles.currentResource = resource ?? .localFile(originalURL)
+        let mediaResource = resource ?? .localFile(originalURL)
+        playback.setCurrentResource(mediaResource)
+        subtitles.currentResource = mediaResource
         subtitles.prepareForNewVideo(url: originalURL)
         mediaAssets.prepareForNewVideo(
             url: originalURL,

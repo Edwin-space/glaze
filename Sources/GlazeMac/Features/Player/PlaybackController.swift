@@ -25,6 +25,16 @@ final class PlaybackController {
     /// path reaches this through AVPlayerItemDidPlayToEndTime in the view; the VLC
     /// path routes its polled end state here.
     var onPlaybackEnded: (() -> Void)?
+
+    /// Where the current video was left off, so playback can pick up rather than
+    /// restart. Cleared once a video is watched to the end.
+    private let positionStore = PlaybackPositionStore()
+    /// The resource being played, which is what positions are keyed on — a streamed
+    /// video has no local path.
+    private var currentResource: MediaResource?
+    /// Set when a video loads with somewhere to resume from; consumed once playback
+    /// is far enough along to accept a seek.
+    private var pendingResumeTime: TimeInterval?
     /// Fired when a compatibility remux succeeds, so the view can re-run the full "load new video" orchestration.
     var onCompatibilityRemuxSucceeded: ((_ originalURL: URL, _ remuxedURL: URL) -> Void)?
 
@@ -36,10 +46,26 @@ final class PlaybackController {
     private var itemStatusObserver: NSKeyValueObservation?
     private var playerTimeControlObserver: NSKeyValueObservation?
 
+    /// Tells the controller what is playing, so positions are stored against the
+    /// resource rather than a path.
+    func setCurrentResource(_ resource: MediaResource?) {
+        // Loading one video calls this more than once — the open-file argument and the
+        // notification both route through it, and SwiftUI re-runs the update. Re-reading
+        // on a repeat call is what broke resume: by the second call playback had already
+        // written a near-zero position over the stored one, so the lookup came back nil.
+        guard resource != currentResource else { return }
+
+        currentResource = resource
+        pendingResumeTime = resource.flatMap { positionStore.position(for: $0) }
+    }
+
     func loadWithNativeEngine(_ url: URL) {
         beginNewPlaybackSession()
         nativeVLCSession.onTimeUpdate = { [weak self] time in
-            self?.onTimeUpdate?(time)
+            guard let self else { return }
+            onTimeUpdate?(time)
+            applyPendingResumeIfReady(at: time, duration: nativeVLCSession.duration)
+            rememberPosition(time, duration: nativeVLCSession.duration)
         }
         nativeVLCSession.onPlaybackEnded = { [weak self] in
             self?.onPlaybackEnded?()
@@ -211,14 +237,51 @@ final class PlaybackController {
         let interval = CMTime(seconds: 0.2, preferredTimescale: 600)
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             Task { @MainActor in
-                self?.onTimeUpdate?(time.seconds)
-                self?.currentTime = max(time.seconds, 0)
-                if let duration = player.currentItem?.duration.seconds, duration.isFinite {
-                    self?.duration = max(duration, 0)
+                guard let self else { return }
+                self.onTimeUpdate?(time.seconds)
+                self.currentTime = max(time.seconds, 0)
+                if let itemDuration = player.currentItem?.duration.seconds, itemDuration.isFinite {
+                    self.duration = max(itemDuration, 0)
                 }
+                self.applyPendingResumeIfReady(at: time.seconds, duration: self.duration)
+                self.rememberPosition(time.seconds, duration: self.duration)
             }
         }
         observedPlayer = player
+    }
+
+    /// Seeks to the remembered position once playback is actually running.
+    ///
+    /// Seeking at load time is unreliable — neither engine accepts one before the
+    /// media is ready — so the resume is held until the first real time update and
+    /// applied then, once.
+    private func applyPendingResumeIfReady(at time: TimeInterval, duration: TimeInterval) {
+        guard let resumeTime = pendingResumeTime else { return }
+
+        // Duration is 0 for the first few updates, while the engine is still opening
+        // the media. That means "not known yet", not "invalid" — treating it as
+        // invalid discarded the resume before it could ever be applied.
+        guard duration > 0 else { return }
+
+        guard resumeTime < duration else {
+            pendingResumeTime = nil
+            return
+        }
+
+        // Wait for the clock to start moving; a seek before that is dropped.
+        guard time > 0 else { return }
+
+        pendingResumeTime = nil
+        seek(to: resumeTime)
+    }
+
+    private func rememberPosition(_ time: TimeInterval, duration: TimeInterval) {
+        // Hold off while a resume is still waiting to be applied. Playback starts at
+        // zero, and a near-zero position counts as "barely watched", which clears the
+        // stored one — destroying the position we are about to seek to.
+        guard pendingResumeTime == nil else { return }
+        guard let currentResource, time.isFinite, duration.isFinite else { return }
+        positionStore.record(time, duration: duration, for: currentResource)
     }
 
     private func removeTimeObserver() {

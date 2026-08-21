@@ -202,3 +202,8 @@
 "subtitle.translate.engine.on_device_ai_hint" = "작품 전체에서 말투를 일관되게 유지합니다. 시스템 번역으로는 할 수 없는 부분입니다.";
 "subtitle.storage.beside_video" = "영상 옆";
 "subtitle.storage.app_library" = "앱 내부";
+"settings.tab.subtitles" = "자막";
+"settings.tab.translation" = "번역";
+"settings.section.generation" = "자막 만들기";
+"settings.section.storage" = "저장";
+"settings.section.translation" = "번역";

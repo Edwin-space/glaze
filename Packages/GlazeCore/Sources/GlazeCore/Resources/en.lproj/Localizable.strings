@@ -202,3 +202,8 @@
 "subtitle.translate.engine.on_device_ai_hint" = "Keeps one consistent tone across the whole film, which system translation cannot do.";
 "subtitle.storage.beside_video" = "Next to the video";
 "subtitle.storage.app_library" = "Inside Glaze";
+"settings.tab.subtitles" = "Subtitles";
+"settings.tab.translation" = "Translation";
+"settings.section.generation" = "Making subtitles";
+"settings.section.storage" = "Saving";
+"settings.section.translation" = "Translation";
