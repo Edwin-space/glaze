@@ -156,7 +156,7 @@ Foundation Models를 v1.0에 넣는 이유는 확장이 아니라 **결함 보�
 
 `SubtitleTranslationEngine` 프로토콜로 추상화되어 있어 엔진 추가는 교체이지 재작성이 아니다.
 
-Apple Translation의 한계는 명확하다 — 문자열 in/out이라 **문맥과 한국어 말투를 지정할 방법이 없다.** 이 벽을 넘으려면 LLM 계열 엔진이 필요하고, 그래서 v1.x에서 Foundation Models로 먼저 검증한다(다운로드 0, 라이선스 리스크 0).
+Apple Translation의 한계는 명확하다 — 문자열 in/out이라 **문맥과 한국어 말투를 지정할 방법이 없다.** 이 벽을 넘으려면 LLM 계열 엔진이 필요하고, 그래서 v1.0에 Foundation Models를 함께 넣는다(다운로드 0, 라이선스 리스크 0).
 
 **로컬 LLM은 번들하지 않고 창구만 제공한다.** 사용자가 Ollama·LM Studio 등으로 직접 받은 모델을 가리키게 하며, 지켜야 할 경계는 다음 세 가지다.
 
