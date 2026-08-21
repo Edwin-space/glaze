@@ -35,8 +35,10 @@ Debug는 `-Onone`이고 SwiftUI가 프레임마다 훨씬 많은 일을 한다. 
 **유리(글래스) 표면 뒤에는 반드시 색이 있어야 한다.**
 어두운 배경 위의 글래스는 그냥 회색 판으로 렌더링된다. `GlazeAmbientBackdrop` 없이 `glazeGlass`만 쓰면 효과가 보이지 않는다.
 
-**`Packaging/Info.plist`의 버전 문자열이 반복적으로 회귀한다.**
-`CFBundleShortVersionString`이 여러 번 `0.1.0` → `1.0`으로 되돌아갔다. 패키징 파일을 건드리는 작업 뒤에는 값을 확인한다.
+**버전 번호는 `project.yml`에만 적는다.**
+`CFBundleShortVersionString`이 여러 번 `0.1.0`과 `1.0` 사이를 오갔다. 원인은 값에 주인이 없었다는 것이다 — `Info.plist`에 리터럴로 박혀 있으니 패키징 파일을 건드리는 작업마다 값이 흔들렸다.
+
+지금은 `Info.plist`가 `$(MARKETING_VERSION)` / `$(CURRENT_PROJECT_VERSION)`을 쓰고 실제 값은 `project.yml`에 있다. 버전을 올릴 때 `Info.plist`는 건드리지 않는다.
 
 ## 3. UI 검증
 
@@ -114,7 +116,6 @@ Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze
 
 작업 전에 상태를 확인해야 하는 항목이다.
 
-- `Packaging/Info.plist`의 버전 회귀(`1.0`)가 미커밋 상태로 남아 있다.
 - Apple `TranslationSession.Strategy.highFidelity`가 온디바이스인지 서버 경유인지 확인되지 않았다. 온디바이스 포지셔닝과 직결된다(`03_ai_subtitle_workflow.md`).
 - Distribution 서명 Archive에서 VLC dylib의 `dlopen`이 통과하는지 확인되지 않았다. Development 서명에서만 검증했다(`16_foundation_redesign_audit.md`).
 - 그림 자막(PGS·VobSub)은 감지만 하고 읽지 못한다. OCR 미지원.
