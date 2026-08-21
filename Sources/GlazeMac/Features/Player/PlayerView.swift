@@ -105,7 +105,6 @@ struct PlayerView: View {
                     panelMenuButton(.playlist, key: "playlist.panel.toggle", systemImage: "list.bullet")
                         .disabled(playlistStore.items.isEmpty)
                     panelMenuButton(.media, key: "media.panel.toggle", systemImage: "info.circle")
-                    panelMenuButton(.assistant, key: "assistant.panel.toggle", systemImage: "sparkles")
                 } label: {
                     Label(L10n.string("player.inspector"), systemImage: "sidebar.right")
                 }
@@ -413,7 +412,6 @@ struct PlayerView: View {
                 Label(L10n.string("subtitle.panel.toggle"), systemImage: "captions.bubble").tag(PlayerPanel.subtitles)
                 Label(L10n.string("playlist.panel.toggle"), systemImage: "list.bullet").tag(PlayerPanel.playlist)
                 Label(L10n.string("media.panel.toggle"), systemImage: "info.circle").tag(PlayerPanel.media)
-                Label(L10n.string("assistant.panel.toggle"), systemImage: "sparkles").tag(PlayerPanel.assistant)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -762,6 +760,14 @@ struct PlayerView: View {
                     } label: {
                         GlazeHelpLabel("media.panel.avkit", help: "help.media.playback")
                     }
+
+                    if let asset = mediaAssets.currentMediaAsset {
+                        LabeledContent {
+                            Text(L10n.string(asset.source.labelKey))
+                        } label: {
+                            GlazeHelpLabel("assistant.media.source", help: "help.assistant.source")
+                        }
+                    }
                 } else {
                     Label(L10n.string("media.panel.empty"), systemImage: "info.circle")
                         .foregroundStyle(.secondary)
@@ -795,42 +801,6 @@ struct PlayerView: View {
         .formStyle(.grouped)
     }
 
-    private var assistantPanel: some View {
-        Form {
-            Section {
-                if let asset = mediaAssets.currentMediaAsset {
-                    LabeledContent {
-                        Text(L10n.string(asset.metadata.matchStatus.labelKey))
-                    } label: {
-                        GlazeHelpLabel("assistant.metadata.status", help: "help.assistant.metadata")
-                    }
-                    LabeledContent(L10n.string("assistant.subtitle.status"), value: L10n.string(asset.subtitleReadiness.labelKey))
-                    LabeledContent {
-                        Text(L10n.string(asset.source.labelKey))
-                    } label: {
-                        GlazeHelpLabel("assistant.media.source", help: "help.assistant.source")
-                    }
-                } else {
-                    Label(L10n.string("assistant.panel.empty"), systemImage: "sparkles")
-                        .foregroundStyle(.secondary)
-                }
-            } header: {
-                inspectorHeader("assistant.panel.title", detailKey: "assistant.panel.subtitle")
-            }
-            .glazeGlassRow()
-
-            if mediaAssets.currentMediaAsset != nil {
-                Section(L10n.string("assistant.panel.suggestions")) {
-                    assistantAction("assistant.action.match_metadata", detailKey: "assistant.action.match_metadata_hint", icon: "magnifyingglass")
-                    assistantAction("assistant.action.prepare_subtitles", detailKey: "assistant.action.prepare_subtitles_hint", icon: "captions.bubble")
-                    assistantAction("assistant.action.write_metadata", detailKey: "assistant.action.write_metadata_hint", icon: "square.and.pencil")
-                }
-                .glazeGlassRow()
-            }
-        }
-        .formStyle(.grouped)
-    }
-
     private func inspectorHeader(_ titleKey: String, detailKey: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(L10n.string(titleKey)).font(.title2.weight(.semibold)).textCase(nil)
@@ -859,17 +829,6 @@ struct PlayerView: View {
             }
         } icon: {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-        }
-    }
-
-    private func assistantAction(_ titleKey: String, detailKey: String, icon: String) -> some View {
-        Label {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(L10n.string(titleKey))
-                Text(L10n.string(detailKey)).font(.caption).foregroundStyle(.secondary)
-            }
-        } icon: {
-            Image(systemName: icon).foregroundStyle(.tint)
         }
     }
 
@@ -1055,7 +1014,7 @@ struct PlayerView: View {
     }
 
     private enum PlayerPanel: Hashable {
-        case subtitles, playlist, media, assistant
+        case subtitles, playlist, media
     }
 
     private func togglePanel(_ panel: PlayerPanel) {
@@ -1068,7 +1027,6 @@ struct PlayerView: View {
         case .subtitles: subtitlePanel
         case .playlist: playlistPanel
         case .media: mediaPanel
-        case .assistant: assistantPanel
         }
     }
 
