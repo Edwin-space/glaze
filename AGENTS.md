@@ -100,6 +100,13 @@ https://github.com/Edwin-space/glaze.git
 At the start of a new session:
 
 1. Read this `AGENTS.md`.
-2. Check `git status --short --branch`.
-3. Review the relevant docs for the requested task.
-4. Continue the implement → verify → document → commit → push loop.
+2. Read `docs/19_engineering_guardrails.md`. It collects the things that fail
+   silently — a successful build with a wrong result — each with the incident that
+   produced it. Skipping it is how they get repeated.
+3. Check `git status --short --branch`.
+4. Review the relevant docs for the requested task.
+5. Continue the implement → verify → document → commit → push loop.
+
+When a change is user-visible, `docs/20_user_help_source.md` is part of "document":
+it is the source the launch FAQ and manual are built from, and it must not
+contradict the in-app `help.*` strings.

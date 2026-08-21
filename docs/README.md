@@ -23,6 +23,12 @@
 - `13_user_flows.md`: 핵심 사용자 플로우와 예외/FAQ 후보 정리
 - `14_working_principles.md`: 구현, 검증, 문서화, GitHub 반영을 유지하기 위한 작업 운영 원칙
 - `15_ffmpeg_mkv_validation.md`: FFmpeg/MKV 도입 검증 계획, 라이선스/App Store 기준, 샘플 검사 절차
+- `16_cross_platform_player_ui_research.md`: 크로스 플랫폼 플레이어 UI 조사
+- `16_foundation_redesign_audit.md`: 기초 재설계 감사와 확정 결정 사항
+- `17_approved_macos_player_ui_spec.md`: 승인된 macOS 플레이어 UI 사양
+- `18_embedded_subtitle_dlna_appletv_foundation.md`: 내장 자막·DLNA·Apple TV 공통 기반
+- `19_engineering_guardrails.md`: **작업 전 필수 확인 사항.** 놓치면 조용히 깨지는 것들을 실제 사고와 함께 정리
+- `20_user_help_source.md`: 출시 시 웹사이트 FAQ·사용 설명서로 옮길 사용자 도움말 원본
 
 ## 제품 한 줄 정의
 

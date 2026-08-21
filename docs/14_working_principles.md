@@ -85,13 +85,16 @@
 
 ## 검증 기준
 
-코드 변경 후 가능한 한 아래를 확인한다.
+코드 변경 후 아래를 확인한다.
 
-- `swift build`
-- 관련 UI 상태가 의도대로 변하는지
+- `./script/build_and_run.sh --bundle` — 앱 빌드
+- `cd Packages/GlazeCore && swift test` — Core 로직 테스트
+- **UI를 바꿨으면 실행 화면을 캡처해 눈으로 확인한다.** 코드에 API가 들어간 것과 화면이 바뀐 것은 다르다
 - localization 키 누락이 없는지
 - 기존 사용자 플로우가 깨지지 않았는지
 - 새 예외 상황이 문서화되었는지
+
+놓치면 조용히 깨지는 항목은 `19_engineering_guardrails.md`에 따로 모았다. **작업 시작 전에 먼저 읽는다.**
 
 ## Git/GitHub 원칙
 
@@ -107,11 +110,20 @@
 
 ## 현재 기준 명령
 
-빌드:
+빌드와 실행:
 
 ```bash
-swift build
+./script/build_and_run.sh          # Debug 빌드 후 실행
+./script/build_and_run.sh release  # 최적화 빌드 (체감 속도는 이걸로 판단)
 ```
+
+Core 테스트:
+
+```bash
+cd Packages/GlazeCore && swift test
+```
+
+`swift build`는 더 이상 앱을 만들지 않는다 — 앱은 `Glaze.xcodeproj`(xcodegen이 `project.yml`에서 생성)로 빌드한다.
 
 GitHub remote:
 
