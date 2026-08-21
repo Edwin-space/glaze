@@ -1,0 +1,161 @@
+import Foundation
+import Testing
+@testable import GlazeCore
+
+struct SubtitleStoreTests {
+    private func makeStore() -> (FileSubtitleStore, URL) {
+        let library = FileManager.default.temporaryDirectory
+            .appendingPathComponent("glaze-store-tests-\(UUID().uuidString)")
+        return (FileSubtitleStore(libraryDirectory: library), library)
+    }
+
+    private let cues = [SubtitleCue(startTime: 0, endTime: 1, text: "안녕")]
+
+    // MARK: - Destination policy
+
+    @Test func besideVideoIsPreferredAndLibraryIsTheFallback() {
+        let (store, library) = makeStore()
+        let video = URL(fileURLWithPath: "/Volumes/NAS/Movies/movie.mkv")
+
+        let destinations = store.destinations(
+            for: .localFile(video),
+            kind: .translated(languageCode: "ko"),
+            preferring: .besideVideo
+        )
+
+        #expect(destinations.count == 2)
+        #expect(destinations[0].path == "/Volumes/NAS/Movies/movie.original.ko.srt")
+        #expect(destinations[1].deletingLastPathComponent().path == library.path)
+    }
+
+    @Test func appLibraryChoiceDoesNotOfferTheVideoFolder() {
+        let (store, _) = makeStore()
+        let video = URL(fileURLWithPath: "/Users/someone/Movies/movie.mkv")
+
+        let destinations = store.destinations(
+            for: .localFile(video),
+            kind: .generated,
+            preferring: .appLibrary
+        )
+
+        #expect(destinations.count == 1)
+        #expect(!destinations[0].path.hasPrefix("/Users/someone/Movies"))
+    }
+
+    /// A streamed video has no folder to sit beside, so the preference cannot apply.
+    @Test func networkResourceFallsBackToTheLibraryEvenWhenBesideIsPreferred() {
+        let (store, library) = makeStore()
+        let resource = MediaResource.network(
+            NetworkMediaResource(
+                serverID: "server-1",
+                objectID: "obj/42",
+                playbackURL: URL(string: "http://nas.local/media/42")!
+            )
+        )
+
+        let destinations = store.destinations(
+            for: resource,
+            kind: .generated,
+            preferring: .besideVideo
+        )
+
+        #expect(destinations.count == 1)
+        #expect(destinations[0].deletingLastPathComponent().path == library.path)
+    }
+
+    /// Object ids can contain path separators, which would otherwise create
+    /// directories that do not exist.
+    @Test func networkIdentifierIsSafeAsAFilename() {
+        let resource = MediaResource.network(
+            NetworkMediaResource(
+                serverID: "srv",
+                objectID: "folder/item",
+                playbackURL: URL(string: "http://nas.local/x")!
+            )
+        )
+
+        #expect(!FileSubtitleStore.identifier(for: resource).contains("/"))
+    }
+
+    @Test func generatedAndTranslatedDoNotCollide() {
+        let (store, _) = makeStore()
+        let video = URL(fileURLWithPath: "/tmp/movie.mkv")
+
+        let generated = store.destinations(for: .localFile(video), kind: .generated, preferring: .besideVideo)[0]
+        let translated = store.destinations(
+            for: .localFile(video),
+            kind: .translated(languageCode: "ko"),
+            preferring: .besideVideo
+        )[0]
+
+        #expect(generated.lastPathComponent == "movie.original.srt")
+        #expect(translated.lastPathComponent == "movie.original.ko.srt")
+    }
+
+    // MARK: - Writing
+
+    @Test func writesBesideTheVideoWhenTheFolderIsWritable() throws {
+        let (store, _) = makeStore()
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("glaze-beside-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let video = folder.appendingPathComponent("movie.mkv")
+        try Data().write(to: video)
+
+        let written = try store.save(
+            cues: cues,
+            for: .localFile(video),
+            kind: .translated(languageCode: "ko"),
+            preferring: .besideVideo
+        )
+
+        #expect(written.deletingLastPathComponent().path == folder.path)
+        #expect(FileManager.default.fileExists(atPath: written.path))
+    }
+
+    /// The point of the fallback: an unwritable video folder must not lose a
+    /// translation the user waited for.
+    @Test func fallsBackToTheLibraryWhenTheVideoFolderRejectsTheWrite() throws {
+        let (store, library) = makeStore()
+        defer { try? FileManager.default.removeItem(at: library) }
+
+        // A path under a file, which cannot be a directory.
+        let blocker = FileManager.default.temporaryDirectory
+            .appendingPathComponent("glaze-blocker-\(UUID().uuidString)")
+        try Data().write(to: blocker)
+        defer { try? FileManager.default.removeItem(at: blocker) }
+
+        let video = blocker.appendingPathComponent("nested").appendingPathComponent("movie.mkv")
+
+        let written = try store.save(
+            cues: cues,
+            for: .localFile(video),
+            kind: .generated,
+            preferring: .besideVideo
+        )
+
+        #expect(written.deletingLastPathComponent().path == library.path)
+        #expect(FileManager.default.fileExists(atPath: written.path))
+    }
+
+    @Test func writtenFileParsesBackToTheSameCues() throws {
+        let (store, library) = makeStore()
+        defer { try? FileManager.default.removeItem(at: library) }
+
+        let written = try store.save(
+            cues: [
+                SubtitleCue(startTime: 0, endTime: 2, text: "첫 줄"),
+                SubtitleCue(startTime: 2, endTime: 4, text: "둘째 줄")
+            ],
+            for: .localFile(URL(fileURLWithPath: "/tmp/does-not-exist/movie.mkv")),
+            kind: .generated,
+            preferring: .appLibrary
+        )
+
+        let parsed = try SubtitleParser.parse(url: written)
+        #expect(parsed.map(\.text) == ["첫 줄", "둘째 줄"])
+        #expect(parsed[1].startTime == 2)
+    }
+}

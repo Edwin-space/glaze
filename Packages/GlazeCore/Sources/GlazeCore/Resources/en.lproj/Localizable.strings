@@ -182,7 +182,7 @@
 "help.accessibility_format" = "About %@";
 "help.subtitle.language" = "Glaze listens to the audio and works out the language on its own. Automatic is right for most videos, though results can wander when one video mixes several languages.";
 "help.subtitle.model_tier" = "The AI model that turns speech into text. Faster tiers finish sooner; more accurate tiers catch mumbled lines and names that the others miss. An accurate model downloads a larger file once and takes longer to run. If the subtitles read badly, move up a tier.";
-"help.subtitle.storage" = "Where newly made subtitle files are kept. Storing them inside the app leaves the folder your video lives in untouched.";
+"help.subtitle.storage" = "Where finished subtitle files are kept. Next to the video means other devices and other players can find them, and for a video on a NAS it means the subtitle lands on the NAS too. If that folder cannot be written to, Glaze keeps it inside the app instead.";
 "help.subtitle.files" = "The subtitles available for this video — both the ones inside the video file and any sitting beside it. Only text subtitles can be used; picture-based ones cannot be read yet.";
 "help.subtitle.generate" = "Listens to the video and writes subtitles from scratch. Use this when there are no usable subtitles at all.";
 "help.subtitle.translate_engine" = "The engine doing the translating. Right now that is the translator built into macOS, which runs on this Mac rather than sending your subtitles anywhere.";
@@ -200,3 +200,5 @@
 "subtitle.translate.engine.unavailable_not_ready" = "The on-device model is still getting ready. Try again shortly.";
 "subtitle.translate.engine.unavailable_generic" = "On-device AI translation is unavailable right now.";
 "subtitle.translate.engine.on_device_ai_hint" = "Keeps one consistent tone across the whole film, which system translation cannot do.";
+"subtitle.storage.beside_video" = "Next to the video";
+"subtitle.storage.app_library" = "Inside Glaze";

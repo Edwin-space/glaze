@@ -35,6 +35,14 @@ final class SubtitleController {
     var translationEngineID: SubtitleTranslationEngineID = SubtitleController.storedTranslationEngine {
         didSet { SubtitleController.storedTranslationEngine = translationEngineID }
     }
+    /// Where finished subtitles are written. Beside the video by default, which on a
+    /// mounted NAS means the NAS — see `21_media_server_vision.md`.
+    var storageLocation: SubtitleStorageLocation = SubtitleController.storedStorageLocation {
+        didSet { SubtitleController.storedStorageLocation = storageLocation }
+    }
+    /// The resource currently loaded, so subtitles are keyed on what is playing rather
+    /// than on a local path a streamed video does not have.
+    var currentResource: MediaResource?
 
     /// Wall-clock cost of the last run of each stage, so tiers can be compared on
     /// something measured rather than remembered.
@@ -55,6 +63,9 @@ final class SubtitleController {
     private var embeddedSubtitleTask: Task<Void, Never>?
     private var translationTask: Task<Void, Never>?
     private let embeddedSubtitleService = EmbeddedSubtitleService()
+    private let subtitleStore: SubtitleStoring = FileSubtitleStore(
+        libraryDirectory: SubtitleController.defaultLibraryDirectory
+    )
     /// Video the pending translation belongs to, so a late result cannot be written
     /// against a file the user has already moved on from.
     private var translationVideoURL: URL?
@@ -228,6 +239,7 @@ final class SubtitleController {
         static let transcriptionTier = "subtitle.transcriptionTier"
         static let translationQuality = "subtitle.translationQuality"
         static let translationEngine = "subtitle.translationEngine"
+        static let storageLocation = "subtitle.storageLocation"
     }
 
     private static var storedTranscriptionTier: TranscriptionModelTier {
@@ -236,6 +248,14 @@ final class SubtitleController {
                 .flatMap(TranscriptionModelTier.init(rawValue:)) ?? .default
         }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.transcriptionTier) }
+    }
+
+    private static var storedStorageLocation: SubtitleStorageLocation {
+        get {
+            UserDefaults.standard.string(forKey: DefaultsKey.storageLocation)
+                .flatMap(SubtitleStorageLocation.init(rawValue:)) ?? .default
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: DefaultsKey.storageLocation) }
     }
 
     private static var storedTranslationEngine: SubtitleTranslationEngineID {
@@ -437,13 +457,15 @@ final class SubtitleController {
         }
         translationStartedAt = nil
 
-        let outputURL = Self.translatedSubtitleURL(
-            for: videoURL,
-            languageCode: pendingTranslationRequest?.targetLanguageCode ?? "translated"
-        )
+        let languageCode = pendingTranslationRequest?.targetLanguageCode ?? "translated"
 
         do {
-            try SubtitleWriter.writeSRT(cues: cues, to: outputURL)
+            let outputURL = try subtitleStore.save(
+                cues: cues,
+                for: currentResource ?? .localFile(videoURL),
+                kind: .translated(languageCode: languageCode),
+                preferring: storageLocation
+            )
             let subtitle = SubtitleFile.manual(url: outputURL)
 
             if !detectedSubtitles.contains(where: { $0.url.path == subtitle.url.path }) {
@@ -470,13 +492,6 @@ final class SubtitleController {
             }
         }
         return L10n.string("subtitle.error.translation_failed")
-    }
-
-    private static func translatedSubtitleURL(for videoURL: URL, languageCode: String) -> URL {
-        generatedSubtitleURL(for: videoURL)
-            .deletingPathExtension()
-            .appendingPathExtension(languageCode)
-            .appendingPathExtension("srt")
     }
 
     private func extractAndLoadEmbedded(
@@ -514,9 +529,13 @@ final class SubtitleController {
     private func finishGenerating(cues: [SubtitleCue], videoURL: URL) {
         isGenerating = false
 
-        let outputURL = Self.generatedSubtitleURL(for: videoURL)
         do {
-            try SubtitleWriter.writeSRT(cues: cues, to: outputURL)
+            let outputURL = try subtitleStore.save(
+                cues: cues,
+                for: currentResource ?? .localFile(videoURL),
+                kind: .generated,
+                preferring: storageLocation
+            )
             let subtitle = SubtitleFile.manual(url: outputURL)
 
             if !detectedSubtitles.contains(where: { $0.url.path == subtitle.url.path }) {
@@ -550,14 +569,14 @@ final class SubtitleController {
 
     /// Generated subtitles are stored app-internally (not next to the source video) — matches the
     /// "앱 내부 저장" default policy in `03_ai_subtitle_workflow.md`. A storage-location prompt is a follow-up.
-    private static func generatedSubtitleURL(for videoURL: URL) -> URL {
-        let baseName = videoURL.deletingPathExtension().lastPathComponent
+    /// Where `appLibrary` storage lives, and the fallback when the video's own folder
+    /// cannot be written to.
+    static var defaultLibraryDirectory: URL {
         let supportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return supportDirectory
             .appendingPathComponent("Glaze", isDirectory: true)
             .appendingPathComponent("Subtitles", isDirectory: true)
-            .appendingPathComponent("\(baseName).original.srt")
     }
 
     func kindLabel(for kind: SubtitleFile.Kind) -> String {

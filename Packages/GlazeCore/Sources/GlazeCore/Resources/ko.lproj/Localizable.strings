@@ -182,7 +182,7 @@
 "help.accessibility_format" = "%@ 설명 보기";
 "help.subtitle.language" = "글레이즈가 소리를 듣고 어떤 언어인지 스스로 판단합니다. 대부분 자동 감지로 충분하지만, 한 영상에 여러 언어가 섞여 있으면 결과가 흔들릴 수 있습니다.";
 "help.subtitle.model_tier" = "소리를 글자로 옮기는 AI 모델입니다. 빠를수록 결과가 먼저 나오고, 정확할수록 잘 안 들리는 대사와 이름을 더 잘 받아씁니다. 정확한 모델은 처음 한 번 더 큰 파일을 내려받고 생성에 시간이 더 걸립니다. 자막이 어색하면 한 단계 위로 올려보세요.";
-"help.subtitle.storage" = "새로 만든 자막 파일을 어디에 둘지입니다. 앱 내부 저장을 쓰면 원본 영상이 있는 폴더는 건드리지 않습니다.";
+"help.subtitle.storage" = "만든 자막 파일을 어디에 둘지입니다. 영상 옆에 두면 다른 기기나 다른 플레이어에서도 그대로 보이고, NAS에 있는 영상이라면 자막도 NAS에 저장됩니다. 쓸 수 없는 위치라면 앱 내부에 자동으로 보관합니다.";
 "help.subtitle.files" = "이 영상에 쓸 수 있는 자막 목록입니다. 영상 파일 안에 들어 있는 자막(내장 자막)과 옆에 놓인 자막 파일을 함께 보여줍니다. 글자로 된 자막만 쓸 수 있고, 그림으로 된 자막은 아직 읽지 못합니다.";
 "help.subtitle.generate" = "영상의 소리를 듣고 자막을 처음부터 만듭니다. 쓸 수 있는 자막이 하나도 없을 때 사용하세요.";
 "help.subtitle.translate_engine" = "번역을 담당하는 엔진입니다. 지금은 macOS에 내장된 번역을 쓰며, 인터넷으로 보내지 않고 이 Mac 안에서 처리합니다.";
@@ -200,3 +200,5 @@
 "subtitle.translate.engine.unavailable_not_ready" = "온디바이스 모델을 준비하는 중입니다. 잠시 후 다시 시도해 주세요.";
 "subtitle.translate.engine.unavailable_generic" = "지금은 온디바이스 AI 번역을 사용할 수 없습니다.";
 "subtitle.translate.engine.on_device_ai_hint" = "작품 전체에서 말투를 일관되게 유지합니다. 시스템 번역으로는 할 수 없는 부분입니다.";
+"subtitle.storage.beside_video" = "영상 옆";
+"subtitle.storage.app_library" = "앱 내부";

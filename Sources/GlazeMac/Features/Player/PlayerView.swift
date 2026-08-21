@@ -479,8 +479,10 @@ struct PlayerView: View {
                 if let duration = subtitles.lastTranslationDuration {
                     measuredDuration("subtitle.measured.translation_format", duration)
                 }
-                LabeledContent {
-                    Text(L10n.string("subtitle.panel.storage_ask"))
+                Picker(selection: $subtitles.storageLocation) {
+                    ForEach(SubtitleStorageLocation.allCases, id: \.self) { location in
+                        Text(L10n.string(location.labelKey)).tag(location)
+                    }
                 } label: {
                     GlazeHelpLabel("subtitle.panel.storage", help: "help.subtitle.storage")
                 }
@@ -990,6 +992,7 @@ struct PlayerView: View {
         source: MediaLibrarySource = .localFolder
     ) {
         playlistStore.setInitial(nextPlaylist)
+        subtitles.currentResource = resource ?? .localFile(originalURL)
         subtitles.prepareForNewVideo(url: originalURL)
         mediaAssets.prepareForNewVideo(
             url: originalURL,
