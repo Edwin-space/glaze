@@ -16,6 +16,17 @@ import GlazeCore
 /// comes from the session transcript, which the model already carries between turns.
 @Generable
 private struct TranslatedLine {
+    /// A scratchpad, not output. Guided generation fills fields in declaration order,
+    /// so asking for the meaning first makes the model read the line before it commits
+    /// to a translation.
+    ///
+    /// This is what fixed double negatives. "It wasn't that she didn't want to know"
+    /// came back as "she didn't want to know" — the opposite of the line — and no
+    /// wording of the instructions changed that. Restating the meaning first did, and
+    /// the result is stable across runs.
+    @Guide(description: "Restate the source line's literal meaning in plain English, keeping every negation exactly as written.")
+    var meaning: String
+
     @Guide(description: "The translated line only. No original text, no notes, no quotes.")
     var translation: String
 }
@@ -45,8 +56,9 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
     private static let segmentsPerSession = 40
 
     /// A model that wanders off-task can produce something far longer than the line
-    /// it was given; cap it rather than letting one bad response stall the run.
-    private static let responseTokenLimit = 400
+    /// it was given; cap it rather than letting one bad response stall the run. Sized
+    /// for two fields — the meaning scratchpad is generated before the translation.
+    private static let responseTokenLimit = 500
 
     static func availability() -> SystemLanguageModel.Availability {
         SystemLanguageModel.default.availability
