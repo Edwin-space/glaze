@@ -22,11 +22,40 @@ DERIVED_DATA_DIR="$ROOT_DIR/dist/DerivedData"
 APP_BUNDLE="$DERIVED_DATA_DIR/Build/Products/$CONFIGURATION/$APP_NAME.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-pkill -x "$APP_NAME" >/dev/null 2>&1 || true
-sleep 0.2
-if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
-  pkill -9 -x "$APP_NAME" >/dev/null 2>&1 || true
-fi
+# Stop only the copy this script builds and runs.
+#
+# This used to be `pkill -x Glaze`, which matches on process name and therefore also
+# killed the Glaze running under someone's Xcode debugger — a build here would end
+# their debugging session with no warning.
+#
+# Matching on the executable path needs care: the repository lives under a Hangul
+# directory name, and the kernel reports that path decomposed (NFD) while the shell
+# holds it composed (NFC), so a plain `pgrep -f "$APP_BINARY"` silently matches
+# nothing. Python compares the two after normalising both.
+stop_our_app() {
+  /usr/bin/python3 - "$APP_BINARY" <<'PYEOF' || true
+import os, signal, subprocess, sys, unicodedata
+
+def key(path):
+    return unicodedata.normalize("NFC", path)
+
+target = key(sys.argv[1])
+listing = subprocess.run(["/bin/ps", "-axo", "pid=,comm="], capture_output=True, text=True).stdout
+
+for line in listing.splitlines():
+    pid, _, command = line.strip().partition(" ")
+    if key(command) != target:
+        continue
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.kill(int(pid), sig)
+        except ProcessLookupError:
+            break
+PYEOF
+  sleep 0.4
+}
+
+stop_our_app
 
 if command -v xcodegen >/dev/null 2>&1; then
   XCODEGEN_BIN="xcodegen"
@@ -57,13 +86,26 @@ xcodebuild \
   -derivedDataPath "$DERIVED_DATA_DIR" \
   build
 
+# Deliberately not `open -n`. Launching a second instance of the same bundle id
+# sometimes produces a process with no window at all: the app runs and takes the menu
+# bar, but `CGWindowListCopyWindowInfo` reports no window and none is ever drawn.
+# Replacing the running instance avoids that.
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE"
+  stop_our_app
+  if [[ $# -gt 0 ]]; then
+    # `-a` is required here. Without it `open` treats every argument as something to
+    # open in its own right, so the video would go to whatever app currently claims
+    # the file type rather than to the build under test.
+    /usr/bin/open -a "$APP_BUNDLE" "$@"
+  else
+    /usr/bin/open "$APP_BUNDLE"
+  fi
 }
 
 case "$MODE" in
   run)
-    open_app
+    shift || true
+    open_app "$@"
     ;;
   --bundle|bundle)
     echo "$APP_BUNDLE"
