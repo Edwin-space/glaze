@@ -447,7 +447,7 @@ struct PlayerView: View {
         Form {
             Section {
                 LabeledContent {
-                    Text(L10n.string("subtitle.panel.auto_detect"))
+                    Text(subtitles.panelSpokenLanguageValue)
                 } label: {
                     GlazeHelpLabel("subtitle.panel.language", help: "help.subtitle.language")
                 }

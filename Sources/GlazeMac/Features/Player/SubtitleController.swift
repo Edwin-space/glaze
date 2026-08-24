@@ -20,6 +20,10 @@ final class SubtitleController {
     var subtitlePreparationPlan: SubtitlePreparationPlan?
     var pendingTranslationRequest: SubtitleTranslationRequest?
 
+    /// What the container says the film is spoken in. nil when it says nothing, and
+    /// transcription falls back to letting Whisper decide.
+    private(set) var spokenLanguageCode: String?
+
     var isGenerating = false
     var generationStage: SubtitleGenerator.Stage?
     var generationProgress: Double = 0
@@ -98,6 +102,7 @@ final class SubtitleController {
         isInspectingEmbeddedSubtitles = true
         subtitlePreparationPlan = nil
         pendingTranslationRequest = nil
+        spokenLanguageCode = nil
         loadPreferredIfAvailable()
         discoverEmbeddedSubtitles(in: url)
     }
@@ -208,10 +213,17 @@ final class SubtitleController {
         status = .generating
         errorMessage = nil
 
+        // Read while the video was opened. The tag is right far more often than
+        // Whisper's own detection, and passing it also skips the detection pass.
+        let spokenLanguage = spokenLanguageCode
+
         generationTask = Task { [transcriptionTier] in
-            let generator = SubtitleGenerator(modelTier: transcriptionTier)
+            let generator = SubtitleGenerator(modelTier: transcriptionTier, ffmpegURL: FFmpegTool.ffmpegURL)
             do {
-                let result = try await generator.generate(from: videoURL) { [weak self] progress in
+                let result = try await generator.generate(
+                    from: videoURL,
+                    spokenLanguageCode: spokenLanguage
+                ) { [weak self] progress in
                     Task { @MainActor in
                         self?.generationStage = progress.stage
                         self?.generationProgress = progress.fraction
@@ -248,6 +260,7 @@ final class SubtitleController {
     private func discoverEmbeddedSubtitles(in videoURL: URL) {
         let preferredLanguages = Locale.preferredLanguages
         embeddedSubtitleTask = Task {
+            spokenLanguageCode = await embeddedSubtitleService.spokenLanguageCode(in: videoURL)
             do {
                 let tracks = try await embeddedSubtitleService.discoverTracks(in: videoURL)
                 guard !Task.isCancelled else { return }
@@ -680,6 +693,17 @@ final class SubtitleController {
         }
 
         return .subtitleDetected
+    }
+
+    /// What to show for "영상 언어": the language the container declares, or a note
+    /// that Glaze will work it out from the audio.
+    var panelSpokenLanguageValue: String {
+        guard let spokenLanguageCode,
+              let name = Locale.current.localizedString(forLanguageCode: spokenLanguageCode) else {
+            return L10n.string("subtitle.panel.auto_detect")
+        }
+
+        return name
     }
 
     func embeddedTrackLabel(_ track: EmbeddedSubtitleTrack) -> String {

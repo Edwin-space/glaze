@@ -35,3 +35,7 @@ Tools/vlc/share/
 
 # Resolved by `swift test` in the local package; the app resolves through Xcode.
 Packages/GlazeCore/Package.resolved
+
+# The reference video every playback and subtitle test runs against. 1.7 GB, and
+# `git add -A` would happily commit it.
+test file/

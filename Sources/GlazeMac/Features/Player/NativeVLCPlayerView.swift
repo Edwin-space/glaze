@@ -164,6 +164,12 @@ final class NativeVLCPlayerView: NSView {
             ":file-caching=100",
             ":network-caching=300",
             ":no-sub-autodetect-file",
+            // Glaze draws subtitles itself — it has to, to show a translation, or an
+            // original and a translation together, in its own styling. Left to its own
+            // devices VLC also renders any subtitle track embedded in the container,
+            // and the two land on top of each other: a film with a built-in track came
+            // up with the same line drawn twice, once by each.
+            ":no-spu",
             ":avcodec-fast"
         ].forEach { option in
             option.withCString { library.addMediaOption(media, $0) }

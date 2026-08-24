@@ -181,7 +181,7 @@
 "subtitle.measured.generation_format" = "Last transcription: %@";
 "subtitle.measured.translation_format" = "Last translation: %@";
 "help.accessibility_format" = "About %@";
-"help.subtitle.language" = "Glaze listens to the audio and works out the language on its own. Automatic is right for most videos, though results can wander when one video mixes several languages.";
+"help.subtitle.language" = "The spoken language as the video file records it. When the file says, Glaze uses that to write subtitles; when it does not, Glaze listens and works it out. Taking the file at its word is both more accurate and considerably faster.";
 "help.subtitle.model_tier" = "The AI model that turns speech into text. Faster tiers finish sooner; more accurate tiers catch mumbled lines and names that the others miss. An accurate model downloads a larger file once and takes longer to run. If the subtitles read badly, move up a tier.";
 "help.subtitle.storage" = "Where finished subtitle files are kept. Next to the video means other devices and other players can find them, and for a video on a NAS it means the subtitle lands on the NAS too. If that folder cannot be written to, Glaze keeps it inside the app instead.";
 "help.subtitle.files" = "The subtitles available for this video — both the ones inside the video file and any sitting beside it. Only text subtitles can be used; picture-based ones cannot be read yet.";

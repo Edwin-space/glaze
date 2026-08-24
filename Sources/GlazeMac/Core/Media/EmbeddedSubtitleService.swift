@@ -58,6 +58,33 @@ actor EmbeddedSubtitleService {
         }
     }
 
+    /// The language the film is spoken in, as the container declares it.
+    ///
+    /// Whisper detects the language itself when not told, and gets it wrong on
+    /// material it has heard less of — silently, producing confident text in the wrong
+    /// language. The container usually knows; when it does, that beats a guess.
+    ///
+    /// - Returns: nil when no track is tagged, or the tag is "und", in which case
+    ///   detection is the only option left.
+    func spokenLanguageCode(in mediaURL: URL) async -> String? {
+        guard let ffprobeURL = FFmpegTool.ffprobeURL else { return nil }
+
+        let output = try? await runForData(
+            executableURL: ffprobeURL,
+            arguments: [
+                "-v", "error",
+                "-select_streams", "a:0",
+                "-show_entries", "stream_tags=language",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                inputArgument(for: mediaURL)
+            ],
+            failure: ServiceError.probeFailed
+        )
+
+        guard let output, let text = String(data: output, encoding: .utf8) else { return nil }
+        return SubtitleLanguageCode.normalized(text.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
     func extract(track: EmbeddedSubtitleTrack, from mediaURL: URL) async throws -> URL {
         guard track.canProvideTimedText else {
             throw ServiceError.unsupportedTrack(track.codec)
