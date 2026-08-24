@@ -20,7 +20,8 @@ struct SubtitleTranslationAssemblerTests {
             cues: cues,
             segments: singleCueSegments(3, from: cues),
             translations: ["안녕", "세계", "다시"],
-            output: .translatedOnly
+            output: .translatedOnly,
+            targetLanguageCode: "ko"
         )
 
         #expect(assembled.map(\.text) == ["안녕", "세계", "다시"])
@@ -32,7 +33,8 @@ struct SubtitleTranslationAssemblerTests {
             cues: cues,
             segments: singleCueSegments(3, from: cues),
             translations: [nil, "세계", nil],
-            output: .bilingual
+            output: .bilingual,
+            targetLanguageCode: "ko"
         )
 
         #expect(assembled[1].text == "World\n세계")
@@ -44,7 +46,8 @@ struct SubtitleTranslationAssemblerTests {
             cues: cues,
             segments: singleCueSegments(3, from: cues),
             translations: ["안녕", nil, nil],
-            output: .translatedOnly
+            output: .translatedOnly,
+            targetLanguageCode: "ko"
         )
 
         #expect(assembled[0].startTime == 0)
@@ -59,7 +62,8 @@ struct SubtitleTranslationAssemblerTests {
             cues: cues,
             segments: singleCueSegments(3, from: cues),
             translations: [nil, nil, "다시"],
-            output: .translatedOnly
+            output: .translatedOnly,
+            targetLanguageCode: "ko"
         )
 
         #expect(assembled.map(\.text) == ["Hello", "World", "다시"])
@@ -79,7 +83,8 @@ struct SubtitleTranslationAssemblerTests {
             cues: cues,
             segments: segments,
             translations: ["그가 부탁했기 때문에 나는 떠나지 않았어요."],
-            output: .translatedOnly
+            output: .translatedOnly,
+            targetLanguageCode: "ko"
         )
 
         #expect(assembled.count == 2)
@@ -106,7 +111,8 @@ struct SubtitleTranslationAssemblerTests {
             cues: cues,
             segments: singleCueSegments(3, from: cues),
             translations: ["Hello", nil, nil],
-            output: .bilingual
+            output: .bilingual,
+            targetLanguageCode: "ko"
         )
 
         // Unchanged text must not be duplicated onto two lines.
@@ -159,5 +165,39 @@ struct SubtitleTranslationEchoTests {
     /// costs nothing, because the fallback is that same text.
     @Test func treatsAnUnchangedNumberAsUntranslated() {
         #expect(!SubtitleTranslationAssembler.isUsable(translated: "1999", source: "1999"))
+    }
+}
+
+/// The system translator returns CJK punctuation in Korean output — 691 marks in one
+/// feature-length film. They are visibly foreign in a Korean subtitle, and equally
+/// correct in a Japanese one, so the rule follows the target language.
+struct SubtitlePunctuationTests {
+    private let cjk = "시작！ 그로부터 12시간 후， 무사히 발견되었습니다。 정말？"
+
+    @Test func rewritesCJKPunctuationForKorean() {
+        #expect(
+            SubtitleTranslationAssembler.normalizePunctuation(cjk, for: "ko")
+                == "시작! 그로부터 12시간 후, 무사히 발견되었습니다. 정말?"
+        )
+    }
+
+    @Test func leavesJapaneseAlone() {
+        #expect(SubtitleTranslationAssembler.normalizePunctuation(cjk, for: "ja") == cjk)
+    }
+
+    @Test func leavesChineseAlone() {
+        #expect(SubtitleTranslationAssembler.normalizePunctuation(cjk, for: "zh-Hans") == cjk)
+    }
+
+    /// An ellipsis and curly quotes are at home in Korean typography; only the wide
+    /// forms of marks Korean writes narrow should change.
+    @Test func keepsPunctuationKoreanActuallyUses() {
+        let text = "그건… “정말”이야"
+        #expect(SubtitleTranslationAssembler.normalizePunctuation(text, for: "ko") == text)
+    }
+
+    @Test func leavesTextWithNoWidePunctuationUntouched() {
+        let text = "Hello, world! Really?"
+        #expect(SubtitleTranslationAssembler.normalizePunctuation(text, for: "ko") == text)
     }
 }

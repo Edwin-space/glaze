@@ -447,7 +447,8 @@ final class SubtitleController {
             cues: input.cues,
             segments: input.segments,
             translations: translations,
-            output: input.output
+            output: input.output,
+            targetLanguageCode: input.targetLanguageCode
         )
         applyTranslation(cues: cues, videoURL: input.videoURL)
     }

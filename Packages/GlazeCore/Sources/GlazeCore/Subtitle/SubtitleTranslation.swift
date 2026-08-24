@@ -101,11 +101,15 @@ public enum SubtitleTranslationAssembler {
     ///
     /// Anything that fails validation falls back to the source text for those cues,
     /// so a bad line degrades to the original rather than to a blank subtitle.
+    /// - Parameter targetLanguageCode: decides how punctuation is written. Whether a
+    ///   full stop is `.` or `。` is a property of the language being written, not of
+    ///   the engine that produced the text.
     public static func assemble(
         cues: [SubtitleCue],
         segments: [SubtitleSegment],
         translations: [String?],
-        output: SubtitleTranslationOutput
+        output: SubtitleTranslationOutput,
+        targetLanguageCode: String
     ) -> [SubtitleCue] {
         var translatedByCueIndex: [Int: String] = [:]
 
@@ -118,7 +122,7 @@ public enum SubtitleTranslationAssembler {
 
             let sourceTexts = segment.cueIndices.map { cues[$0].text }
             let pieces = SubtitleRedistributor.redistribute(
-                translated: normalizeLineBreaks(translated),
+                translated: normalizePunctuation(normalizeLineBreaks(translated), for: targetLanguageCode),
                 across: sourceTexts
             )
 
@@ -142,6 +146,44 @@ public enum SubtitleTranslationAssembler {
 
             return SubtitleCue(startTime: cue.startTime, endTime: cue.endTime, text: text)
         }
+    }
+
+    /// Languages that write punctuation full width. Everywhere else the wide forms are
+    /// simply wrong — Korean takes the same full stop and comma as English.
+    private static let fullWidthPunctuationLanguages: Set<String> = ["ja", "zh", "yue"]
+
+    /// Rewrites CJK punctuation as ASCII when the target language does not use it.
+    ///
+    /// The system translator returns `。` `！` `？` `，` in Korean output — 691 of them
+    /// in one feature-length film. They render as visibly foreign marks in a Korean
+    /// subtitle. The engine is not wrong about the words, only about the typography,
+    /// so this is fixed on the way out rather than argued with in a prompt.
+    static func normalizePunctuation(_ text: String, for languageCode: String) -> String {
+        guard let base = SubtitleLanguageCode.normalized(languageCode),
+              !fullWidthPunctuationLanguages.contains(base) else {
+            return text
+        }
+
+        var result = ""
+        result.reserveCapacity(text.count)
+
+        for character in text {
+            switch character {
+            case "\u{3002}": result.append(".")   // 。
+            case "\u{FF0C}": result.append(",")   // ，
+            case "\u{3001}": result.append(",")   // 、
+            case "\u{FF01}": result.append("!")   // ！
+            case "\u{FF1F}": result.append("?")   // ？
+            case "\u{FF1A}": result.append(":")   // ：
+            case "\u{FF1B}": result.append(";")   // ；
+            case "\u{FF05}": result.append("%")   // ％
+            case "\u{FF08}": result.append("(")   // （
+            case "\u{FF09}": result.append(")")   // ）
+            default: result.append(character)
+            }
+        }
+
+        return result
     }
 
     /// Engines translating a two-speaker cue tend to return the lines separated by a

@@ -43,7 +43,8 @@ struct SubtitleTranslationPipelineTests {
             cues: cues,
             segments: segments,
             translations: translations,
-            output: .translatedOnly
+            output: .translatedOnly,
+            targetLanguageCode: "ko"
         )
 
         #expect(assembled.count == cues.count)
@@ -68,7 +69,8 @@ struct SubtitleTranslationPipelineTests {
             cues: cues,
             segments: segments,
             translations: translations,
-            output: .translatedOnly
+            output: .translatedOnly,
+            targetLanguageCode: "ko"
         )
 
         #expect(assembled[2].text == cues[2].text)
@@ -90,7 +92,8 @@ struct SubtitleTranslationPipelineTests {
             cues: cues,
             segments: segments,
             translations: translations,
-            output: .bilingual
+            output: .bilingual,
+            targetLanguageCode: "ko"
         )
 
         for index in cues.indices {
