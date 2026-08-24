@@ -1,17 +1,25 @@
 import Foundation
 
-/// Reaches a file that sits next to a video the viewer opened.
+/// One place where subtitle files are read and written.
 ///
-/// Under the App Sandbox, opening a film grants access to that one file. The `.srt`
-/// beside it — the entire premise of sidecar subtitles — is off limits, and the read
-/// fails with a permission error that looks like a corrupt file. The unsandboxed Debug
-/// build never sees this, so it only appears in the configuration that ships.
+/// It exists because of a defect that is still open: under the App Sandbox, opening a
+/// film grants access to that one file, and the `.srt` beside it — the entire premise
+/// of sidecar subtitles — cannot be read. Every automatic subtitle load fails in the
+/// configuration that ships. The unsandboxed Debug build never sees it.
 ///
-/// macOS calls these *related items*: files an app may reach because they belong to a
-/// document already open. Two things are required, and neither works without the other:
-/// the subtitle types are declared with `NSIsRelatedItemType` in `Info.plist`, and the
-/// file is reached through `NSFileCoordinator` with a presenter naming the video as its
-/// primary item. Registering that presenter is what hands over the sandbox extension.
+/// The obvious remedy was *related items*, the mechanism macOS documents for exactly
+/// this: declare the subtitle types with `NSIsRelatedItemType` in `Info.plist` and
+/// reach the file through `NSFileCoordinator` with a presenter naming the video as its
+/// primary item. That is what this type does, and **it is not sufficient** — measured
+/// against a signed, sandboxed Release build, the read still fails, both for
+/// `film.en.srt` and for `film.srt`, which matches the video's base name exactly.
+///
+/// What is known to work is a security-scoped bookmark for the containing folder,
+/// asked for once through an open panel and kept. That is a change to what the viewer
+/// sees, not just to plumbing, so it has not been made here yet. This type is where it
+/// goes when it is: both the read and the write already funnel through it.
+///
+/// See `docs/19_engineering_guardrails.md` §8.
 public enum RelatedFileAccess {
     /// - Parameter primaryURL: the video the file belongs to. nil skips coordination,
     ///   for files the app reached some other way — its own library, or one the viewer

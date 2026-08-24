@@ -166,9 +166,9 @@ final class SubtitleController {
         displayName: String? = nil
     ) {
         do {
-            // The video is named so the App Sandbox will grant access to a subtitle
-            // sitting beside it; without that, sidecar subtitles cannot be read at all
-            // in the shipping build.
+            // The video is named so file access can be coordinated against it. This
+            // does not yet unlock sidecar subtitles under the App Sandbox — see
+            // RelatedFileAccess for what is still missing.
             subtitleCues = try SubtitleParser.parse(
                 url: subtitle.url,
                 relatedTo: currentResource?.localFileURL
