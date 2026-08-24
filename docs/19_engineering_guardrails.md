@@ -161,5 +161,6 @@ Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze
 
 작업 전에 상태를 확인해야 하는 항목이다.
 
+- 샌드박스 Release 빌드에서 사이드카 자막 읽기가 실제로 되는지 화면으로 확인하지 못했다. 수정은 들어갔고 빌드·테스트는 통과했다(`b97d3cf`). 확인 방법: Release로 빌드해 `~/Movies` 아래 영상을 열고 자막 패널에 "자막 문제"가 없는지 본다.
 - Distribution 서명 Archive에서 VLC dylib의 `dlopen`이 통과하는지 확인되지 않았다. Development 서명에서만 검증했다(`16_foundation_redesign_audit.md`).
 - 그림 자막(PGS·VobSub)은 감지만 하고 읽지 못한다. OCR 미지원.
