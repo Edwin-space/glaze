@@ -162,7 +162,28 @@ public enum SubtitleTranslationAssembler {
         guard !trimmedTranslation.isEmpty else { return false }
         guard !trimmedSource.isEmpty else { return false }
 
+        // A language model asked for a translation will sometimes hand the source
+        // straight back. Length checks wave that through — it is exactly the right
+        // length — and the run then reports success while writing the original text
+        // into a file named for the target language. Whatever else it is, a copy of
+        // the source is not a translation.
+        guard !isEchoOfSource(trimmedTranslation, trimmedSource) else { return false }
+
         let ratio = Double(trimmedTranslation.count) / Double(trimmedSource.count)
         return ratio >= minimumLengthRatio && ratio <= maximumLengthRatio
+    }
+
+    /// Compares loosely: an echo often differs from the source only in whitespace or
+    /// a trailing period.
+    public static func isEchoOfSource(_ translated: String, _ source: String) -> Bool {
+        func normalized(_ text: String) -> String {
+            text.lowercased()
+                .components(separatedBy: .whitespacesAndNewlines)
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+                .trimmingCharacters(in: CharacterSet(charactersIn: ".!?"))
+        }
+
+        return normalized(translated) == normalized(source)
     }
 }

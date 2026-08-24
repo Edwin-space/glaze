@@ -47,8 +47,18 @@ struct AppleTranslationEngine: SubtitleTranslationEngine {
                 // returns non-Sendable types that cannot leave the main actor the
                 // session lives on; a String in and a Sendable response back can.
                 let response = try await session.translate(source)
-                results.append(response.targetText)
-                successes += 1
+
+                // The system translator returns the source unchanged when it decides a
+                // sentence needs no work — a proper noun, a number, or a pair it cannot
+                // actually handle. None of those count as a translated line, and if
+                // every line comes back this way the run must report failure rather
+                // than write the original text into a file named for another language.
+                if SubtitleTranslationAssembler.isEchoOfSource(response.targetText, source) {
+                    results.append(nil)
+                } else {
+                    results.append(response.targetText)
+                    successes += 1
+                }
             } catch is CancellationError {
                 throw CancellationError()
             } catch {

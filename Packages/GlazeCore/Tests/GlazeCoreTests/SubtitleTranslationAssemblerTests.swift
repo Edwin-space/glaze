@@ -129,3 +129,35 @@ extension SubtitleTranslationAssemblerTests {
         )
     }
 }
+
+/// A model asked to translate sometimes returns the source unchanged. The length
+/// checks pass it — it is exactly the right length — so without an explicit test the
+/// run reports success and writes English into a file named `.ko.srt`.
+struct SubtitleTranslationEchoTests {
+    private let source = "It wasn't that she didn't want to know what it said."
+
+    @Test func rejectsAnExactCopyOfTheSource() {
+        #expect(!SubtitleTranslationAssembler.isUsable(translated: source, source: source))
+    }
+
+    @Test func rejectsACopyThatDiffersOnlyInSpacingOrFinalPunctuation() {
+        #expect(!SubtitleTranslationAssembler.isUsable(
+            translated: "  It wasn't that she didn't want to know what it said  ",
+            source: source
+        ))
+    }
+
+    @Test func stillAcceptsARealTranslation() {
+        #expect(SubtitleTranslationAssembler.isUsable(
+            translated: "그녀가 그 내용을 알고 싶지 않았던 것은 아니었습니다.",
+            source: source
+        ))
+    }
+
+    /// A cue that is just a number comes back unchanged from any honest translator, and
+    /// the guard cannot tell that apart from an echo. It counts as untranslated — which
+    /// costs nothing, because the fallback is that same text.
+    @Test func treatsAnUnchangedNumberAsUntranslated() {
+        #expect(!SubtitleTranslationAssembler.isUsable(translated: "1999", source: "1999"))
+    }
+}

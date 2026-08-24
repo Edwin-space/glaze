@@ -20,14 +20,19 @@ private struct TranslatedLine {
     /// so asking for the meaning first makes the model read the line before it commits
     /// to a translation.
     ///
-    /// This is what fixed double negatives. "It wasn't that she didn't want to know"
-    /// came back as "she didn't want to know" — the opposite of the line — and no
-    /// wording of the instructions changed that. Restating the meaning first did, and
-    /// the result is stable across runs.
+    /// It earns its cost on multi-sentence segments, which is what the segmenter
+    /// actually produces. Without it the model drops whole sentences: a three-sentence
+    /// segment came back missing its first clause entirely. With it, every sentence
+    /// survives. That is worth roughly 25% more time per segment.
+    ///
+    /// It does *not* fix double negatives, which an earlier version of this comment
+    /// claimed. "It wasn't that she didn't want to know" still inverts, with or
+    /// without the scratchpad, and the system translator gets it wrong too. See
+    /// docs/03.
     @Guide(description: "Restate the source line's literal meaning in plain English, keeping every negation exactly as written.")
     var meaning: String
 
-    @Guide(description: "The translated line only. No original text, no notes, no quotes.")
+    @Guide(description: "The translation only, written in the target language. Never a copy of the source. No notes, no quotes.")
     var translation: String
 }
 
@@ -110,8 +115,17 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
                     generating: TranslatedLine.self,
                     options: options
                 )
-                results.append(cleaned(response.content.translation))
-                successes += 1
+                let translated = cleaned(response.content.translation)
+
+                // A model that hands the source straight back has not translated it.
+                // Counting that as a success is how a whole run finished "fine" and
+                // wrote the English text into a file named for Korean.
+                if SubtitleTranslationAssembler.isEchoOfSource(translated, source) {
+                    results.append(nil)
+                } else {
+                    results.append(translated)
+                    successes += 1
+                }
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
