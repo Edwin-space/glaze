@@ -214,3 +214,21 @@
 "subtitle.folder_access.action" = "Allow this folder";
 "subtitle.folder_access.panel_message" = "Choose “%@” so Glaze can read the subtitles in it.";
 "subtitle.folder_access.panel_prompt" = "Allow";
+
+"settings.tab.appearance" = "Appearance";
+"settings.section.appearance" = "Subtitle appearance";
+"subtitle.appearance.size" = "Text size";
+"subtitle.appearance.size.small" = "Small";
+"subtitle.appearance.size.medium" = "Medium";
+"subtitle.appearance.size.large" = "Large";
+"subtitle.appearance.size.extra_large" = "Extra large";
+"subtitle.appearance.position" = "Position";
+"subtitle.appearance.position.bottom" = "Bottom";
+"subtitle.appearance.position.raised" = "Raised";
+"subtitle.appearance.position.top" = "Top";
+"subtitle.appearance.background" = "Background";
+"subtitle.appearance.background.plate" = "Translucent plate";
+"subtitle.appearance.background.none" = "None (shadow only)";
+"help.subtitle.size" = "A laptop at arm's length and a large screen across a room need different sizes. Changes apply while the film is playing.";
+"help.subtitle.position" = "Some films have signage or subtitles burned into the picture, right where a subtitle would land. Raise the text or move it to the top when that happens.";
+"help.subtitle.background" = "The translucent plate keeps text readable over bright scenes. Turn it off for shadow alone if you would rather see more of the picture.";

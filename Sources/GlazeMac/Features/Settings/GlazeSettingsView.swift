@@ -17,6 +17,9 @@ struct GlazeSettingsView: View {
 
             translationSettings
                 .tabItem { Label(L10n.string("settings.tab.translation"), systemImage: "character.bubble") }
+
+            appearanceSettings
+                .tabItem { Label(L10n.string("settings.tab.appearance"), systemImage: "textformat.size") }
         }
         .frame(width: 480)
     }
@@ -54,6 +57,42 @@ struct GlazeSettingsView: View {
                 }
             } header: {
                 Text(L10n.string("settings.section.storage"))
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    /// How subtitles are drawn. Watching on a laptop and watching across a room are
+    /// not the same, and neither is a film whose burned-in signage sits exactly where
+    /// a subtitle lands.
+    private var appearanceSettings: some View {
+        Form {
+            Section {
+                Picker(selection: $preferences.textSize) {
+                    ForEach(SubtitleTextSize.allCases, id: \.self) { size in
+                        Text(L10n.string(size.labelKey)).tag(size)
+                    }
+                } label: {
+                    GlazeHelpLabel("subtitle.appearance.size", help: "help.subtitle.size")
+                }
+
+                Picker(selection: $preferences.position) {
+                    ForEach(SubtitlePosition.allCases, id: \.self) { position in
+                        Text(L10n.string(position.labelKey)).tag(position)
+                    }
+                } label: {
+                    GlazeHelpLabel("subtitle.appearance.position", help: "help.subtitle.position")
+                }
+
+                Picker(selection: $preferences.background) {
+                    ForEach(SubtitleBackground.allCases, id: \.self) { background in
+                        Text(L10n.string(background.labelKey)).tag(background)
+                    }
+                } label: {
+                    GlazeHelpLabel("subtitle.appearance.background", help: "help.subtitle.background")
+                }
+            } header: {
+                Text(L10n.string("settings.section.appearance"))
             }
         }
         .formStyle(.grouped)

@@ -9,6 +9,7 @@ struct PlayerView: View {
     @State private var playlistStore = PlaylistStore()
     @State private var subtitles = SubtitleController()
     @State private var mediaAssets = MediaAssetStore()
+    @State private var preferences = GlazePreferences.shared
 
     @State private var activePanel: PlayerPanel?
     @State private var isDropTargeted = false
@@ -343,22 +344,52 @@ struct PlayerView: View {
 
     private var subtitleOverlay: some View {
         VStack {
-            Spacer()
+            if preferences.position != .top { Spacer() }
+
             if subtitles.isSubtitleVisible, !subtitles.activeSubtitleText.isEmpty {
-                Text(subtitles.activeSubtitleText)
-                    .font(.title3.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 11)
-                    .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.card)
+                subtitleText
                     .padding(.horizontal, 32)
-                    .padding(.bottom, areControlsVisible ? 124 : 34)
+                    .padding(.top, preferences.position == .top ? 28 : 0)
+                    .padding(.bottom, bottomInsetForSubtitle)
                     .transition(.opacity)
             }
+
+            if preferences.position == .top { Spacer() }
         }
         .animation(.easeInOut(duration: 0.15), value: subtitles.activeSubtitleText)
         .animation(.easeOut(duration: 0.18), value: areControlsVisible)
+    }
+
+    @ViewBuilder
+    private var subtitleText: some View {
+        let text = Text(subtitles.activeSubtitleText)
+            .font(.system(size: preferences.textSize.pointSize, weight: .semibold))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.white)
+
+        switch preferences.background {
+        case .plate:
+            text
+                .padding(.horizontal, 20)
+                .padding(.vertical, 11)
+                .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.card)
+        case .none:
+            // No plate to sit on, so the text has to stay legible against a white
+            // frame on its own. Two shadows: a tight dark one for edge definition and
+            // a soft one for separation.
+            text
+                .shadow(color: .black.opacity(0.9), radius: 1, y: 1)
+                .shadow(color: .black.opacity(0.55), radius: 5)
+        }
+    }
+
+    /// Keeps the subtitle clear of the transport, and lifts it off the very bottom of
+    /// the frame when the viewer has asked for that.
+    private var bottomInsetForSubtitle: CGFloat {
+        guard preferences.position != .top else { return 0 }
+
+        let base: CGFloat = areControlsVisible ? 124 : 34
+        return preferences.position == .raised ? base + 60 : base
     }
 
     private var dropTargetOverlay: some View {

@@ -214,3 +214,21 @@
 "subtitle.folder_access.action" = "이 폴더 허용";
 "subtitle.folder_access.panel_message" = "‘%@’ 폴더의 자막을 읽을 수 있도록 이 폴더를 선택해 주세요.";
 "subtitle.folder_access.panel_prompt" = "허용";
+
+"settings.tab.appearance" = "표시";
+"settings.section.appearance" = "자막 표시";
+"subtitle.appearance.size" = "글자 크기";
+"subtitle.appearance.size.small" = "작게";
+"subtitle.appearance.size.medium" = "보통";
+"subtitle.appearance.size.large" = "크게";
+"subtitle.appearance.size.extra_large" = "아주 크게";
+"subtitle.appearance.position" = "위치";
+"subtitle.appearance.position.bottom" = "아래";
+"subtitle.appearance.position.raised" = "아래에서 조금 위";
+"subtitle.appearance.position.top" = "위";
+"subtitle.appearance.background" = "배경";
+"subtitle.appearance.background.plate" = "반투명 판";
+"subtitle.appearance.background.none" = "없음(그림자만)";
+"help.subtitle.size" = "노트북을 가까이서 볼 때와 큰 화면을 멀리서 볼 때 필요한 크기가 다릅니다. 재생 중에 바꾸면 바로 반영됩니다.";
+"help.subtitle.position" = "영상에 자막이 이미 새겨져 있거나 화면 아래에 글자가 있으면 겹칠 수 있습니다. 그럴 때 위치를 올리거나 위쪽으로 보내세요.";
+"help.subtitle.background" = "반투명 판은 밝은 장면에서도 글자가 묻히지 않게 해줍니다. 화면을 가리는 것이 싫다면 배경 없이 그림자만 쓸 수 있습니다.";

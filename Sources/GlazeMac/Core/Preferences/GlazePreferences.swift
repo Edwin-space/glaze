@@ -21,6 +21,9 @@ final class GlazePreferences {
         static let translationQuality = "subtitle.translationQuality"
         static let translationOutput = "subtitle.translationOutput"
         static let storageLocation = "subtitle.storageLocation"
+        static let textSize = "subtitle.textSize"
+        static let position = "subtitle.position"
+        static let background = "subtitle.background"
     }
 
     /// Which Whisper model transcription runs on.
@@ -48,6 +51,20 @@ final class GlazePreferences {
         didSet { store(storageLocation.rawValue, Key.storageLocation) }
     }
 
+    /// How subtitles look on the video. Kept here rather than on the player so the
+    /// choice survives closing a film, which is the only way it is useful.
+    var textSize: SubtitleTextSize {
+        didSet { store(textSize.rawValue, Key.textSize) }
+    }
+
+    var position: SubtitlePosition {
+        didSet { store(position.rawValue, Key.position) }
+    }
+
+    var background: SubtitleBackground {
+        didSet { store(background.rawValue, Key.background) }
+    }
+
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -57,6 +74,9 @@ final class GlazePreferences {
         translationQuality = Self.read(defaults, Key.translationQuality) ?? .default
         translationOutput = Self.read(defaults, Key.translationOutput) ?? .bilingual
         storageLocation = Self.read(defaults, Key.storageLocation) ?? .default
+        textSize = Self.read(defaults, Key.textSize) ?? .default
+        position = Self.read(defaults, Key.position) ?? .default
+        background = Self.read(defaults, Key.background) ?? .default
     }
 
     private static func read<T: RawRepresentable>(_ defaults: UserDefaults, _ key: String) -> T?
