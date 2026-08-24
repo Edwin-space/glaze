@@ -162,5 +162,6 @@ Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze
 작업 전에 상태를 확인해야 하는 항목이다.
 
 - 샌드박스 Release 빌드에서 사이드카 자막 읽기가 실제로 되는지 화면으로 확인하지 못했다. 수정은 들어갔고 빌드·테스트는 통과했다(`b97d3cf`). 확인 방법: Release로 빌드해 `~/Movies` 아래 영상을 열고 자막 패널에 "자막 문제"가 없는지 본다.
-- Distribution 서명 Archive에서 VLC dylib의 `dlopen`이 통과하는지 확인되지 않았다. Development 서명에서만 검증했다(`16_foundation_redesign_audit.md`).
+- Distribution(Developer ID / App Store) 서명 Archive에서 VLC dylib의 `dlopen`이 통과하는지는 아직 모른다. 사용자의 Apple ID가 필요해서 진행하지 못했다.
+  - **샌드박스 자체는 통과했다(2026-08-24).** Release 구성(`ENABLE_APP_SANDBOX: YES`, `Glaze.entitlements`)으로 빌드해 팀 서명(`JBN99YZ7KN`)이 붙은 번들이 MKV를 VLC로 재생하는 것까지 확인했다. 헬퍼(`ffmpeg`/`ffprobe`)에도 `com.apple.security.inherit`가 정상적으로 붙는다. 남은 미지수는 배포용 인증서로 다시 서명했을 때뿐이다.
 - 그림 자막(PGS·VobSub)은 감지만 하고 읽지 못한다. OCR 미지원.
