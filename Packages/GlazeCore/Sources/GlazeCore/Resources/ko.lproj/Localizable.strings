@@ -232,3 +232,7 @@
 "help.subtitle.size" = "노트북을 가까이서 볼 때와 큰 화면을 멀리서 볼 때 필요한 크기가 다릅니다. 재생 중에 바꾸면 바로 반영됩니다.";
 "help.subtitle.position" = "영상에 자막이 이미 새겨져 있거나 화면 아래에 글자가 있으면 겹칠 수 있습니다. 그럴 때 위치를 올리거나 위쪽으로 보내세요.";
 "help.subtitle.background" = "반투명 판은 밝은 장면에서도 글자가 묻히지 않게 해줍니다. 화면을 가리는 것이 싫다면 배경 없이 그림자만 쓸 수 있습니다.";
+
+"tv.playback.unsupported.title" = "이 영상은 Apple TV에서 재생할 수 없습니다";
+"tv.playback.unsupported.detail_format" = "%@ 형식은 Apple TV가 직접 재생하지 못합니다. Mac에서 이 영상을 준비하면 Apple TV에서 볼 수 있습니다.";
+"tv.playback.unsupported.detail_generic" = "Apple TV가 이 파일 형식을 직접 재생하지 못합니다. Mac에서 이 영상을 준비하면 Apple TV에서 볼 수 있습니다.";

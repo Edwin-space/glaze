@@ -232,3 +232,7 @@
 "help.subtitle.size" = "A laptop at arm's length and a large screen across a room need different sizes. Changes apply while the film is playing.";
 "help.subtitle.position" = "Some films have signage or subtitles burned into the picture, right where a subtitle would land. Raise the text or move it to the top when that happens.";
 "help.subtitle.background" = "The translucent plate keeps text readable over bright scenes. Turn it off for shadow alone if you would rather see more of the picture.";
+
+"tv.playback.unsupported.title" = "Apple TV cannot play this video";
+"tv.playback.unsupported.detail_format" = "Apple TV cannot play %@ directly. Prepare this video on your Mac and it will play here.";
+"tv.playback.unsupported.detail_generic" = "Apple TV cannot play this file format directly. Prepare this video on your Mac and it will play here.";

@@ -1,14 +1,13 @@
 import Darwin
 import Foundation
-import GlazeCore
 
-actor UPnPMediaServerDiscoveryService: NetworkMediaServerDiscovering {
-    enum DiscoveryError: LocalizedError {
+public actor UPnPMediaServerDiscoveryService: NetworkMediaServerDiscovering {
+    public enum DiscoveryError: LocalizedError {
         case socketCreationFailed(Int32)
         case sendFailed(Int32)
         case receiveFailed(Int32)
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .socketCreationFailed(let code):
                 "Could not create the UPnP discovery socket (errno \(code))."
@@ -23,7 +22,7 @@ actor UPnPMediaServerDiscoveryService: NetworkMediaServerDiscovering {
     private let session: URLSession
     private let responseWait: TimeInterval
 
-    init(responseWait: TimeInterval = 2, session: URLSession? = nil) {
+    public init(responseWait: TimeInterval = 2, session: URLSession? = nil) {
         self.responseWait = responseWait
         if let session {
             self.session = session
@@ -35,7 +34,7 @@ actor UPnPMediaServerDiscoveryService: NetworkMediaServerDiscovering {
         }
     }
 
-    func discoverServers() async throws -> [NetworkMediaServer] {
+    public func discoverServers() async throws -> [NetworkMediaServer] {
         let responseWait = responseWait
         let packets = try await Task.detached(priority: .userInitiated) {
             try SSDPSocketSearch.search(responseWait: responseWait)
