@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.edwin
   deploymentTarget:
     macOS: "26.0"
+    tvOS: "18.0"
   createIntermediateGroups: true
 
 packages:
@@ -18,6 +19,9 @@ targets:
       - path: Sources/GlazeMac
     dependencies:
       - package: GlazeCore
+        product: GlazeCore
+      - package: GlazeCore
+        product: GlazeTranscription
     settings:
       base:
         PRODUCT_NAME: Glaze
@@ -44,11 +48,41 @@ targets:
           exec "$SRCROOT/script/xcode_vlc_stage.sh"
         basedOnDependencyAnalysis: false
 
+  GlazeTV:
+    type: application
+    platform: tvOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Sources/GlazeTV
+    dependencies:
+      - package: GlazeCore
+        product: GlazeCore
+    settings:
+      base:
+        PRODUCT_NAME: Glaze
+        PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze.tv
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Packaging/InfoTV.plist
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JBN99YZ7KN
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+
 schemes:
   GlazeMac:
     build:
       targets:
         GlazeMac: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+  GlazeTV:
+    build:
+      targets:
+        GlazeTV: all
     run:
       config: Debug
     archive:

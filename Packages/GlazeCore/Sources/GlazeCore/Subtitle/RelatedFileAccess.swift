@@ -58,6 +58,7 @@ public enum RelatedFileAccess {
         relatedTo primaryURL: URL?,
         _ body: (NSFileCoordinator, RelatedItemPresenter?) throws -> T
     ) throws -> T {
+        #if os(macOS)
         guard let primaryURL, primaryURL.standardizedFileURL != url.standardizedFileURL else {
             return try body(NSFileCoordinator(filePresenter: nil), nil)
         }
@@ -67,9 +68,16 @@ public enum RelatedFileAccess {
         defer { NSFileCoordinator.removeFilePresenter(presenter) }
 
         return try body(NSFileCoordinator(filePresenter: presenter), presenter)
+        #else
+        // Related items are a macOS sandbox mechanism; `primaryPresentedItemURL` does
+        // not exist elsewhere. On Apple TV the app reads what it downloaded into its
+        // own container, which needs no permission from anyone.
+        return try body(NSFileCoordinator(filePresenter: nil), nil)
+        #endif
     }
 }
 
+#if os(macOS)
 /// Names one file as belonging to another. The sandbox reads `primaryPresentedItemURL`
 /// to decide whether the app has any business touching `presentedItemURL`.
 final class RelatedItemPresenter: NSObject, NSFilePresenter, @unchecked Sendable {
@@ -84,3 +92,7 @@ final class RelatedItemPresenter: NSObject, NSFilePresenter, @unchecked Sendable
         presentedItemOperationQueue.maxConcurrentOperationCount = 1
     }
 }
+#else
+/// Not a presenter anywhere but macOS; the type exists so the signatures match.
+final class RelatedItemPresenter {}
+#endif

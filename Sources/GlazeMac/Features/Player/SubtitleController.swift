@@ -1,5 +1,6 @@
 import Foundation
 import GlazeCore
+import GlazeTranscription
 import Observation
 import Translation
 

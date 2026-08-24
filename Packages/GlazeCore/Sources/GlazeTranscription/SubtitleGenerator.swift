@@ -1,4 +1,5 @@
 import Foundation
+import GlazeCore
 import WhisperKit
 
 /// Generates subtitle cues for a single video by running on-device Whisper (via WhisperKit) over its audio track.

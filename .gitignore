@@ -39,3 +39,7 @@ Packages/GlazeCore/Package.resolved
 # The reference video every playback and subtitle test runs against. 1.7 GB, and
 # `git add -A` would happily commit it.
 test file/
+
+# tvOS build output from the xcodebuild invocations in script/, alongside dist/.
+dist/DerivedDataTV/
+dist/tvbuild/
