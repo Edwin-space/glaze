@@ -12,6 +12,17 @@ public enum MediaResource: Equatable, Hashable, Sendable {
             resource.playbackURL
         }
     }
+
+    /// The file on this Mac, when there is one. A streamed video has no folder to read
+    /// subtitles from or write them into, and no sandbox permission to inherit.
+    public var localFileURL: URL? {
+        switch self {
+        case .localFile(let url):
+            url
+        case .network:
+            nil
+        }
+    }
 }
 
 public struct NetworkMediaResource: Equatable, Hashable, Sendable {

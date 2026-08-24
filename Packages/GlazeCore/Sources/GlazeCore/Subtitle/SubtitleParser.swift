@@ -7,13 +7,16 @@ public enum SubtitleParser: Sendable {
         case emptySubtitle
     }
 
-    public static func parse(url: URL) throws -> [SubtitleCue] {
+    /// - Parameter relatedTo: the video this subtitle sits beside. Required under the
+    ///   App Sandbox, where reading a sidecar is only permitted as a related item of a
+    ///   video the viewer opened — see `RelatedFileAccess`.
+    public static func parse(url: URL, relatedTo videoURL: URL? = nil) throws -> [SubtitleCue] {
         let fileExtension = url.pathExtension.lowercased()
         guard supportedExtensions.contains(fileExtension) else {
             throw ParseError.unsupportedFormat
         }
 
-        let content = try readTextFile(url: url)
+        let content = try readTextFile(url: url, relatedTo: videoURL)
 
         let cues = switch fileExtension {
         case "srt", "vtt":
@@ -31,9 +34,15 @@ public enum SubtitleParser: Sendable {
         return cues
     }
 
-    private static func readTextFile(url: URL) throws -> String {
+    private static func readTextFile(url: URL, relatedTo videoURL: URL?) throws -> String {
+        guard let data = try? RelatedFileAccess.read(url, relatedTo: videoURL) else {
+            throw ParseError.unreadableFile
+        }
+
+        // Subtitles arrive in whatever encoding the person who made them used; Korean
+        // ones are still routinely CP949 rather than UTF-8.
         for encoding in textFileEncodings {
-            if let content = try? String(contentsOf: url, encoding: encoding) {
+            if let content = String(data: data, encoding: encoding) {
                 return content
             }
         }

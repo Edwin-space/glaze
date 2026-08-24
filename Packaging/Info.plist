@@ -29,6 +29,29 @@
 				<string>io.mpv.mkv</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>srt</string>
+				<string>vtt</string>
+				<string>smi</string>
+				<string>ass</string>
+				<string>ssa</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>Subtitle</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.plain-text</string>
+				<string>public.text</string>
+			</array>
+			<key>NSIsRelatedItemType</key>
+			<true/>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>Glaze</string>

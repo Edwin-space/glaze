@@ -166,7 +166,13 @@ final class SubtitleController {
         displayName: String? = nil
     ) {
         do {
-            subtitleCues = try SubtitleParser.parse(url: subtitle.url)
+            // The video is named so the App Sandbox will grant access to a subtitle
+            // sitting beside it; without that, sidecar subtitles cannot be read at all
+            // in the shipping build.
+            subtitleCues = try SubtitleParser.parse(
+                url: subtitle.url,
+                relatedTo: currentResource?.localFileURL
+            )
             selectedSubtitleName = subtitle.displayName
             selectedSubtitlePath = subtitle.url.path
             selectedEmbeddedTrackID = nil

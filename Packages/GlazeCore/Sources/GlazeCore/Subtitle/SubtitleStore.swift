@@ -78,10 +78,13 @@ public struct FileSubtitleStore: SubtitleStoring {
         let candidates = destinations(for: resource, kind: kind, preferring: location)
         guard !candidates.isEmpty else { throw SubtitleStoreError.noWritableLocation }
 
+        // Only a local file has a video for the sandbox to relate the write to.
+        let videoURL: URL? = if case .localFile(let url) = resource { url } else { nil }
+
         var lastError: Error?
         for destination in candidates {
             do {
-                try SubtitleWriter.writeSRT(cues: cues, to: destination)
+                try SubtitleWriter.writeSRT(cues: cues, to: destination, relatedTo: videoURL)
                 return destination
             } catch {
                 // Beside-the-video can fail on a read-only volume or a folder the
