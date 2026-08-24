@@ -172,4 +172,20 @@ Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze
 - ~~샌드박스에서 사이드카 자막을 읽지 못한다~~ **해결(2026-08-24).** `~/Movies`는 `com.apple.security.assets.movies.read-write`로, 그 밖의 폴더는 자막을 못 읽을 때만 한 번 묻는 security-scoped bookmark로 처리한다. related items 단독으로는 통하지 않았다(위 §3).
 - Distribution(Developer ID / App Store) 서명 Archive에서 VLC dylib의 `dlopen`이 통과하는지는 아직 모른다. 사용자의 Apple ID가 필요해서 진행하지 못했다.
   - **샌드박스 자체는 통과했다(2026-08-24).** Release 구성(`ENABLE_APP_SANDBOX: YES`, `Glaze.entitlements`)으로 빌드해 팀 서명(`JBN99YZ7KN`)이 붙은 번들이 MKV를 VLC로 재생하는 것까지 확인했다. 헬퍼(`ffmpeg`/`ffprobe`)에도 `com.apple.security.inherit`가 정상적으로 붙는다. 남은 미지수는 배포용 인증서로 다시 서명했을 때뿐이다.
-- 그림 자막(PGS·VobSub)은 감지만 하고 읽지 못한다. OCR 미지원.
+- 그림 자막(PGS·VobSub)은 감지만 하고 읽지 못한다. OCR 미지원 — MVP 제외 범위(`07_mvp_scope_and_decisions.md`)라 v1.0 결격 사항은 아니다.
+- 번들된 VLC 플러그인 265개의 라이선스는 바이너리 증거로 정리했지만(`Tools/vlc/LICENSE-THIRD-PARTY.md`) 법률 검토는 받지 않았다. 출시 전 확인이 필요하다.
+
+## 9. v1.0 완료 판정 (2026-08-24)
+
+`07_mvp_scope_and_decisions.md`의 MVP 포함 범위 6개 항목을 출시 구성(Release · 샌드박스 · 팀 서명)에서 `test file/testmedia.mkv`로 확인했다.
+
+| MVP 항목 | 상태 |
+|---|---|
+| 1. macOS 네이티브 앱 | 충족 — SwiftUI, Apple Silicon, 한/영, 설정 창 |
+| 2. 기본 영상 플레이어 | 충족 — 열기·재생·탐색·전체화면·볼륨·현재 파일 |
+| 3. 외부 자막 로딩 | 충족 — SRT·VTT·SMI, 표시/숨김, 크기·위치·배경 |
+| 4. AI 자막 생성 | 충족 — MKV 포함, 컨테이너 음성 언어 사용 |
+| 5. 한국어 번역 자막 | 충족 — 번역만·원문+번역, 시스템 번역과 온디바이스 AI |
+| 6. 자막 저장/재사용 | 충족 — 영상 옆/앱 내부 선택, 재열림 시 자동 연결 |
+
+미해결로 남은 두 가지는 코드 문제가 아니다. 배포 인증서 재서명은 Apple ID가 필요하고, VLC 라이선스는 법률 검토가 필요하다.
