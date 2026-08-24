@@ -514,6 +514,21 @@ struct PlayerView: View {
                 .glazeGlassRow()
             }
 
+            if subtitles.needsFolderAccess, let videoURL = playback.currentVideoURL {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        issueLabel(
+                            titleKey: "subtitle.folder_access.title",
+                            message: L10n.string("subtitle.folder_access.detail")
+                        )
+                        Button(L10n.string("subtitle.folder_access.action")) {
+                            subtitles.requestFolderAccess(for: videoURL)
+                        }
+                    }
+                }
+                .glazeGlassRow()
+            }
+
             if let errorMessage = subtitles.errorMessage {
                 Section { issueLabel(titleKey: "subtitle.error.title", message: errorMessage) }
                     .glazeGlassRow()

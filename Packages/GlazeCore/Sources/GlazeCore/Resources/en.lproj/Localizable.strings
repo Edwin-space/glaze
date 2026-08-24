@@ -208,3 +208,9 @@
 "settings.section.generation" = "Making subtitles";
 "settings.section.storage" = "Saving";
 "settings.section.translation" = "Translation";
+
+"subtitle.folder_access.title" = "Glaze needs access to this folder";
+"subtitle.folder_access.detail" = "There is a subtitle next to the video, but macOS is blocking Glaze from reading it. Allow this folder once and you will not be asked again.";
+"subtitle.folder_access.action" = "Allow this folder";
+"subtitle.folder_access.panel_message" = "Choose “%@” so Glaze can read the subtitles in it.";
+"subtitle.folder_access.panel_prompt" = "Allow";

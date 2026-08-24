@@ -208,3 +208,9 @@
 "settings.section.generation" = "자막 만들기";
 "settings.section.storage" = "저장";
 "settings.section.translation" = "번역";
+
+"subtitle.folder_access.title" = "폴더 권한이 필요합니다";
+"subtitle.folder_access.detail" = "영상 옆에 자막이 있지만 macOS가 읽는 것을 막고 있습니다. 이 폴더를 한 번 허용하면 다음부터는 묻지 않습니다.";
+"subtitle.folder_access.action" = "이 폴더 허용";
+"subtitle.folder_access.panel_message" = "‘%@’ 폴더의 자막을 읽을 수 있도록 이 폴더를 선택해 주세요.";
+"subtitle.folder_access.panel_prompt" = "허용";

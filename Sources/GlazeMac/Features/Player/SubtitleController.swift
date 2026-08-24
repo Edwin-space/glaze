@@ -20,6 +20,11 @@ final class SubtitleController {
     var subtitlePreparationPlan: SubtitlePreparationPlan?
     var pendingTranslationRequest: SubtitleTranslationRequest?
 
+    /// Set when a subtitle sits next to the film but the sandbox will not let Glaze
+    /// read it. The panel offers to ask for the folder rather than leaving the viewer
+    /// with an error that reads like a corrupt file.
+    private(set) var needsFolderAccess = false
+
     /// What the container says the film is spoken in. nil when it says nothing, and
     /// transcription falls back to letting Whisper decide.
     private(set) var spokenLanguageCode: String?
@@ -90,6 +95,10 @@ final class SubtitleController {
     func prepareForNewVideo(url: URL) {
         embeddedSubtitleTask?.cancel()
         cancelTranslating()
+        needsFolderAccess = false
+        // Reopen a folder the viewer already allowed, before looking for subtitles in
+        // it — under the sandbox the search itself comes up empty otherwise.
+        SubtitleFolderAccess.restoreAccess(toFolderOf: url)
         detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
         embeddedSubtitleTracks = []
         subtitleCues = []
@@ -185,6 +194,7 @@ final class SubtitleController {
             isSubtitleVisible = true
             status = computeStatus(for: detectedSubtitles)
             errorMessage = nil
+            needsFolderAccess = false
             offerTranslation(
                 displayName: displayName ?? subtitle.displayName,
                 sourceLanguageCode: sourceLanguageCode ?? subtitle.languageCode
@@ -196,7 +206,11 @@ final class SubtitleController {
             selectedEmbeddedTrackID = nil
             activeSubtitleText = ""
             status = computeStatus(for: detectedSubtitles)
-            errorMessage = subtitleErrorMessage(for: error)
+            // A file that is on disk but unreadable is almost always the sandbox
+            // refusing a folder, not a damaged subtitle.
+            let existsButUnreadable = FileManager.default.fileExists(atPath: subtitle.url.path)
+            needsFolderAccess = existsButUnreadable && !SubtitleFolderAccess.hasAccess(toFolderOf: subtitle.url)
+            errorMessage = needsFolderAccess ? nil : subtitleErrorMessage(for: error)
             pendingTranslationRequest = nil
         }
     }
@@ -697,6 +711,15 @@ final class SubtitleController {
         }
 
         return .subtitleDetected
+    }
+
+    /// Asks for the folder, then retries whatever failed to load.
+    func requestFolderAccess(for videoURL: URL) {
+        guard SubtitleFolderAccess.requestAccess(toFolderOf: videoURL) else { return }
+
+        needsFolderAccess = false
+        detectedSubtitles = SubtitleSidecarDetector.detect(for: videoURL)
+        loadPreferredIfAvailable()
     }
 
     /// What to show for "영상 언어": the language the container declares, or a note

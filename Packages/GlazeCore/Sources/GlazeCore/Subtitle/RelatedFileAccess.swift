@@ -2,24 +2,21 @@ import Foundation
 
 /// One place where subtitle files are read and written.
 ///
-/// It exists because of a defect that is still open: under the App Sandbox, opening a
-/// film grants access to that one file, and the `.srt` beside it — the entire premise
-/// of sidecar subtitles — cannot be read. Every automatic subtitle load fails in the
-/// configuration that ships. The unsandboxed Debug build never sees it.
+/// Under the App Sandbox, opening a film grants access to that one file — not the
+/// `.srt` beside it, which is how sidecar subtitles have always worked. Reading it is
+/// refused, and the unsandboxed Debug build never sees the problem.
 ///
-/// The obvious remedy was *related items*, the mechanism macOS documents for exactly
-/// this: declare the subtitle types with `NSIsRelatedItemType` in `Info.plist` and
-/// reach the file through `NSFileCoordinator` with a presenter naming the video as its
-/// primary item. That is what this type does, and **it is not sufficient** — measured
-/// against a signed, sandboxed Release build, the read still fails, both for
-/// `film.en.srt` and for `film.srt`, which matches the video's base name exactly.
+/// Three things together make it work, and each covers what the others miss:
 ///
-/// What is known to work is a security-scoped bookmark for the containing folder,
-/// asked for once through an open panel and kept. That is a change to what the viewer
-/// sees, not just to plumbing, so it has not been made here yet. This type is where it
-/// goes when it is: both the read and the write already funnel through it.
-///
-/// See `docs/19_engineering_guardrails.md` §8.
+/// 1. `com.apple.security.assets.movies.read-write` opens `~/Movies` with nothing to
+///    ask. Films kept there — the default place — just work.
+/// 2. `SubtitleFolderAccess` asks for any other folder once and keeps the grant, which
+///    is what covers the Desktop, an external drive, and the mounted NAS share this
+///    product is headed toward.
+/// 3. The file coordination here, which declares the subtitle a related item of the
+///    video. On its own it is *not* sufficient — measured against a signed, sandboxed
+///    build, the read still failed — but it is correct, cheap, and the right thing to
+///    be doing when a coordinated write lands beside a file another process holds.
 public enum RelatedFileAccess {
     /// - Parameter primaryURL: the video the file belongs to. nil skips coordination,
     ///   for files the app reached some other way — its own library, or one the viewer

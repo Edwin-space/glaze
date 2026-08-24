@@ -169,10 +169,7 @@ Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze
 
 작업 전에 상태를 확인해야 하는 항목이다.
 
-- **샌드박스 Release 빌드에서 사이드카 자막을 읽지 못한다. v1.0 출시 차단 사항이다.**
-  - 확인 방법: Release로 빌드해 `~/Movies` 아래 영상을 열면 자막 패널에 "자막 문제 — 자막 파일을 읽을 수 없습니다"가 뜬다. Debug에서는 정상이므로 반드시 Release로 확인해야 한다.
-  - related items 방식은 시도했고 통하지 않는 것으로 확인했다(위 §3).
-  - 다음 수순: 영상을 열 때 그 폴더에 대한 security-scoped bookmark를 확보한다. 열기 패널로 폴더를 고르게 하면 권한이 함께 오므로, "영상 열기"를 파일이 아니라 폴더 선택으로 바꾸는 방안과 자막을 못 읽을 때만 한 번 묻는 방안을 비교해야 한다.
+- ~~샌드박스에서 사이드카 자막을 읽지 못한다~~ **해결(2026-08-24).** `~/Movies`는 `com.apple.security.assets.movies.read-write`로, 그 밖의 폴더는 자막을 못 읽을 때만 한 번 묻는 security-scoped bookmark로 처리한다. related items 단독으로는 통하지 않았다(위 §3).
 - Distribution(Developer ID / App Store) 서명 Archive에서 VLC dylib의 `dlopen`이 통과하는지는 아직 모른다. 사용자의 Apple ID가 필요해서 진행하지 못했다.
   - **샌드박스 자체는 통과했다(2026-08-24).** Release 구성(`ENABLE_APP_SANDBOX: YES`, `Glaze.entitlements`)으로 빌드해 팀 서명(`JBN99YZ7KN`)이 붙은 번들이 MKV를 VLC로 재생하는 것까지 확인했다. 헬퍼(`ffmpeg`/`ffprobe`)에도 `com.apple.security.inherit`가 정상적으로 붙는다. 남은 미지수는 배포용 인증서로 다시 서명했을 때뿐이다.
 - 그림 자막(PGS·VobSub)은 감지만 하고 읽지 못한다. OCR 미지원.
