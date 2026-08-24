@@ -526,10 +526,13 @@ final class SubtitleController {
         do {
             let extractedURL = try await embeddedSubtitleService.extract(track: track, from: videoURL)
             guard !Task.isCancelled else { return }
+
+            // Deliberately not added to `detectedSubtitles`. That list is the subtitle
+            // files the viewer has, and this is a scratch file in the cache named
+            // `film-5a30c983160fce93.embedded.fr.stream-2.srt`. Listing it put a hash
+            // in front of the viewer and showed the same subtitle twice, once as that
+            // and once as the embedded track it came from.
             let subtitle = SubtitleFile.manual(url: extractedURL)
-            if !detectedSubtitles.contains(where: { $0.url.path == subtitle.url.path }) {
-                detectedSubtitles.append(subtitle)
-            }
             load(
                 subtitle,
                 sourceLanguageCode: track.languageCode,
