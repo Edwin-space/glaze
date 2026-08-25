@@ -69,3 +69,34 @@ The remaining ~245 plugins not listed above are VLC-authored demuxers, format pa
 ## Disclaimer
 
 This classification is based on each plugin's own embedded license declaration, FFmpeg's own embedded build configuration, and VideoLAN's public relicensing statements — not a legal opinion. Recommend a licensing/legal review pass before actual App Store submission, particularly for `liba52_plugin` and `liblive555_plugin` (flagged above) and for confirming no plugin update since this pass (2026-08-10) reintroduced a GPL dependency.
+
+## Apple TV (VLCKit) — 2026-08-24
+
+tvOS 앱은 `dlopen`을 쓸 수 없어 macOS와 달리 VideoLAN 공식 **VLCKit**(LGPL-2.1 이상)을 정적 링크한다. 배포되는 바이너리는 `tvos-arm64` 슬라이스 하나(42MB)다.
+
+macOS에서 플러그인 폴더를 직접 추려낸 것과 달리 미리 빌드된 xcframework는 손댈 수 없으므로, 대신 무엇이 들어 있는지 바이너리에서 확인했다.
+
+**VideoLAN의 빌드 설정이 바이너리에 그대로 남아 있다.** GPL 전용 모듈이 명시적으로 비활성화되어 있다:
+
+```
+--disable-goom --disable-dvdread --disable-dvdnav --disable-bluray
+--disable-gme --disable-mad --disable-lua --disable-qt
+```
+
+**심볼 확인 결과 GPL 전용 코드가 링크되어 있지 않다.**
+
+| 모듈 | 라이선스 | 심볼 |
+|---|---|---|
+| x264 (`x264_encoder_open`) | GPL | 없음 |
+| x265 (`x265_encoder_open`) | GPL | 없음 |
+| dvdnav (`dvdnav_open`) | GPL | 없음 |
+| libmad (`mad_decoder_init`) | GPL | 없음 |
+| faad (`NeAACDecInit`) | GPL | 없음 |
+| libpostproc (`pp_get_context`) | GPL | 없음 |
+| goom | GPL | 없음 |
+
+`postproc` 문자열이 검색되지만 실제 심볼은 mpg123(`INT123_postprocess_buffer`, LGPL), HarfBuzz(아랍어 셰이핑, MIT), OpenJPEG(BSD)의 것으로 libpostproc과 무관하다. `x264`/`x265` 문자열도 FourCC 매핑 표의 항목이며 인코더 코드가 아니다.
+
+`--enable-` 로 켜진 항목은 `--enable-static` 하나뿐이다.
+
+**여전히 법률 검토 대상이다.** 위는 바이너리 증거이지 법률 자문이 아니다. LGPL이 요구하는 고지·재링크 가능성 조건을 App Store 배포에서 어떻게 충족할지는 별도 판단이 필요하다.

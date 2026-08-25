@@ -9,6 +9,13 @@ options:
 packages:
   GlazeCore:
     path: Packages/GlazeCore
+  # Official VideoLAN binding, statically linked. Apple TV forbids dlopen, so the
+  # runtime-loaded libvlc the Mac app uses cannot come along; this is the supported
+  # way to play the same formats there. Pinned to an exact tag because 4.0 is still
+  # an alpha series and the package points at a dated build of the xcframework.
+  VLCKit:
+    url: https://github.com/videolan/vlckit
+    exactVersion: 4.0.0-a23
 
 targets:
   GlazeMac:
@@ -57,6 +64,8 @@ targets:
     dependencies:
       - package: GlazeCore
         product: GlazeCore
+      - package: VLCKit
+        product: VLCKit
     settings:
       base:
         PRODUCT_NAME: Glaze

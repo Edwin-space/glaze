@@ -34,7 +34,7 @@
 "network.browser.close" = "닫기";
 "network.browser.discovering" = "미디어 서버를 찾는 중입니다";
 "network.browser.empty" = "미디어 서버를 찾지 못했습니다";
-"network.browser.empty_hint" = "NAS의 DLNA/UPnP 미디어 서버가 켜져 있고 Mac과 같은 네트워크인지 확인하세요.";
+"network.browser.empty_hint" = "NAS의 DLNA/UPnP 미디어 서버가 켜져 있고 같은 네트워크에 연결되어 있는지 확인하세요.";
 "network.browser.error" = "네트워크 미디어를 불러오지 못했습니다";
 "network.browser.folder_empty" = "이 폴더에 재생 가능한 영상이 없습니다";
 "network.browser.loading" = "폴더를 불러오는 중입니다";
@@ -236,3 +236,6 @@
 "tv.playback.unsupported.title" = "이 영상은 Apple TV에서 재생할 수 없습니다";
 "tv.playback.unsupported.detail_format" = "%@ 형식은 Apple TV가 직접 재생하지 못합니다. Mac에서 이 영상을 준비하면 Apple TV에서 볼 수 있습니다.";
 "tv.playback.unsupported.detail_generic" = "Apple TV가 이 파일 형식을 직접 재생하지 못합니다. Mac에서 이 영상을 준비하면 Apple TV에서 볼 수 있습니다.";
+
+"tv.playback.failed.title" = "재생할 수 없습니다";
+"tv.playback.failed.detail" = "NAS에서 이 영상을 불러오지 못했습니다. 서버가 켜져 있고 같은 네트워크인지 확인하세요.";

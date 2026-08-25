@@ -1,59 +1,94 @@
-import AVKit
 import GlazeCore
 import SwiftUI
 
-/// Plays one video from the NAS.
+/// Watching one film, from the sofa.
 ///
-/// AVKit brings the transport, the scrubber, and the remote gestures people already
-/// know from every other Apple TV app, so none of that is rebuilt here. What this adds
-/// is telling the viewer when the file cannot be played at all — AVFoundation refuses
-/// Matroska outright, and a NAS library is full of it. A black screen with a spinner
-/// reads as a broken app; naming the format reads as a limit.
+/// The controls are deliberately sparse. On a remote with no pointer, every extra
+/// affordance is another thing to arrow past, so this is play/pause, skip, and a
+/// progress line — the same vocabulary every other Apple TV app uses.
 struct TVPlayerView: View {
     let resource: NetworkMediaResource
+    let title: String
 
     @Environment(\.dismiss) private var dismiss
-    @State private var player: AVPlayer?
-    @State private var failure: String?
+    @State private var model = TVPlaybackModel()
+    @State private var areControlsVisible = true
+    @State private var hideTask: Task<Void, Never>?
 
     var body: some View {
-        Group {
-            if let failure {
-                unplayable(failure)
-            } else if let player {
-                VideoPlayer(player: player)
-                    .ignoresSafeArea()
-            } else {
-                ProgressView().controlSize(.large)
+        ZStack {
+            Color.black.ignoresSafeArea()
+            TVVideoSurface(player: model.player).ignoresSafeArea()
+
+            if model.hasFailed {
+                failure
+            } else if areControlsVisible {
+                controls.transition(.opacity)
             }
         }
-        .task { await start() }
-        .onDisappear { player?.pause() }
-    }
-
-    private func start() async {
-        let asset = AVURLAsset(url: resource.playbackURL)
-
-        // Ask before playing rather than after failing. `isPlayable` is false for a
-        // container AVFoundation will not open, which is the common case here.
-        let playable = (try? await asset.load(.isPlayable)) ?? false
-        guard playable else {
-            failure = TVPlaybackSupport.describeUnsupported(resource)
-            return
+        // Without this the view receives nothing from the remote. tvOS delivers
+        // play/pause and arrow presses to the focused view, and a ZStack of video and
+        // an overlay that hides itself has nothing focusable in it — the first version
+        // looked like it worked only because the film kept playing under the
+        // screenshots.
+        .focusable()
+        .onAppear {
+            model.start(resource)
+            scheduleHide()
         }
-
-        player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-        player?.play()
+        .onDisappear {
+            hideTask?.cancel()
+            model.stop()
+        }
+        .onExitCommand { dismiss() }
+        // The remote's play/pause button, and a click on the touch surface.
+        .onPlayPauseCommand { toggle() }
+        .onMoveCommand { direction in
+            reveal()
+            switch direction {
+            case .left: model.skip(-TVPlaybackModel.skipInterval)
+            case .right: model.skip(TVPlaybackModel.skipInterval)
+            default: break
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: areControlsVisible)
     }
 
-    private func unplayable(_ message: String) -> some View {
+    private var controls: some View {
+        VStack {
+            Spacer()
+            VStack(alignment: .leading, spacing: 16) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+                    .tint(.white)
+
+                HStack {
+                    Text(timecode(model.currentTime))
+                    Spacer()
+                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                    Spacer()
+                    Text(timecode(model.duration))
+                }
+                .font(.callout.monospacedDigit())
+                .foregroundStyle(.secondary)
+            }
+            .padding(40)
+            .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .padding(60)
+        }
+    }
+
+    private var failure: some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text(L10n.string("tv.playback.unsupported.title"))
-                .font(.title2)
-            Text(message)
+            Text(L10n.string("tv.playback.failed.title")).font(.title2)
+            Text(L10n.string("tv.playback.failed.detail"))
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -62,18 +97,40 @@ struct TVPlayerView: View {
                 .padding(.top, 12)
         }
     }
-}
 
-enum TVPlaybackSupport {
-    /// Names the format when the server told us what it is, so the viewer knows which
-    /// of their files this applies to rather than guessing.
-    static func describeUnsupported(_ resource: NetworkMediaResource) -> String {
-        let name = resource.mimeType?
-            .split(separator: "/").last
-            .map(String.init)?
-            .uppercased()
+    private var progress: Double {
+        guard model.duration > 0 else { return 0 }
+        return min(1, model.currentTime / model.duration)
+    }
 
-        guard let name else { return L10n.string("tv.playback.unsupported.detail_generic") }
-        return String(format: L10n.string("tv.playback.unsupported.detail_format"), name)
+    private func toggle() {
+        model.togglePlayPause()
+        reveal()
+    }
+
+    private func reveal() {
+        areControlsVisible = true
+        scheduleHide()
+    }
+
+    /// Controls get out of the way on their own; there is no cursor to move away.
+    private func scheduleHide() {
+        hideTask?.cancel()
+        hideTask = Task {
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            areControlsVisible = false
+        }
+    }
+
+    private func timecode(_ seconds: TimeInterval) -> String {
+        guard seconds.isFinite, seconds >= 0 else { return "--:--" }
+        let total = Int(seconds)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let secs = total % 60
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, secs)
+            : String(format: "%d:%02d", minutes, secs)
     }
 }

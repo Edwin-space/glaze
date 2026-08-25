@@ -8,7 +8,7 @@ import SwiftUI
 /// focusable row big enough to read from the sofa and reachable with a d-pad.
 struct TVLibraryView: View {
     @State private var model = NetworkMediaBrowserModel()
-    @State private var playing: NetworkMediaResource?
+    @State private var playing: PlayableItem?
 
     var body: some View {
         NavigationStack {
@@ -16,8 +16,8 @@ struct TVLibraryView: View {
                 .navigationTitle(model.navigationTitle)
         }
         .task { await model.discoverIfNeeded() }
-        .fullScreenCover(item: $playing) { resource in
-            TVPlayerView(resource: resource)
+        .fullScreenCover(item: $playing) { item in
+            TVPlayerView(resource: item.resource, title: item.title)
         }
         .onExitCommand { model.navigateBack() }
     }
@@ -90,7 +90,7 @@ struct TVLibraryView: View {
             }
         case .video(let resource):
             Button {
-                playing = resource
+                playing = PlayableItem(resource: resource, title: node.title)
             } label: {
                 Label(node.title, systemImage: "play.rectangle")
             }
@@ -123,6 +123,11 @@ struct TVLibraryView: View {
     }
 }
 
-extension NetworkMediaResource: @retroactive Identifiable {
-    public var id: String { "\(serverID)#\(objectID)" }
+/// Carries the title alongside the resource: DLNA playback URLs are opaque ids like
+/// `80.mkv`, so the name the server listed is the only thing worth showing.
+struct PlayableItem: Identifiable {
+    let resource: NetworkMediaResource
+    let title: String
+
+    var id: String { "\(resource.serverID)#\(resource.objectID)" }
 }

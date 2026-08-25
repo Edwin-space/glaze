@@ -34,7 +34,7 @@
 "network.browser.close" = "Close";
 "network.browser.discovering" = "Looking for media servers";
 "network.browser.empty" = "No media servers found";
-"network.browser.empty_hint" = "Check that your NAS DLNA/UPnP media server is enabled and on the same network as this Mac.";
+"network.browser.empty_hint" = "Check that the DLNA or UPnP media server on your NAS is switched on and connected to the same network.";
 "network.browser.error" = "Couldn’t load network media";
 "network.browser.folder_empty" = "No playable videos in this folder";
 "network.browser.loading" = "Loading folder";
@@ -236,3 +236,6 @@
 "tv.playback.unsupported.title" = "Apple TV cannot play this video";
 "tv.playback.unsupported.detail_format" = "Apple TV cannot play %@ directly. Prepare this video on your Mac and it will play here.";
 "tv.playback.unsupported.detail_generic" = "Apple TV cannot play this file format directly. Prepare this video on your Mac and it will play here.";
+
+"tv.playback.failed.title" = "Cannot play this video";
+"tv.playback.failed.detail" = "Glaze could not load this video from the NAS. Check that the server is on and on the same network.";
