@@ -248,3 +248,20 @@
 "tv.home.recent" = "최근 추가";
 "tv.home.folders" = "폴더";
 "tv.home.videos" = "영상";
+
+"metadata.panel.section" = "작품 정보";
+"metadata.panel.action" = "작품 정보 가져오기";
+"metadata.panel.searching" = "찾는 중입니다";
+"metadata.panel.choose" = "어느 작품인가요?";
+"metadata.panel.writing" = "저장하는 중입니다";
+"metadata.panel.written_format" = "영상 옆에 저장했습니다 (%d개 파일)";
+"metadata.error.no_key" = "TMDB API 키가 설정되어 있지 않습니다. 설정 > 작품 정보에서 입력하세요.";
+"metadata.error.not_found" = "이 이름으로는 작품을 찾지 못했습니다.";
+"metadata.error.rate_limited" = "요청이 너무 잦습니다. 잠시 후 다시 시도하세요.";
+"metadata.error.network" = "작품 정보를 가져오지 못했습니다.";
+"metadata.error.write_failed" = "영상 옆에 저장하지 못했습니다. 폴더 권한을 확인하세요.";
+"metadata.attribution" = "작품 정보 제공: TMDB";
+"settings.tab.metadata" = "작품 정보";
+"settings.section.metadata" = "TMDB";
+"metadata.settings.key" = "API 키";
+"help.metadata.key" = "포스터와 줄거리는 TMDB(themoviedb.org)에서 가져옵니다. 무료 계정에서 API 키를 발급받아 여기에 붙여 넣으세요. 키가 없으면 작품 정보 기능만 동작하지 않고 나머지는 그대로 쓸 수 있습니다.";

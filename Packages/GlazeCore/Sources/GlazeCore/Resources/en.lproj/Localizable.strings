@@ -248,3 +248,20 @@
 "tv.home.recent" = "Recently added";
 "tv.home.folders" = "Folders";
 "tv.home.videos" = "Videos";
+
+"metadata.panel.section" = "Film information";
+"metadata.panel.action" = "Look up this film";
+"metadata.panel.searching" = "Searching";
+"metadata.panel.choose" = "Which film is this?";
+"metadata.panel.writing" = "Saving";
+"metadata.panel.written_format" = "Saved beside the video (%d files)";
+"metadata.error.no_key" = "No TMDB API key is set. Enter one in Settings > Film information.";
+"metadata.error.not_found" = "Nothing matched this name.";
+"metadata.error.rate_limited" = "Too many requests. Try again shortly.";
+"metadata.error.network" = "Could not fetch film information.";
+"metadata.error.write_failed" = "Could not save beside the video. Check the folder permission.";
+"metadata.attribution" = "Film information from TMDB";
+"settings.tab.metadata" = "Film information";
+"settings.section.metadata" = "TMDB";
+"metadata.settings.key" = "API key";
+"help.metadata.key" = "Posters and plots come from TMDB (themoviedb.org). Create a free account, generate an API key, and paste it here. Without a key only this feature stops working; everything else is unaffected.";

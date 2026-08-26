@@ -24,6 +24,7 @@ final class GlazePreferences {
         static let textSize = "subtitle.textSize"
         static let position = "subtitle.position"
         static let background = "subtitle.background"
+        static let tmdbAPIKey = "metadata.tmdbAPIKey"
     }
 
     /// Which Whisper model transcription runs on.
@@ -65,6 +66,13 @@ final class GlazePreferences {
         didSet { store(background.rawValue, Key.background) }
     }
 
+    /// The viewer's own TMDB key. Not shipped with the app: the terms around
+    /// commercial use of a bundled key are unsettled (`docs/23`), and a key someone
+    /// created themselves is unambiguous.
+    var tmdbAPIKey: String {
+        didSet { store(tmdbAPIKey, Key.tmdbAPIKey) }
+    }
+
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -77,6 +85,7 @@ final class GlazePreferences {
         textSize = Self.read(defaults, Key.textSize) ?? .default
         position = Self.read(defaults, Key.position) ?? .default
         background = Self.read(defaults, Key.background) ?? .default
+        tmdbAPIKey = defaults.string(forKey: Key.tmdbAPIKey) ?? ""
     }
 
     private static func read<T: RawRepresentable>(_ defaults: UserDefaults, _ key: String) -> T?

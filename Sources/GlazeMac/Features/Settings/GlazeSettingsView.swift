@@ -20,6 +20,9 @@ struct GlazeSettingsView: View {
 
             appearanceSettings
                 .tabItem { Label(L10n.string("settings.tab.appearance"), systemImage: "textformat.size") }
+
+            metadataSettings
+                .tabItem { Label(L10n.string("settings.tab.metadata"), systemImage: "film") }
         }
         .frame(width: 480)
     }
@@ -93,6 +96,30 @@ struct GlazeSettingsView: View {
                 }
             } header: {
                 Text(L10n.string("settings.section.appearance"))
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    /// Where the viewer's own TMDB key goes.
+    private var metadataSettings: some View {
+        Form {
+            Section {
+                LabeledContent {
+                    TextField("", text: $preferences.tmdbAPIKey)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 320)
+                } label: {
+                    GlazeHelpLabel("metadata.settings.key", help: "help.metadata.key")
+                }
+
+                Link(
+                    L10n.string("metadata.attribution"),
+                    destination: URL(string: "https://www.themoviedb.org")!
+                )
+                .font(.caption)
+            } header: {
+                Text(L10n.string("settings.section.metadata"))
             }
         }
         .formStyle(.grouped)

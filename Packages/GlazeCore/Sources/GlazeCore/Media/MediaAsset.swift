@@ -74,7 +74,7 @@ public struct MediaMetadata: Sendable {
     public var matchStatus: MetadataMatchStatus
 }
 
-public struct MediaExternalIDs: Sendable {
+public struct MediaExternalIDs: Equatable, Codable, Sendable {
     public var imdbID: String?
     public var tmdbID: String?
     public var tvdbID: String?

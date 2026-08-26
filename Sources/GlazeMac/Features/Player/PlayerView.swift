@@ -9,6 +9,7 @@ struct PlayerView: View {
     @State private var playlistStore = PlaylistStore()
     @State private var subtitles = SubtitleController()
     @State private var mediaAssets = MediaAssetStore()
+    @State private var metadata = MetadataController()
     @State private var preferences = GlazePreferences.shared
 
     @State private var activePanel: PlayerPanel?
@@ -831,6 +832,18 @@ struct PlayerView: View {
             }
             .glazeGlassRow()
 
+            // Only for a file on this Mac: the sidecars are written next to the video,
+            // and a streamed resource has no folder to write into.
+            if let videoURL = playback.currentVideoURL, videoURL.isFileURL {
+                Section {
+                    metadataSection(for: videoURL)
+                } header: {
+                    GlazeHelpLabel("metadata.panel.section", help: "help.metadata.key")
+                        .textCase(nil)
+                }
+                .glazeGlassRow()
+            }
+
             if let inspection = mediaAssets.mediaInspection, !inspection.tracks.isEmpty {
                 Section {
                     ForEach(inspection.tracks) { track in
@@ -1005,6 +1018,9 @@ struct PlayerView: View {
         source: MediaLibrarySource = .localFolder
     ) {
         playlistStore.setInitial(nextPlaylist)
+        // A match belongs to one film; carrying it to the next one would offer to write
+        // the wrong title beside it.
+        metadata.reset()
         let mediaResource = resource ?? .localFile(originalURL)
         playback.setCurrentResource(mediaResource)
         subtitles.currentResource = mediaResource
@@ -1048,6 +1064,99 @@ struct PlayerView: View {
         mediaAssets.markSubtitleExternallyLoaded()
         playback.errorMessage = nil
         activePanel = .subtitles
+    }
+
+    /// Looking a film up and writing what came back beside it.
+    ///
+    /// The candidates are shown rather than the top hit taken automatically. Release
+    /// names are ambiguous — a remake and its original differ by a year the filename
+    /// may have wrong — and a wrong match written next to the file is worse than none.
+    @ViewBuilder
+    private func metadataSection(for videoURL: URL) -> some View {
+        switch metadata.phase {
+        case .idle:
+            Button(L10n.string("metadata.panel.action")) {
+                Task { await metadata.lookUp(videoURL: videoURL, apiKey: preferences.tmdbAPIKey) }
+            }
+
+        case .searching:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text(L10n.string("metadata.panel.searching"))
+            }
+            .foregroundStyle(.secondary)
+
+        case .choosing(let matches):
+            VStack(alignment: .leading, spacing: 10) {
+                Text(L10n.string("metadata.panel.choose"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(matches, id: \.externalIDs.tmdbID) { match in
+                    Button {
+                        Task { await metadata.apply(match, to: videoURL) }
+                    } label: {
+                        candidateRow(match)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Text(L10n.string("metadata.attribution"))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+
+        case .writing:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text(L10n.string("metadata.panel.writing"))
+            }
+            .foregroundStyle(.secondary)
+
+        case .written(let files):
+            VStack(alignment: .leading, spacing: 6) {
+                Label(
+                    String(format: L10n.string("metadata.panel.written_format"), files.count),
+                    systemImage: "checkmark.circle"
+                )
+                ForEach(files, id: \.self) { file in
+                    Text(file.lastPathComponent)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: 8) {
+                issueLabel(titleKey: "metadata.panel.section", message: message)
+                Button(L10n.string("network.browser.retry")) { metadata.reset() }
+            }
+        }
+    }
+
+    private func candidateRow(_ match: MediaMetadataMatch) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(match.title).lineLimit(1)
+                    if let year = match.year {
+                        Text(String(year))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                // The original title is often the one the filename was built from, so
+                // it is what tells two similar candidates apart.
+                if let original = match.originalTitle, original != match.title {
+                    Text(original)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
     }
 
     private func avKitSupportText(for isPlayable: Bool?) -> String {
