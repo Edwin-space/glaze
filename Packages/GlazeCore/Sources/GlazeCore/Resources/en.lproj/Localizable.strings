@@ -265,3 +265,17 @@
 "settings.section.metadata" = "TMDB";
 "metadata.settings.key" = "API key";
 "help.metadata.key" = "Posters and plots come from TMDB (themoviedb.org). Create a free account, generate an API key, and paste it here. Without a key only this feature stops working; everything else is unaffected.";
+
+"webdav.error.unauthorized" = "That username or password was not accepted.";
+"webdav.error.not_found" = "That path could not be found.";
+"webdav.error.not_webdav" = "This address does not answer WebDAV. Check that WebDAV is switched on for your NAS and that the path is right.";
+"webdav.error.network" = "Could not reach the NAS.";
+"webdav.section.title" = "NAS (WebDAV)";
+"webdav.add" = "Add a NAS";
+"webdav.field.name" = "Name";
+"webdav.field.url" = "Address";
+"webdav.field.username" = "Username";
+"webdav.field.password" = "Password";
+"webdav.connect" = "Connect";
+"webdav.remove" = "Remove";
+"help.webdav.url" = "The WebDAV address of your NAS. On a Synology this is usually https://your-nas:5006/folder. Unlike DLNA it shows real filenames, which is what lets Glaze load the subtitles and artwork sitting beside a film.";

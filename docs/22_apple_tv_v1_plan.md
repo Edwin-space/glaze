@@ -75,3 +75,21 @@ NAS가 주는 것은 `Avatar.Fire.and.Ash.2025.2160p.HDR10Plus.DV.WEBRip.6CH.x26
 **커스텀 `ButtonStyle`은 버튼을 죽인다.** tvOS는 포커스된 버튼 뒤에 옅은 판을 그리는데, 카드 디자인에서는 뒤에 색 바랜 카드가 한 장 더 있는 것처럼 보인다. `.buttonStyle(.plain)`으로도 `.focusEffectDisabled()`로도 없어지지 않는다. 레이블만 반환하는 `ButtonStyle`을 만들면 판은 사라지지만 **버튼이 영영 안 눌린다** — 리모컨 선택이 무시되는 것과 구분되지 않는다. `.borderless`가 둘 다 해결한다.
 
 **`fullScreenCover`는 한 뷰에 하나만 동작한다.** 상세용과 재생용으로 두 개를 달았더니 두 번째가 조용히 뜨지 않았고, 이것도 선택 버튼이 안 먹는 것처럼 보였다. 단일 `Route` 열거형으로 합쳤다.
+
+## WebDAV (2026-08-26)
+
+DLNA는 탐색이 자동이라는 장점이 있지만 두 가지를 못 한다. 재생 URL이 불투명해서(`80.mkv`, `file.mkv`) **영상 옆에 무엇이 있는지 물어볼 수 없고**, 자막도 포스터도 노출하지 않는다. Plex와 Synology 양쪽에서 확인했다.
+
+WebDAV는 실제 경로를 준다. 폴더 목록 한 번이면 영상과 그 옆의 자막·포스터·`.nfo`가 한꺼번에 보인다.
+
+구현한 것:
+
+- `WebDAVPropfindParser` — `PROPFIND` 멀티스테이터스 응답. 네임스페이스 접두어는 서버마다 다르므로(`D:`, `d:`, `lp1:`) **로컬 이름으로만** 매칭한다. 접두어로 키를 잡으면 한 서버에서는 되고 다음 서버에서는 조용히 빈 목록이 된다.
+- `WebDAVClient` — `Depth: 1` 목록과 작은 파일 가져오기. 쓰기는 없다. Apple TV가 NAS를 고칠 이유가 없다.
+- `WebDAVCompanionFinder` — 영상 옆 파일 찾기. `film.ko.srt`와 `film-poster.jpg`는 `film.mkv`의 것이고 `film2.srt`는 아니다. 자막은 점, 아트워크는 하이픈으로 구분자가 다른 것이 관례라 둘 다 받는다.
+- `WebDAVCredentialStore` — 비밀번호는 **키체인**에 둔다. `UserDefaults`는 평문 파일이고, 연결 모델에 넣으면 환경설정으로 인코딩되어 새어 나간다.
+- `WebDAVBrowserModel` — `NetworkMediaBrowserModel`과 같은 모양. 같은 화면이 둘 다 굴린다.
+
+전부 `GlazeCore`에 있으므로 Mac과 Apple TV가 같은 코드를 쓴다. tvOS 컴파일도 확인했다.
+
+**실기 검증은 남았다.** NAS가 집에 있어 사무실에서는 확인할 수 없다. 확인할 것: Synology WebDAV 서버(기본 포트 5006/HTTPS)에 대한 `PROPFIND` 응답 형태, 한글 파일명의 퍼센트 인코딩, 큰 폴더에서의 응답 시간, HTTPS 인증서(자체 서명일 경우 처리).

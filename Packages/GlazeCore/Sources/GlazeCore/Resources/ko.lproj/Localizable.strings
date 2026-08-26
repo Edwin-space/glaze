@@ -265,3 +265,17 @@
 "settings.section.metadata" = "TMDB";
 "metadata.settings.key" = "API 키";
 "help.metadata.key" = "포스터와 줄거리는 TMDB(themoviedb.org)에서 가져옵니다. 무료 계정에서 API 키를 발급받아 여기에 붙여 넣으세요. 키가 없으면 작품 정보 기능만 동작하지 않고 나머지는 그대로 쓸 수 있습니다.";
+
+"webdav.error.unauthorized" = "아이디 또는 비밀번호가 맞지 않습니다.";
+"webdav.error.not_found" = "그 경로를 찾을 수 없습니다.";
+"webdav.error.not_webdav" = "이 주소는 WebDAV로 응답하지 않습니다. NAS에서 WebDAV 서버가 켜져 있는지, 경로가 맞는지 확인하세요.";
+"webdav.error.network" = "NAS에 연결하지 못했습니다.";
+"webdav.section.title" = "NAS (WebDAV)";
+"webdav.add" = "NAS 추가";
+"webdav.field.name" = "이름";
+"webdav.field.url" = "주소";
+"webdav.field.username" = "아이디";
+"webdav.field.password" = "비밀번호";
+"webdav.connect" = "연결";
+"webdav.remove" = "삭제";
+"help.webdav.url" = "NAS의 WebDAV 주소입니다. 시놀로지라면 대개 https://내NAS주소:5006/폴더이름 형태입니다. DLNA와 달리 실제 파일 이름이 보이기 때문에, 영상 옆에 있는 자막과 포스터를 그대로 불러올 수 있습니다.";
