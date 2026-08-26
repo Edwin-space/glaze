@@ -239,3 +239,12 @@
 
 "tv.playback.failed.title" = "Cannot play this video";
 "tv.playback.failed.detail" = "Glaze could not load this video from the NAS. Check that the server is on and on the same network.";
+
+"tv.detail.play" = "Play";
+"tv.detail.play_from_start" = "Play from start";
+"tv.detail.resume_format" = "Resume from %@";
+"tv.detail.minutes_format" = "%d min";
+"tv.home.continue" = "Continue watching";
+"tv.home.recent" = "Recently added";
+"tv.home.folders" = "Folders";
+"tv.home.videos" = "Videos";

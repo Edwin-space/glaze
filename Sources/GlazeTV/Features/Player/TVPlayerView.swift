@@ -9,6 +9,8 @@ import SwiftUI
 struct TVPlayerView: View {
     let resource: NetworkMediaResource
     let title: String
+    /// Where to start. Non-zero when the viewer chose to resume.
+    var startAt: TimeInterval = 0
 
     @Environment(\.dismiss) private var dismiss
     @State private var model = TVPlaybackModel()
@@ -33,11 +35,13 @@ struct TVPlayerView: View {
         // screenshots.
         .focusable()
         .onAppear {
-            model.start(resource)
+            model.start(resource, at: startAt)
             scheduleHide()
         }
         .onDisappear {
             hideTask?.cancel()
+            // Remember where they got to before tearing the player down.
+            model.rememberPosition(for: resource)
             model.stop()
         }
         .onExitCommand { dismiss() }

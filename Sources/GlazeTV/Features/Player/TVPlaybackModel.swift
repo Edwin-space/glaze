@@ -23,9 +23,14 @@ final class TVPlaybackModel {
     let player = VLCMediaPlayer()
     private var observer: PlayerObserver?
 
-    func start(_ resource: NetworkMediaResource) {
+    private let positions = PlaybackPositionStore()
+    /// Applied once the stream reports a length; asking to seek before then is ignored.
+    private var pendingSeek: TimeInterval?
+
+    func start(_ resource: NetworkMediaResource, at startAt: TimeInterval = 0) {
         let media = VLCMedia(url: resource.playbackURL)
         player.media = media
+        pendingSeek = startAt > 0 ? startAt : nil
 
         let observer = PlayerObserver(
             onState: { [weak self] state in
@@ -80,6 +85,19 @@ final class TVPlaybackModel {
         if let length = player.media?.length.intValue {
             duration = TimeInterval(length) / 1000
         }
+
+        // A stream has no length until it has been opened and read a little; seeking
+        // before that lands nowhere and is silently dropped.
+        if let pendingSeek, duration > 0 {
+            player.time = VLCTime(int: Int32(pendingSeek * 1000))
+            self.pendingSeek = nil
+        }
+    }
+
+    /// Stores where the viewer got to, so the shelf can offer to resume.
+    func rememberPosition(for resource: NetworkMediaResource) {
+        guard duration > 0 else { return }
+        positions.record(currentTime, duration: duration, for: .network(resource))
     }
 }
 

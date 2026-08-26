@@ -239,3 +239,12 @@
 
 "tv.playback.failed.title" = "재생할 수 없습니다";
 "tv.playback.failed.detail" = "NAS에서 이 영상을 불러오지 못했습니다. 서버가 켜져 있고 같은 네트워크인지 확인하세요.";
+
+"tv.detail.play" = "재생";
+"tv.detail.play_from_start" = "처음부터";
+"tv.detail.resume_format" = "%@부터 이어보기";
+"tv.detail.minutes_format" = "%d분";
+"tv.home.continue" = "이어보기";
+"tv.home.recent" = "최근 추가";
+"tv.home.folders" = "폴더";
+"tv.home.videos" = "영상";

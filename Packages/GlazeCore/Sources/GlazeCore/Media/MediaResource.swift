@@ -33,6 +33,12 @@ public struct NetworkMediaResource: Equatable, Hashable, Sendable {
     public let protocolInfo: String?
     public let byteCount: Int64?
     public let duration: TimeInterval?
+    /// e.g. `1920x816`, straight from the server. DLNA sends no artwork, so the few
+    /// facts it does send have to carry the shelf.
+    public let resolution: String?
+    /// When the server first saw the file. The only thing available to order a
+    /// "recently added" shelf by.
+    public let dateAdded: Date?
 
     public init(
         serverID: String,
@@ -41,7 +47,9 @@ public struct NetworkMediaResource: Equatable, Hashable, Sendable {
         mimeType: String? = nil,
         protocolInfo: String? = nil,
         byteCount: Int64? = nil,
-        duration: TimeInterval? = nil
+        duration: TimeInterval? = nil,
+        resolution: String? = nil,
+        dateAdded: Date? = nil
     ) {
         self.serverID = serverID
         self.objectID = objectID
@@ -50,5 +58,7 @@ public struct NetworkMediaResource: Equatable, Hashable, Sendable {
         self.protocolInfo = protocolInfo
         self.byteCount = byteCount
         self.duration = duration
+        self.resolution = resolution
+        self.dateAdded = dateAdded
     }
 }

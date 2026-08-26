@@ -188,6 +188,7 @@ private final class DIDLXMLDelegate: NSObject, XMLParserDelegate {
         let isContainer: Bool
         var title = ""
         var upnpClass: String?
+        var dateText: String?
         var resources: [PendingResource] = []
     }
 
@@ -195,6 +196,7 @@ private final class DIDLXMLDelegate: NSObject, XMLParserDelegate {
         let protocolInfo: String?
         let byteCount: Int64?
         let duration: TimeInterval?
+        let resolution: String?
         var urlText = ""
     }
 
@@ -223,7 +225,8 @@ private final class DIDLXMLDelegate: NSObject, XMLParserDelegate {
             pendingResource = PendingResource(
                 protocolInfo: attributeDict["protocolInfo"],
                 byteCount: attributeDict["size"].flatMap(Int64.init),
-                duration: attributeDict["duration"].flatMap(Self.parseDuration)
+                duration: attributeDict["duration"].flatMap(Self.parseDuration),
+                resolution: attributeDict["resolution"]
             )
         default:
             break
@@ -239,6 +242,8 @@ private final class DIDLXMLDelegate: NSObject, XMLParserDelegate {
         switch elementName {
         case "title", "dc:title":
             pendingNode?.title = value
+        case "date", "dc:date":
+            pendingNode?.dateText = value
         case "class", "upnp:class":
             pendingNode?.upnpClass = value
         case "res":
@@ -278,7 +283,9 @@ private final class DIDLXMLDelegate: NSObject, XMLParserDelegate {
                 mimeType: Self.mimeType(from: resource.protocolInfo),
                 protocolInfo: resource.protocolInfo,
                 byteCount: resource.byteCount,
-                duration: resource.duration
+                duration: resource.duration,
+                resolution: resource.resolution,
+                dateAdded: pending.dateText.flatMap(Self.parseDate)
             )
             return NetworkMediaNode(
                 id: pending.id,
@@ -296,6 +303,20 @@ private final class DIDLXMLDelegate: NSObject, XMLParserDelegate {
             upnpClass: pending.upnpClass,
             kind: .unsupported
         )
+    }
+
+    /// Servers send `dc:date` in a couple of shapes: a full timestamp
+    /// (`2026-05-29T17:07:26`) from Synology, a plain date (`2025-12-17`) from Plex.
+    private static func parseDate(_ text: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        if let date = formatter.date(from: text) { return date }
+
+        formatter.formatOptions = [.withFullDate, .withTime, .withColonSeparatorInTime]
+        if let date = formatter.date(from: text) { return date }
+
+        formatter.formatOptions = [.withFullDate]
+        return formatter.date(from: text)
     }
 
     private static func mimeType(from protocolInfo: String?) -> String? {
