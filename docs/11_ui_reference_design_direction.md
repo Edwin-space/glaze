@@ -1,12 +1,14 @@
 # UI 레퍼런스 및 디자인 방향
 
 작성일: 2026-06-18  
-최종 수정: 2026-08-11 (macOS 플레이어 승인 시안 확정)
+최종 수정: 2026-08-27 (macOS 설정 허브 구현·Figma 동기화)
 프로젝트명: 글레이즈 / Glaze
 
 ## 확정된 브랜드 (2026-08-10)
 
 전면 재설계를 거쳐 브랜드가 확정됐다. 소스 오브 트루스는 Figma 문서다: [Glaze Brand Guidelines](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa)(팀 드라이브 "#9. 참고 자료"). 색상 값·타입 램프·로고·카피 원칙을 바꿀 때는 이 문서를 먼저 갱신하고 코드/이 파일에 반영한다.
+
+macOS 설정 허브의 구현 기준은 같은 문서의 [Settings / macOS](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=50-2) 페이지다. 자막 설정과 네트워크 설정의 실제 SwiftUI 정보 구조, 지원 수준, 플랫폼 연속성 계약을 함께 유지한다.
 
 - **브랜드 콘셉트**: "글레이즈"(유약을 입히다) — 자막 없는 영상이 재생 전에 이해 가능한 상태로 "코팅"된다는 은유. 브랜드마크는 앱 아이콘과 마케팅 자산에서 사용하고, 플레이어 크롬에는 반복 노출하지 않는다.
 - **포지셔닝**: 한국 사용자에서 시작하지만 메시지는 처음부터 글로벌 — "언어는 더 이상 장벽이 아닙니다 / Language is no longer a barrier." (Messaging 페이지에 미션·태그라인·헤드라인 공식·App Store 카피 정리됨)
@@ -133,6 +135,17 @@ macOS의 시각적 소스 오브 트루스는 [승인된 macOS 플레이어 UI](
 - production design은 현재 deployment baseline과 맞는 macOS 26 / iOS·iPadOS 26 UI Kit를 사용한다. Apple 27 UI Kit는 forward exploration에만 사용한다.
 
 Liquid Glass는 영상 위 controls와 navigation 같은 기능 레이어에 제한한다. 영상·설정 내용 자체를 Glass content layer로 만들지 않으며, 텍스트가 많은 Inspector와 Sheet에는 regular material 또는 standard material을 사용한다. 영상 위에서는 넓은 Glass bar나 캡슐을 만들지 않고 각 조작의 원형 micro control에만 clear variant를 적용한다.
+
+## macOS 설정 허브 (2026-08-27)
+
+설정은 480pt 고정 탭 툴바 대신 `NavigationSplitView` 기반의 작업별 사이드바로 구성한다. `자막`, `번역`, `네트워크`, `작품 정보`를 1차 항목으로 두고, 현재 영상 하나에만 적용되는 행동은 플레이어 Inspector에 남긴다.
+
+- 자막 화면은 결과 미리보기를 먼저 보여주고 글자 크기(14–48pt), 위·아래 앵커, 세부 여백, 반투명 배경 농도를 실제 렌더러와 같은 값으로 조절한다.
+- 설정 본문은 regular material 카드와 표준 `Slider`·`Picker`·`LabeledContent`를 사용한다. Liquid Glass 강조 버튼은 `NAS 추가` 같은 명시적 1차 행동에만 쓴다.
+- 네트워크 화면은 자동 발견(DLNA/UPnP), 저장 연결(WebDAV), 시스템 마운트(SMB), 미지원(FTP)을 혼합하지 않고 지원 수준을 함께 표시한다.
+- WebDAV 빈 상태의 아이콘과 설명은 compact row로 유지한다. 설정 화면에서 큰 장식 아이콘이 콘텐츠보다 우선하지 않는다.
+- 설정은 앱 메뉴의 ⌘, 외에도 플레이어 툴바의 `gearshape` 아이콘으로 접근할 수 있다.
+- 한국어와 영어가 40% 이상 길어져도 설명은 세로로 확장하고, URL은 가운데 생략하며, 상태 배지는 trailing에 유지한다.
 
 ## 플레이어 크롬 기준
 

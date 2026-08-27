@@ -170,6 +170,20 @@
 | `network.browser.folder_empty` | 이 폴더에 재생 가능한 영상이 없습니다 | No playable videos in this folder | 빈 상태 | 구현 |
 | `network.browser.error` | 네트워크 미디어를 불러오지 못했습니다 | Couldn’t load network media | 오류 | 구현 |
 | `network.browser.back/close/refresh/retry` | 뒤로/닫기/새로고침/다시 시도 | Back/Close/Refresh/Try Again | 탐색 버튼 | 구현 |
+| `settings.title` | 설정 | Settings | 창/버튼 | 구현 |
+| `settings.tab.network` | 네트워크 | Network | 설정 사이드바 | 구현 |
+| `settings.*.description` | 화면별 기본값과 적용 범위 설명 | Per-page defaults and scope | 설정 안내 | 구현 |
+| `subtitle.appearance.points_format` | %d pt | %d pt | 자막 크기 값 | 구현 |
+| `subtitle.appearance.offset` | 세부 위치 | Fine position | 자막 설정 | 구현 |
+| `subtitle.appearance.opacity` | 배경 농도 | Background opacity | 자막 설정 | 구현 |
+| `subtitle.appearance.preview` | 미리보기 | Preview | 자막 설정 | 구현 |
+| `webdav.add/edit/remove` | NAS 추가/편집/삭제 | Add/Edit/Remove NAS | 네트워크 설정 | 구현 |
+| `webdav.test` | 연결 확인 | Test Connection | 버튼 | 구현 |
+| `webdav.test.success` | 연결됨 | Connected | 상태 | 구현 |
+| `webdav.http_warning` | HTTP 보안 경고 | HTTP security warning | 경고 | 구현 |
+| `settings.network.dlna.*` | DLNA/UPnP 자동 발견 설명 | DLNA/UPnP discovery description | 네트워크 설정 | 구현 |
+| `settings.network.smb.*` | Finder에서 SMB 관리 안내 | SMB via Finder guidance | 네트워크 설정 | 구현 |
+| `settings.network.ftp.*` | FTP 미지원·대안 안내 | FTP unsupported and alternatives | 네트워크 설정 | 구현 |
 
 ## 앞으로 필요한 텍스트 그룹
 

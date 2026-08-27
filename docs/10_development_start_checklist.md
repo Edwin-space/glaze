@@ -356,6 +356,12 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] 원격 URL용 VLC `libvlc_media_new_location` 재생 경로
 - [x] 로컬 네트워크 사용 목적 한국어/영어 문구
 - [x] 네트워크 미디어 시트에서 서버 탐색·폴더 이동·영상 선택/재생
+- [x] macOS 설정 > 네트워크에서 WebDAV 추가·편집·삭제·연결 확인
+- [x] WebDAV 메타데이터(UserDefaults)와 비밀번호(Keychain) 분리 저장
+- [x] macOS/tvOS 공통 `WebDAVConnectionStore` 적용
+- [x] macOS 네트워크 미디어 화면에 DLNA와 저장된 WebDAV NAS를 통합 표시
+- [x] WebDAV 폴더 탐색과 인증 URL의 VLC 재생 경로 연결
+- [x] SMB는 Finder 마운트 경로로 안내하고 암호화되지 않은 FTP는 미지원으로 명시
 
 ### 출시 전 검증
 
@@ -368,6 +374,22 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [ ] Apple TV를 Xcode에 페어링해 tvOS 개발 프로파일 생성
 - [ ] tvOS 서명 아카이브 업로드 및 TestFlight 내부 테스트
 - [ ] Synology/Emby/WebDAV 실기기 재생·sidecar 자막·이어보기 회귀 테스트
+
+## Phase 3D. macOS 설정 허브 (2026-08-27)
+
+### 구현 완료
+
+- [x] 480pt 탭 툴바를 `NavigationSplitView` 기반 자막·번역·네트워크·작품 정보 사이드바로 전환
+- [x] 플레이어 툴바에 설정 진입점 추가, 기존 ⌘, 유지
+- [x] 실제 렌더러와 연결된 자막 크기 14–48pt, 앵커 위치, 세부 여백, 배경 유무·농도 저장
+- [x] 자막 설정 실시간 미리보기와 표시 기본값 복원
+- [x] 사용자 문구 한국어/영어 동시 반영
+
+### 다음 검증
+
+- [ ] 실제 영상의 밝은/어두운 장면에서 자막 배경 농도와 그림자 대비 확인
+- [ ] 긴 영어·추가 언어에서 사이드바와 WebDAV URL 행 줄바꿈/생략 확인
+- [ ] Synology HTTPS/HTTP WebDAV, 무인증 WebDAV, 잘못된 인증 상태 실기기 회귀 테스트
 
 ## Phase 5. 번역 기술 검증
 

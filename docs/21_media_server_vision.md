@@ -42,6 +42,8 @@ Synology 패키지는 Linux 위에서 동작한다. WhisperKit과 Core ML은 App
 
 `03_ai_subtitle_workflow.md`의 "영상 옆 파일 저장"은 이미 계획에 있다. 구현만 되어 있지 않다.
 
+2026-08-27 기준 macOS 앱은 설정에서 WebDAV 연결을 저장·검증하고 네트워크 미디어 화면에서 해당 NAS의 폴더와 영상을 탐색할 수 있다. 연결 주소와 사용자 이름은 UserDefaults, 비밀번호는 Keychain으로 분리한다. SMB는 Finder 마운트 경로를 유지해 영상 옆 쓰기 권한과 macOS Sandbox의 보안 범위를 함께 활용한다. FTP는 암호화되지 않은 자격 증명을 제품 기본 경로로 만들지 않는다.
+
 ### 진짜 패키지가 필요해지는 시점
 
 아래가 필요해질 때 비로소 NAS 패키지를 만든다. 이것이 Plex의 본체이고, 작업 규모가 크다.

@@ -129,6 +129,11 @@ struct PlayerView: View {
                     Label(L10n.string("network.browser.open"), systemImage: "externaldrive.badge.wifi")
                 }
                 .help(L10n.string("network.browser.open"))
+
+                SettingsLink {
+                    Label(L10n.string("settings.title"), systemImage: "gearshape")
+                }
+                .help(L10n.string("settings.title"))
             }
         } else {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -142,6 +147,11 @@ struct PlayerView: View {
                 }
                 .buttonStyle(.glassProminent)
                 .help(L10n.string("player.open_video"))
+
+                SettingsLink {
+                    Label(L10n.string("settings.title"), systemImage: "gearshape")
+                }
+                .help(L10n.string("settings.title"))
             }
         }
     }
@@ -350,7 +360,10 @@ struct PlayerView: View {
             if subtitles.isSubtitleVisible, !subtitles.activeSubtitleText.isEmpty {
                 subtitleText
                     .padding(.horizontal, 32)
-                    .padding(.top, preferences.position == .top ? 28 : 0)
+                    .padding(
+                        .top,
+                        preferences.position == .top ? 28 + CGFloat(preferences.positionOffset) : 0
+                    )
                     .padding(.bottom, bottomInsetForSubtitle)
                     .transition(.opacity)
             }
@@ -364,7 +377,7 @@ struct PlayerView: View {
     @ViewBuilder
     private var subtitleText: some View {
         let text = Text(subtitles.activeSubtitleText)
-            .font(.system(size: preferences.textSize.pointSize, weight: .semibold))
+            .font(.system(size: preferences.fontSize, weight: .semibold))
             .multilineTextAlignment(.center)
             .foregroundStyle(.white)
 
@@ -373,7 +386,18 @@ struct PlayerView: View {
             text
                 .padding(.horizontal, 20)
                 .padding(.vertical, 11)
-                .glazeGlass(.floating, cornerRadius: GlazeGlass.Radius.card)
+                .background {
+                    RoundedRectangle(cornerRadius: GlazeGlass.Radius.card, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: GlazeGlass.Radius.card, style: .continuous)
+                                .fill(.black.opacity(preferences.backgroundOpacity))
+                        }
+                        .overlay {
+                            RoundedRectangle(cornerRadius: GlazeGlass.Radius.card, style: .continuous)
+                                .strokeBorder(.white.opacity(0.16), lineWidth: 1)
+                        }
+                }
         case .none:
             // No plate to sit on, so the text has to stay legible against a white
             // frame on its own. Two shadows: a tight dark one for edge definition and
@@ -390,7 +414,8 @@ struct PlayerView: View {
         guard preferences.position != .top else { return 0 }
 
         let base: CGFloat = areControlsVisible ? 124 : 34
-        return preferences.position == .raised ? base + 60 : base
+        let presetOffset: CGFloat = preferences.position == .raised ? 60 : 0
+        return base + presetOffset + CGFloat(preferences.positionOffset)
     }
 
     private var dropTargetOverlay: some View {
@@ -953,14 +978,14 @@ struct PlayerView: View {
         revealControls()
     }
 
-    private func openNetworkMedia(_ resource: NetworkMediaResource, server: NetworkMediaServer) {
+    private func openNetworkMedia(_ resource: NetworkMediaResource, source: MediaLibrarySource) {
         let item = MediaPlaylistItem(url: resource.playbackURL)
         loadVideo(
             item.url,
             playlist: [item],
             shouldStartPlayback: true,
             resource: .network(resource),
-            source: .dlna(serverID: server.id, serverName: server.friendlyName)
+            source: source
         )
         activePanel = nil
         revealControls()

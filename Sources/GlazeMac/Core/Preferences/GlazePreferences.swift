@@ -22,8 +22,11 @@ final class GlazePreferences {
         static let translationOutput = "subtitle.translationOutput"
         static let storageLocation = "subtitle.storageLocation"
         static let textSize = "subtitle.textSize"
+        static let fontSize = "subtitle.fontSize"
         static let position = "subtitle.position"
+        static let positionOffset = "subtitle.positionOffset"
         static let background = "subtitle.background"
+        static let backgroundOpacity = "subtitle.backgroundOpacity"
         static let tmdbAPIKey = "metadata.tmdbAPIKey"
     }
 
@@ -55,15 +58,34 @@ final class GlazePreferences {
     /// How subtitles look on the video. Kept here rather than on the player so the
     /// choice survives closing a film, which is the only way it is useful.
     var textSize: SubtitleTextSize {
-        didSet { store(textSize.rawValue, Key.textSize) }
+        didSet {
+            store(textSize.rawValue, Key.textSize)
+            fontSize = textSize.pointSize
+        }
+    }
+
+    /// Exact text size used by the renderer. The named size remains as a migration
+    /// and quick-preset value, while this gives the viewer room to tune a television
+    /// or an external display precisely.
+    var fontSize: Double {
+        didSet { defaults.set(fontSize, forKey: Key.fontSize) }
     }
 
     var position: SubtitlePosition {
         didSet { store(position.rawValue, Key.position) }
     }
 
+    /// Additional distance from the selected top/bottom anchor.
+    var positionOffset: Double {
+        didSet { defaults.set(positionOffset, forKey: Key.positionOffset) }
+    }
+
     var background: SubtitleBackground {
         didSet { store(background.rawValue, Key.background) }
+    }
+
+    var backgroundOpacity: Double {
+        didSet { defaults.set(backgroundOpacity, forKey: Key.backgroundOpacity) }
     }
 
     /// The viewer's own TMDB key. Not shipped with the app: the terms around
@@ -82,9 +104,13 @@ final class GlazePreferences {
         translationQuality = Self.read(defaults, Key.translationQuality) ?? .default
         translationOutput = Self.read(defaults, Key.translationOutput) ?? .bilingual
         storageLocation = Self.read(defaults, Key.storageLocation) ?? .default
-        textSize = Self.read(defaults, Key.textSize) ?? .default
+        let storedTextSize: SubtitleTextSize = Self.read(defaults, Key.textSize) ?? .default
+        textSize = storedTextSize
+        fontSize = defaults.object(forKey: Key.fontSize) as? Double ?? storedTextSize.pointSize
         position = Self.read(defaults, Key.position) ?? .default
+        positionOffset = defaults.object(forKey: Key.positionOffset) as? Double ?? 0
         background = Self.read(defaults, Key.background) ?? .default
+        backgroundOpacity = defaults.object(forKey: Key.backgroundOpacity) as? Double ?? 0.48
         tmdbAPIKey = defaults.string(forKey: Key.tmdbAPIKey) ?? ""
     }
 

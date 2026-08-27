@@ -5,19 +5,24 @@ import SwiftUI
 struct NetworkMediaBrowserView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model = NetworkMediaBrowserModel()
+    @State private var webDAVConnections = WebDAVConnectionStore()
+    @State private var webDAVModel = WebDAVBrowserModel()
+    @State private var selectedWebDAV: WebDAVConnection?
 
-    let onOpen: (NetworkMediaResource, NetworkMediaServer) -> Void
+    let onOpen: (NetworkMediaResource, MediaLibrarySource) -> Void
 
     var body: some View {
         NavigationStack {
             Group {
-                if model.selectedServer == nil {
+                if selectedWebDAV != nil {
+                    webDAVMediaList
+                } else if model.selectedServer == nil {
                     serverList
                 } else {
                     mediaList
                 }
             }
-            .navigationTitle(model.navigationTitle)
+            .navigationTitle(navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.string("network.browser.close")) { dismiss() }
@@ -30,9 +35,9 @@ struct NetworkMediaBrowserView: View {
                         bodyKey: "help.network.browser"
                     )
                 }
-                if model.canNavigateBack {
+                if canNavigateBack {
                     ToolbarItem(placement: .navigation) {
-                        Button(action: model.navigateBack) {
+                        Button(action: navigateBack) {
                             Label(L10n.string("network.browser.back"), systemImage: "chevron.left")
                         }
                     }
@@ -68,32 +73,134 @@ struct NetworkMediaBrowserView: View {
             }
         } else if let errorMessage = model.errorMessage {
             issueView(message: errorMessage)
-        } else if model.servers.isEmpty {
+        } else if model.servers.isEmpty, webDAVConnections.connections.isEmpty {
             ContentUnavailableView {
                 Label(L10n.string("network.browser.empty"), systemImage: "externaldrive.badge.questionmark")
             } description: {
                 Text(L10n.string("network.browser.empty_hint"))
             } actions: {
-                Button(L10n.string("network.browser.retry")) {
-                    Task { await model.discover() }
+                HStack {
+                    Button(L10n.string("network.browser.retry")) {
+                        Task { await model.discover() }
+                    }
+                    SettingsLink {
+                        Text(L10n.string("settings.title"))
+                    }
                 }
             }
         } else {
-            List(model.servers) { server in
-                Button {
-                    Task { await model.select(server) }
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "externaldrive.connected.to.line.below")
-                            .foregroundStyle(.tint)
-                        Text(server.friendlyName)
-                        Spacer()
-                        Image(systemName: "chevron.forward").foregroundStyle(.tertiary)
+            List {
+                if !model.servers.isEmpty {
+                    Section(L10n.string("settings.network.dlna.title")) {
+                        ForEach(model.servers) { server in
+                            Button {
+                                Task { await model.select(server) }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "dot.radiowaves.left.and.right")
+                                        .foregroundStyle(.tint)
+                                    Text(server.friendlyName)
+                                    Spacer()
+                                    Image(systemName: "chevron.forward").foregroundStyle(.tertiary)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .glazeGlassRow()
+                        }
                     }
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .glazeGlassRow()
+
+                if !webDAVConnections.connections.isEmpty {
+                    Section(L10n.string("webdav.section.title")) {
+                        ForEach(webDAVConnections.connections) { connection in
+                            Button {
+                                selectedWebDAV = connection
+                                Task { await webDAVModel.open(connection) }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "externaldrive.connected.to.line.below")
+                                        .foregroundStyle(.tint)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(connection.name)
+                                        Text(connection.rootURL.host ?? connection.rootURL.absoluteString)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.forward").foregroundStyle(.tertiary)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .glazeGlassRow()
+                        }
+                    }
+                }
+            }
+            .listStyle(.inset)
+        }
+    }
+
+    @ViewBuilder
+    private var webDAVMediaList: some View {
+        if webDAVModel.phase == .loading {
+            ContentUnavailableView {
+                Label(L10n.string("network.browser.loading"), systemImage: "folder")
+            } description: {
+                ProgressView()
+            }
+        } else if let errorMessage = webDAVModel.errorMessage {
+            ContentUnavailableView {
+                Label(L10n.string("network.browser.error"), systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(errorMessage)
+            } actions: {
+                if let selectedWebDAV {
+                    Button(L10n.string("network.browser.retry")) {
+                        Task { await webDAVModel.open(selectedWebDAV) }
+                    }
+                }
+            }
+        } else if webDAVModel.folders.isEmpty, webDAVModel.videos.isEmpty {
+            ContentUnavailableView(L10n.string("network.browser.folder_empty"), systemImage: "folder")
+        } else {
+            List {
+                ForEach(webDAVModel.folders) { entry in
+                    Button {
+                        Task { await webDAVModel.open(entry) }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "folder").foregroundStyle(.tint)
+                            Text(entry.name).lineLimit(2)
+                            Spacer()
+                            Image(systemName: "chevron.forward").foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .glazeGlassRow()
+                }
+
+                ForEach(webDAVModel.videos) { entry in
+                    Button { openWebDAVVideo(entry) } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "film").foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(entry.name).lineLimit(2)
+                                if let byteCount = entry.byteCount {
+                                    Text(ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .file))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .glazeGlassRow()
+                }
             }
             .listStyle(.inset)
         }
@@ -157,11 +264,65 @@ struct NetworkMediaBrowserView: View {
             Task { await model.open(node) }
         case .video(let resource):
             guard let server = model.selectedServer else { return }
-            onOpen(resource, server)
+            onOpen(resource, .dlna(serverID: server.id, serverName: server.friendlyName))
             dismiss()
         case .unsupported:
             break
         }
+    }
+
+    private var navigationTitle: String {
+        if selectedWebDAV != nil {
+            return webDAVModel.title
+        }
+        return model.navigationTitle
+    }
+
+    private var canNavigateBack: Bool {
+        if selectedWebDAV != nil { return true }
+        return model.canNavigateBack
+    }
+
+    private func navigateBack() {
+        if selectedWebDAV != nil {
+            if webDAVModel.canNavigateBack {
+                webDAVModel.navigateBack()
+            } else {
+                selectedWebDAV = nil
+            }
+        } else {
+            model.navigateBack()
+        }
+    }
+
+    private func openWebDAVVideo(_ entry: WebDAVEntry) {
+        guard let connection = selectedWebDAV else { return }
+        let playbackURL = authenticatedURL(
+            entry.url,
+            username: connection.username,
+            password: webDAVConnections.password(for: connection)
+        )
+        let resource = NetworkMediaResource(
+            serverID: connection.id,
+            objectID: entry.url.absoluteString,
+            playbackURL: playbackURL,
+            byteCount: entry.byteCount,
+            dateAdded: entry.lastModified
+        )
+        onOpen(resource, .nas)
+        dismiss()
+    }
+
+    /// Keeps credentials transient: they are inserted only into the in-memory URL
+    /// handed to libVLC and are never encoded in the saved connection record.
+    private func authenticatedURL(_ url: URL, username: String, password: String?) -> URL {
+        guard !username.isEmpty, let password,
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url
+        }
+        components.user = username
+        components.password = password
+        return components.url ?? url
     }
 
     private func isContainer(_ node: NetworkMediaNode) -> Bool {

@@ -40,7 +40,7 @@ struct TVLibraryView: View {
         }
         .fullScreenCover(isPresented: $isAddingWebDAV) {
             TVWebDAVSetupView { connection, password in
-                webdav.add(connection, password: password)
+                webdav.save(connection, password: password)
             }
         }
         .fullScreenCover(item: $openWebDAV) { connection in
