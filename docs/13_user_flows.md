@@ -74,9 +74,10 @@
 - `movie.en.srt`
 - `movie.en.vtt`
 - `movie.en.smi`
-- `movie.original.srt`
-- `movie.original.vtt`
-- `movie.original.smi`
+- `movie.ja.srt`처럼 ISO 언어 코드가 붙은 다른 자막
+- 과거 글레이즈가 만든 `movie.original.srt`, `movie.original.ko.srt` 등 레거시 자막
+
+새로 생성하는 자막은 `movie.<언어 코드>.srt`로 저장한다. 원문 전사는 감지한 음성 언어를, 번역은 대상 언어를 사용하며 언어를 확정하지 못하면 `movie.und.srt`를 사용한다. 이 이름은 WebDAV로 같은 폴더를 읽는 Apple TV와 Kodi·Jellyfin·Emby가 그대로 해석할 수 있다.
 
 ### 실패/예외
 

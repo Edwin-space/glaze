@@ -498,7 +498,11 @@ final class SubtitleController {
         }
         translationStartedAt = nil
 
-        let languageCode = pendingTranslationRequest?.targetLanguageCode ?? "translated"
+        guard let languageCode = pendingTranslationRequest?.targetLanguageCode else {
+            status = computeStatus(for: detectedSubtitles)
+            errorMessage = L10n.string("subtitle.error.translation_failed")
+            return
+        }
 
         do {
             let outputURL = try subtitleStore.save(
@@ -570,7 +574,7 @@ final class SubtitleController {
             let outputURL = try subtitleStore.save(
                 cues: cues,
                 for: currentResource ?? .localFile(videoURL),
-                kind: .generated,
+                kind: .generated(languageCode: languageCode),
                 preferring: storageLocation
             )
             let subtitle = SubtitleFile.manual(url: outputURL)
@@ -579,8 +583,8 @@ final class SubtitleController {
                 detectedSubtitles.append(subtitle)
             }
 
-            // The saved name carries no language tag, so pass what Whisper heard —
-            // otherwise a Korean film would be offered for translation into Korean.
+            // The name now carries the language, but pass it anyway — Whisper may have
+            // reported nothing, in which case the file is `.und.srt` and says nothing.
             load(
                 subtitle,
                 sourceLanguageCode: languageCode,

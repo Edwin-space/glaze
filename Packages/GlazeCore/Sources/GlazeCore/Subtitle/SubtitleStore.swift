@@ -48,14 +48,37 @@ public protocol SubtitleStoring: Sendable {
 /// What produced the subtitle, which decides the filename suffix so a generated
 /// original and its translation can sit side by side without colliding.
 public enum SubtitleArtifactKind: Equatable, Sendable {
-    case generated
+    case generated(languageCode: String?)
     case translated(languageCode: String)
 
+    /// The suffix between the film's name and `.srt`.
+    ///
+    /// Follows the convention Jellyfin, Emby and Kodi all read: `Film.ko.srt` is a
+    /// Korean subtitle for `Film.mkv`. The earlier form was `Film.original.ko.srt`,
+    /// which no scraper understands and which says two contradictory things — it is
+    /// not the original if it is in Korean.
+    ///
+    /// A transcription is labelled with the language that was spoken, when Whisper
+    /// reported one, so a server shelving it knows what it is.
     public var filenameSuffix: String {
         switch self {
-        case .generated: "original"
-        case .translated(let languageCode): "original.\(languageCode)"
+        case .generated(let languageCode):
+            Self.filenameLanguageCode(languageCode)
+        case .translated(let languageCode):
+            Self.filenameLanguageCode(languageCode)
         }
+    }
+
+    /// Keep filenames predictable even when a framework reports a regional or
+    /// three-letter tag. Sidecar consumers agree much more reliably on the normalized
+    /// ISO language (`ja`, `ko`) than on aliases (`jpn`, `kor`) or regions (`ko-KR`).
+    private static func filenameLanguageCode(_ value: String?) -> String {
+        guard let normalized = SubtitleLanguageCode.normalized(value),
+              Locale.LanguageCode(normalized).isISOLanguage else {
+            return "und"
+        }
+
+        return normalized
     }
 }
 

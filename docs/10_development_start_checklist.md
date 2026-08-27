@@ -143,7 +143,9 @@ scripts/
 ### 진행 중 구현
 
 - 같은 폴더의 sidecar 자막 파일 감지
-- 감지 패턴: `movie.srt`, `movie.vtt`, `movie.smi`, `movie.ko.srt`, `movie.ko.vtt`, `movie.ko.smi`, `movie.en.srt`, `movie.en.vtt`, `movie.en.smi`, `movie.original.srt`
+- 감지 패턴: `movie.srt`와 `movie.<언어 코드>.(srt|vtt|smi)`. 과거 `movie.original.*`·`movie.original.<언어>.*`도 하위 호환으로 감지
+- 생성 자막 저장명: 원문은 감지된 음성 언어(`movie.ja.srt`), 번역은 대상 언어(`movie.ko.srt`), 언어 미확정은 `movie.und.srt`
+- Kodi·Jellyfin·Emby가 읽는 ISO 언어 태그 관례에 맞춰 3자리 별칭과 지역 태그를 2자리 기본 코드로 정규화
 - 영상 하단 transport controls에 자막 감지 결과 표시
 - 자막 패널에서 SRT/VTT/SMI 파일 수동 불러오기
 - SRT/VTT/SMI 기본 파싱 및 영상 위 자막 오버레이 표시

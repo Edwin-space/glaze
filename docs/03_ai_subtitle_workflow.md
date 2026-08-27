@@ -78,7 +78,7 @@ PGS, VobSub 같은 이미지 기반 내장 자막은 트랙 존재를 표시하�
 예:
 
 - `movie.mkv`
-- `movie.original.srt`
+- `movie.ja.srt` — 일본어 음성을 전사한 원문 자막
 - `movie.ko.srt`
 
 장점:
@@ -87,6 +87,8 @@ PGS, VobSub 같은 이미지 기반 내장 자막은 트랙 존재를 표시하�
 - 사용자가 자막 파일을 직접 보관 가능
 
 이 옵션은 최종 방향과 직결된다. **NAS 폴더를 마운트한 상태에서 "영상 옆"을 고르면, 자체 서버 패키지 없이도 자막이 NAS에 쌓이고 다른 기기가 그것을 가져다 쓴다.** 자세한 내용은 `21_media_server_vision.md`.
+
+파일명은 Kodi·Jellyfin·Emby가 읽는 `영상명.<ISO 언어 코드>.srt`를 따른다. 음성 언어를 확정하지 못한 전사는 `movie.und.srt`로 저장한다. 과거 글레이즈가 만든 `movie.original.srt`, `movie.original.ko.srt`도 계속 감지하지만 새 파일에는 사용하지 않는다.
 
 ### 기본값을 뒤집는다 (2026-08-20 확정)
 

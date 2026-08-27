@@ -33,9 +33,8 @@ struct SubtitleSidecarDetectorTests {
         #expect(found.sorted() == ["film.en.srt", "film.ko.srt"])
     }
 
-    /// The app saves translations as `film.original.ko.srt`. The old fixed candidate
-    /// list had no entry for it, so a translation the viewer had waited minutes for
-    /// vanished the next time they opened the film.
+    /// Old Glaze versions saved translations as `film.original.ko.srt`. Keep reading
+    /// that name after new output moves to the media-server convention `film.ko.srt`.
     @Test func findsTheAppsOwnTranslationOutput() throws {
         let found = try detected(
             ["film.mkv", "film.original.srt", "film.original.ko.srt"],

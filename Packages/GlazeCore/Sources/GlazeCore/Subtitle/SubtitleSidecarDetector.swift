@@ -4,12 +4,13 @@ import Foundation
 ///
 /// This used to try a fixed list of names — `film.srt`, `film.ko.srt`, `film.en.srt`,
 /// `film.original.srt` and a few more. Anything outside the list was invisible, and one
-/// of the names outside it was the app's own: a translation is saved as
-/// `film.original.ko.srt`, which no candidate matched. So the viewer waited for a
-/// translation, closed the film, reopened it, and the translation was gone.
+/// of the names outside it was the app's own legacy output: translations used to be
+/// saved as `film.original.ko.srt`, which no candidate matched. So the viewer waited
+/// for a translation, closed the film, reopened it, and the translation was gone.
 ///
 /// Reading the folder instead of guessing at names covers the app's own output, the
-/// conventions other tools use, and whatever a person names a file by hand.
+/// current `film.ko.srt` convention, old Glaze output, and whatever a person names a
+/// file by hand.
 public enum SubtitleSidecarDetector {
     private static let supportedExtensions: Set<String> = ["srt", "vtt", "smi"]
 
