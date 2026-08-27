@@ -364,7 +364,9 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [ ] DLNA가 제공하지 않는 sidecar 자막의 앱 내부 저장·연결 정책
 - [ ] iOS/iPadOS multicast entitlement 신청 및 실기기 검증
 - [x] tvOS 타깃, focus engine UI, 앱 아이콘/Top Shelf 자산 구성
-- [ ] Apple Distribution 인증서·tvOS 배포 프로파일 구성 및 TestFlight 내부 테스트
+- [x] App Store Connect tvOS 플랫폼·공통 번들 ID·관리형 배포 인증서 확인
+- [ ] Apple TV를 Xcode에 페어링해 tvOS 개발 프로파일 생성
+- [ ] tvOS 서명 아카이브 업로드 및 TestFlight 내부 테스트
 - [ ] Synology/Emby/WebDAV 실기기 재생·sidecar 자막·이어보기 회귀 테스트
 
 ## Phase 5. 번역 기술 검증

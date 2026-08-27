@@ -231,7 +231,7 @@ Apple TV 앱과 NAS/자체 미디어 서버는 장기 프리미엄 확장의 핵
 - 내장 텍스트 자막의 언어 선택·추출·표시 및 번역 입력 계획을 공통 모델로 분리했다.
 - `GlazeTV` 타깃과 focus engine 기반 NAS 탐색 UI를 추가했고, DLNA 자동 탐색과 WebDAV 수동 연결을 같은 감상 흐름으로 제공한다.
 - VLCKit 정적 링크 재생, WebDAV sidecar 자막 선택, 미디어 서버 관례의 언어 코드 자막 파일명까지 시뮬레이터에서 검증했다.
-- tvOS 앱 아이콘/Top Shelf 자산과 Release 빌드는 준비됐다. TestFlight 업로드 전 Apple Distribution 인증서, 배포 프로파일, App Store Connect 앱 레코드의 번들 ID 결정을 완료해야 한다.
+- tvOS 앱 아이콘/Top Shelf 자산과 Release 빌드는 준비됐다. App Store Connect의 macOS·tvOS 통합 앱 레코드에 맞춰 공통 번들 ID `com.edwin.glaze`와 기존 관리형 배포 인증서를 사용한다.
 - 실제 Synology/Emby 장비의 인증·한글 경로·스트리밍 안정성은 Apple TV 실기기 TestFlight에서 최종 검증한다.
 
 Apple 플랫폼 네트워크 계약:

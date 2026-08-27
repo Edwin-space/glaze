@@ -118,5 +118,7 @@ Mac이 만드는 자막은 `Film.<ISO 언어 코드>.srt`로 저장한다. 예�
 - macOS 브랜드 마크를 유지한 tvOS 앱 아이콘 스택(400×240, App Store 1280×768)과 일반/와이드 Top Shelf 자산을 `GlazeTV` 자산 카탈로그에 추가했다.
 - `InfoTV.plist`의 번들 ID는 `PRODUCT_BUNDLE_IDENTIFIER`를 사용해 `project.yml`을 단일 원본으로 삼는다.
 - tvOS generic device Release 빌드와 자산 카탈로그 컴파일은 오류 없이 통과했다. 이미지 스택은 레이어마다 중첩 `imageset`이 필요하며, 단순히 이미지 파일을 `imagestacklayer`에 두면 `actool`이 오류를 출력하면서도 빌드 종료 코드를 0으로 내놓으므로 로그까지 확인해야 한다.
-- 서명 아카이브는 아직 생성되지 않았다. 현재 팀에는 Apple Distribution 인증서와 `com.edwin.glaze.tv`용 tvOS 배포 프로파일이 없고, 등록된 실기기 중 Apple TV도 없어 Xcode가 개발 프로파일을 만들 수 없다.
-- 다음 순서는 Apple Distribution 인증서 생성 → App Store Connect의 기존 Glaze 레코드/번들 ID 확인 → tvOS 플랫폼 또는 별도 앱 레코드 결정 → 서명 아카이브 업로드 → 내부 TestFlight 설치다. 기존 앱에 tvOS 플랫폼을 추가해 통합 구매로 운영하려면 플랫폼 간 번들 ID 정책을 먼저 확인하고 `com.edwin.glaze.tv`를 유지할지 결정한다.
+- App Store Connect의 Glaze 앱(Apple ID `6800189560`)에는 macOS와 tvOS 1.0 플랫폼이 이미 함께 등록돼 있으며 공통 번들 ID는 `com.edwin.glaze`다. tvOS 타깃에 임시로 사용하던 `com.edwin.glaze.tv`는 등록된 App ID가 아니므로 통합 앱 레코드와 같은 `com.edwin.glaze`로 정정했다.
+- 개발자 팀에는 2027-07-29까지 유효한 `Distribution Managed` 인증서가 이미 있다. 인증서를 중복 생성하지 않고 Apple의 관리형 배포 인증서를 사용한다.
+- 현재 Xcode에 페어링된 Apple TV 실기기는 없다. 자동 서명의 아카이브 단계는 개발 서명 프로파일을 먼저 만들기 때문에 Apple TV를 Xcode에 한 번 페어링·등록해야 한다. 그 뒤 개발 서명 아카이브를 만들고 Organizer가 기존 관리형 인증서로 클라우드 배포 서명해 App Store Connect에 올린다. 로컬 Apple Distribution 인증서를 중복 생성하지 않는다.
+- 다음 순서는 Apple TV 페어링 → 정정한 번들 ID로 서명 아카이브 생성 → App Store Connect 업로드 → 내부 TestFlight 설치 → Synology/Emby 실기기 검증이다.
