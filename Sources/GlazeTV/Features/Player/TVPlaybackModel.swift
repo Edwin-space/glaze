@@ -26,9 +26,31 @@ final class TVPlaybackModel {
     private let positions = PlaybackPositionStore()
     /// Applied once the stream reports a length; asking to seek before then is ignored.
     private var pendingSeek: TimeInterval?
+    /// The subtitle the folder listing found beside the film, still to be selected.
+    private var pendingSubtitleLanguage: String?
+    private var hasChosenSubtitle = false
 
-    func start(_ resource: NetworkMediaResource, at startAt: TimeInterval = 0) {
+    /// - Parameter subtitleURL: a subtitle found sitting beside the film. Attached to
+    ///   the media before it is played, which VLCKit requires — adding it afterwards
+    ///   through `addPlaybackSlave` is ignored, and the film comes up showing whichever
+    ///   track was embedded in the container instead.
+    func start(
+        _ resource: NetworkMediaResource,
+        at startAt: TimeInterval = 0,
+        subtitleURL: URL? = nil
+    ) {
         let media = VLCMedia(url: resource.playbackURL)
+
+        if let subtitleURL {
+            // Priority 4 is VLC's "user selected". It gets the file loaded, but does
+            // not make VLC show it: a film with a subtitle track inside it comes up
+            // showing that one regardless, so the choice is made explicitly below once
+            // the tracks exist.
+            media?.addSlave(VLCMediaSlave(url: subtitleURL, type: .subtitle, priority: 4))
+            pendingSubtitleLanguage = SubtitleFile.manual(url: subtitleURL).languageCode
+            hasChosenSubtitle = false
+        }
+
         player.media = media
         pendingSeek = startAt > 0 ? startAt : nil
 
@@ -92,6 +114,34 @@ final class TVPlaybackModel {
             player.time = VLCTime(int: Int32(pendingSeek * 1000))
             self.pendingSeek = nil
         }
+
+        chooseSubtitleIfReady()
+    }
+
+    /// Selects the subtitle that came from the folder rather than the one inside the
+    /// film.
+    ///
+    /// Tracks do not exist until the media has been read, so this runs on the time
+    /// updates and does its work once.
+    private func chooseSubtitleIfReady() {
+        guard !hasChosenSubtitle, pendingSubtitleLanguage != nil else { return }
+
+        let tracks = player.textTracks
+        guard !tracks.isEmpty else { return }
+
+        // The slave is appended after whatever the container carried, so the last track
+        // is it — but prefer a language match when the tracks say what they are, since
+        // that survives a film that carries no subtitles at all.
+        let chosen = tracks.first { track in
+            guard let language = track.language, let wanted = pendingSubtitleLanguage else { return false }
+            return SubtitleLanguageCode.normalized(language) == wanted
+        } ?? tracks.last
+
+        if let chosen {
+            player.selectTextTracks([chosen])
+        }
+
+        hasChosenSubtitle = true
     }
 
     /// Stores where the viewer got to, so the shelf can offer to resume.

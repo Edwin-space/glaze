@@ -126,7 +126,7 @@ final class SubtitleController {
 
     /// The language the viewer reads, which is what anything else gets translated into.
     static var preferredTargetLanguageCode: String {
-        Locale.preferredLanguages.compactMap(SubtitleLanguageCode.normalized).first ?? "en"
+        SubtitleLanguagePreference.targetLanguageCode
     }
 
     /// Decides whether the subtitle now loaded is worth offering to translate.

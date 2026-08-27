@@ -11,6 +11,10 @@ struct TVPlayerView: View {
     let title: String
     /// Where to start. Non-zero when the viewer chose to resume.
     var startAt: TimeInterval = 0
+    /// A subtitle found sitting beside the film. VLC finds subtitles next to a local
+    /// file on its own; over a network it cannot, because it has no way to list the
+    /// folder — which is what the WebDAV browser did before getting here.
+    var externalSubtitleURL: URL?
 
     @Environment(\.dismiss) private var dismiss
     @State private var model = TVPlaybackModel()
@@ -35,7 +39,7 @@ struct TVPlayerView: View {
         // screenshots.
         .focusable()
         .onAppear {
-            model.start(resource, at: startAt)
+            model.start(resource, at: startAt, subtitleURL: externalSubtitleURL)
             scheduleHide()
         }
         .onDisappear {

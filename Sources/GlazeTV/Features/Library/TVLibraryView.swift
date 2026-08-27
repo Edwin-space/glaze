@@ -14,6 +14,9 @@ struct TVLibraryView: View {
     /// both work — the second silently never presents, which looked exactly like the
     /// remote's select button being ignored.
     @State private var route: Route?
+    @State private var webdav = TVWebDAVConnections()
+    @State private var isAddingWebDAV = false
+    @State private var openWebDAV: WebDAVConnection?
 
     var body: some View {
         ZStack {
@@ -35,6 +38,14 @@ struct TVLibraryView: View {
                 )
             }
         }
+        .fullScreenCover(isPresented: $isAddingWebDAV) {
+            TVWebDAVSetupView { connection, password in
+                webdav.add(connection, password: password)
+            }
+        }
+        .fullScreenCover(item: $openWebDAV) { connection in
+            TVWebDAVLibraryView(connection: connection)
+        }
         .onExitCommand { model.navigateBack() }
     }
 
@@ -53,37 +64,113 @@ struct TVLibraryView: View {
 
     // MARK: - Servers
 
+    /// Always the same screen, whether or not anything was found on the network.
+    ///
+    /// The first version replaced it with a full-screen "no servers found" when
+    /// discovery came up empty — which is precisely when someone needs to add a NAS by
+    /// hand, and the button to do that was on the screen being replaced.
     private var serverList: some View {
-        Group {
-            if model.servers.isEmpty {
-                emptyState(
-                    title: L10n.string("network.browser.empty"),
-                    detail: L10n.string("network.browser.empty_hint")
-                )
-            } else {
-                VStack(alignment: .leading, spacing: 30) {
-                    Text(L10n.string("network.browser.title"))
-                        .font(.system(size: 62, weight: .bold))
-                        .padding(.horizontal, 60)
-                        .padding(.top, 50)
+        serverAndNASList
+    }
 
-                    ScrollView {
-                        VStack(spacing: 22) {
-                            ForEach(model.servers) { server in
-                                Button {
-                                    Task { await model.select(server) }
-                                } label: {
-                                    serverRow(server)
-                                }
-                                .buttonStyle(.card)
-                            }
-                        }
-                        .padding(.horizontal, 60)
-                        .padding(.vertical, 20)
+    /// Both ways in, on one screen. DLNA finds servers by itself but cannot reach the
+    /// subtitles and artwork beside a film; WebDAV needs an address typed once and can.
+    private var serverAndNASList: some View {
+        VStack(alignment: .leading, spacing: 30) {
+            Text(L10n.string("network.browser.title"))
+                .font(.system(size: 62, weight: .bold))
+                .padding(.horizontal, 60)
+                .padding(.top, 50)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    if model.servers.isEmpty {
+                        discoveryNote
                     }
+
+                    ForEach(model.servers) { server in
+                        Button {
+                            Task { await model.select(server) }
+                        } label: {
+                            serverRow(server)
+                        }
+                        .buttonStyle(.card)
+                    }
+
+                    Text(L10n.string("webdav.section.title"))
+                        .font(.system(size: 32, weight: .semibold))
+                        .padding(.top, 20)
+
+                    ForEach(webdav.connections) { connection in
+                        Button {
+                            openWebDAV = connection
+                        } label: {
+                            nasRow(connection)
+                        }
+                        .buttonStyle(.card)
+                    }
+
+                    Button {
+                        isAddingWebDAV = true
+                    } label: {
+                        HStack(spacing: 24) {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 36))
+                                .foregroundStyle(TVTheme.amber)
+                            Text(L10n.string("webdav.add"))
+                                .font(.system(size: 32, weight: .medium))
+                            Spacer()
+                        }
+                        .padding(28)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.card)
                 }
+                .padding(.horizontal, 60)
+                .padding(.vertical, 20)
             }
         }
+    }
+
+    /// Says nothing was found without taking the screen away from what can be done
+    /// about it.
+    private var discoveryNote: some View {
+        HStack(spacing: 18) {
+            Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                .font(.system(size: 30))
+                .foregroundStyle(TVTheme.dim)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.string("network.browser.empty"))
+                    .font(.system(size: 28, weight: .medium))
+                Text(L10n.string("network.browser.empty_hint"))
+                    .font(.system(size: 22))
+                    .foregroundStyle(TVTheme.dim)
+                    .lineLimit(2)
+            }
+            Spacer()
+            Button(L10n.string("network.browser.refresh")) {
+                Task { await model.discover() }
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
+    private func nasRow(_ connection: WebDAVConnection) -> some View {
+        HStack(spacing: 24) {
+            Image(systemName: "folder.badge.person.crop")
+                .font(.system(size: 40))
+                .foregroundStyle(TVTheme.amber)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(connection.name).font(.system(size: 34, weight: .medium))
+                Text(connection.rootURL.absoluteString)
+                    .font(.system(size: 22))
+                    .foregroundStyle(TVTheme.dim)
+                    .lineLimit(1)
+            }
+            Spacer()
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func serverRow(_ server: NetworkMediaServer) -> some View {
