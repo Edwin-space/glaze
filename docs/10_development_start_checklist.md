@@ -363,7 +363,9 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [ ] NAS sleep/wake, IP 변경, 서버 중복 응답, 연결 손실 복구
 - [ ] DLNA가 제공하지 않는 sidecar 자막의 앱 내부 저장·연결 정책
 - [ ] iOS/iPadOS multicast entitlement 신청 및 실기기 검증
-- [ ] tvOS 타겟, focus engine UI, Top Shelf/이어보기 범위 결정
+- [x] tvOS 타깃, focus engine UI, 앱 아이콘/Top Shelf 자산 구성
+- [ ] Apple Distribution 인증서·tvOS 배포 프로파일 구성 및 TestFlight 내부 테스트
+- [ ] Synology/Emby/WebDAV 실기기 재생·sidecar 자막·이어보기 회귀 테스트
 
 ## Phase 5. 번역 기술 검증
 

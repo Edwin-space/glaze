@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Glaze</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.edwin.glaze.tv</string>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>
 	<string>Glaze</string>
 	<key>CFBundlePackageType</key>

@@ -1,0 +1,18 @@
+{
+  "images" : [
+    {
+      "filename" : "glaze-tv-app-icon.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "glaze-tv-app-icon@2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

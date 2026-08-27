@@ -112,3 +112,11 @@ WebDAV는 실제 경로를 준다. 폴더 목록 한 번이면 영상과 그 옆
 ### Emby와 함께 쓰는 자막 파일명 (2026-08-27)
 
 Mac이 만드는 자막은 `Film.<ISO 언어 코드>.srt`로 저장한다. 예를 들어 일본어 원문은 `Film.ja.srt`, 한국어 번역은 `Film.ko.srt`다. Apple TV의 WebDAV companion 탐색뿐 아니라 Emby·Jellyfin·Kodi가 이미 이해하는 관례라 별도 Glaze 서버나 Emby 플러그인이 필요 없다. 과거 `Film.original.srt`, `Film.original.ko.srt`는 읽기 호환만 유지한다.
+
+### TestFlight 준비 상태 (2026-08-27)
+
+- macOS 브랜드 마크를 유지한 tvOS 앱 아이콘 스택(400×240, App Store 1280×768)과 일반/와이드 Top Shelf 자산을 `GlazeTV` 자산 카탈로그에 추가했다.
+- `InfoTV.plist`의 번들 ID는 `PRODUCT_BUNDLE_IDENTIFIER`를 사용해 `project.yml`을 단일 원본으로 삼는다.
+- tvOS generic device Release 빌드와 자산 카탈로그 컴파일은 오류 없이 통과했다. 이미지 스택은 레이어마다 중첩 `imageset`이 필요하며, 단순히 이미지 파일을 `imagestacklayer`에 두면 `actool`이 오류를 출력하면서도 빌드 종료 코드를 0으로 내놓으므로 로그까지 확인해야 한다.
+- 서명 아카이브는 아직 생성되지 않았다. 현재 팀에는 Apple Distribution 인증서와 `com.edwin.glaze.tv`용 tvOS 배포 프로파일이 없고, 등록된 실기기 중 Apple TV도 없어 Xcode가 개발 프로파일을 만들 수 없다.
+- 다음 순서는 Apple Distribution 인증서 생성 → App Store Connect의 기존 Glaze 레코드/번들 ID 확인 → tvOS 플랫폼 또는 별도 앱 레코드 결정 → 서명 아카이브 업로드 → 내부 TestFlight 설치다. 기존 앱에 tvOS 플랫폼을 추가해 통합 구매로 운영하려면 플랫폼 간 번들 ID 정책을 먼저 확인하고 `com.edwin.glaze.tv`를 유지할지 결정한다.
