@@ -504,15 +504,63 @@ struct PlayerView: View {
         Form {
             Section {
                 LabeledContent {
-                    Text(subtitles.panelSpokenLanguageValue)
-                } label: {
-                    GlazeHelpLabel("subtitle.panel.language", help: "help.subtitle.language")
-                }
-                LabeledContent {
                     Text(subtitles.panelOutputValue)
                 } label: {
                     GlazeHelpLabel("subtitle.panel.output", help: "help.subtitle.current")
                 }
+                subtitleFileSection
+                Toggle(L10n.string("subtitle.visibility.toggle"), isOn: $subtitles.isSubtitleVisible)
+                    .disabled(subtitles.subtitleCues.isEmpty)
+                Button(action: importSubtitle) {
+                    Label(L10n.string("subtitle.import"), systemImage: "text.badge.plus")
+                }
+            } header: {
+                inspectorHeader("subtitle.panel.title", detailKey: "subtitle.panel.subtitle")
+            }
+            .glazeGlassRow()
+
+            if !subtitles.subtitleCues.isEmpty {
+                Section {
+                    Picker(selection: selectedSubtitleLanguageBinding) {
+                        Text(L10n.string("subtitle.language.unknown")).tag("")
+                        ForEach(subtitleLanguageCodes, id: \.self) { code in
+                            Text(languageDisplayName(code)).tag(code)
+                        }
+                    } label: {
+                        GlazeHelpLabel("subtitle.language.source", help: "help.subtitle.source_language")
+                    }
+
+                    Picker(selection: $subtitles.preferredTranslationLanguageCode) {
+                        ForEach(subtitleLanguageCodes, id: \.self) { code in
+                            Text(languageDisplayName(code)).tag(code)
+                        }
+                    } label: {
+                        GlazeHelpLabel("subtitle.language.target", help: "help.subtitle.target_language")
+                    }
+                } header: {
+                    Text(L10n.string("subtitle.language.section")).textCase(nil)
+                }
+                .glazeGlassRow()
+            }
+
+            if subtitles.pendingTranslationRequest != nil || subtitles.isTranslating {
+                Section(L10n.string("subtitle.translate.section")) {
+                    translationSection
+                }
+                .glazeGlassRow()
+            }
+
+            Section {
+                Text(L10n.string("subtitle.ai.description"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                LabeledContent {
+                    Text(subtitles.panelSpokenLanguageValue)
+                } label: {
+                    GlazeHelpLabel("subtitle.panel.language", help: "help.subtitle.language")
+                }
+
                 Picker(selection: $subtitles.transcriptionTier) {
                     ForEach(TranscriptionModelTier.allCases, id: \.self) { tier in
                         Text(L10n.string(tier.labelKey)).tag(tier)
@@ -522,26 +570,13 @@ struct PlayerView: View {
                 }
                 .disabled(subtitles.isGenerating)
 
-                Text(
-                    String(
-                        format: L10n.string("subtitle.model.download_format"),
-                        subtitles.transcriptionTier.approximateDownloadMegabytes
-                    )
-                )
+                Text(String(
+                    format: L10n.string("subtitle.model.download_format"),
+                    subtitles.transcriptionTier.approximateDownloadMegabytes
+                ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-                // Both timings live here rather than beside their own controls: the
-                // translation section disappears once a translation succeeds, and a
-                // measurement that vanishes the moment you take it is no use for
-                // comparing model tiers.
-                if let duration = subtitles.lastGenerationDuration {
-                    measuredDuration("subtitle.measured.generation_format", duration)
-                }
-
-                if let duration = subtitles.lastTranslationDuration {
-                    measuredDuration("subtitle.measured.translation_format", duration)
-                }
                 Picker(selection: $subtitles.storageLocation) {
                     ForEach(SubtitleStorageLocation.allCases, id: \.self) { location in
                         Text(L10n.string(location.labelKey)).tag(location)
@@ -549,27 +584,34 @@ struct PlayerView: View {
                 } label: {
                     GlazeHelpLabel("subtitle.panel.storage", help: "help.subtitle.storage")
                 }
-            } header: {
-                inspectorHeader("subtitle.panel.title", detailKey: "subtitle.panel.subtitle")
-            }
-            .glazeGlassRow()
 
-            Section {
-                subtitleFileSection
-                Toggle(L10n.string("subtitle.visibility.toggle"), isOn: $subtitles.isSubtitleVisible)
-                    .disabled(subtitles.subtitleCues.isEmpty)
-            } header: {
-                GlazeHelpLabel("subtitle.panel.files", help: "help.subtitle.files")
-                    .textCase(nil)
-            }
-            .glazeGlassRow()
-
-            if subtitles.pendingTranslationRequest != nil || subtitles.isTranslating {
-                Section(L10n.string("subtitle.translate.section")) {
-                    translationSection
+                if let duration = subtitles.lastGenerationDuration {
+                    measuredDuration("subtitle.measured.generation_format", duration)
                 }
-                .glazeGlassRow()
+                if let duration = subtitles.lastTranslationDuration {
+                    measuredDuration("subtitle.measured.translation_format", duration)
+                }
+
+                if subtitles.isGenerating {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ProgressView(value: subtitles.generationProgress)
+                        HStack {
+                            Text(generationStageText).font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button(L10n.string("subtitle.generate.cancel")) { subtitles.cancelGenerating() }
+                        }
+                    }
+                } else {
+                    Button(action: generateSubtitle) {
+                        Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
+                    }
+                    .buttonStyle(.glassProminent)
+                    .disabled(playback.currentVideoURL == nil)
+                }
+            } header: {
+                Text(L10n.string("subtitle.ai.section")).textCase(nil)
             }
+            .glazeGlassRow()
 
             if subtitles.needsFolderAccess, let videoURL = playback.currentVideoURL {
                 Section {
@@ -592,36 +634,6 @@ struct PlayerView: View {
             }
         }
         .formStyle(.grouped)
-        .safeAreaInset(edge: .bottom) {
-            subtitleActions
-        }
-    }
-
-    private var subtitleActions: some View {
-        VStack(spacing: 8) {
-            Divider()
-            if subtitles.isGenerating {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text(generationStageText).font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button(L10n.string("subtitle.generate.cancel")) { subtitles.cancelGenerating() }
-                }
-            } else {
-                HStack {
-                    Button(action: importSubtitle) {
-                        Label(L10n.string("subtitle.import"), systemImage: "text.badge.plus")
-                    }
-                    Spacer()
-                    Button(action: generateSubtitle) {
-                        Label(L10n.string("subtitle.generate"), systemImage: "sparkles")
-                    }
-                    .buttonStyle(.glassProminent)
-                }
-            }
-        }
-        .padding(12)
-        .glazeGlass(.floating, cornerRadius: 0, stroked: false)
     }
 
     /// Offered when a subtitle is loaded in a language the viewer did not ask for —
@@ -736,6 +748,19 @@ struct PlayerView: View {
         Locale.current.localizedString(forLanguageCode: code) ?? code.uppercased()
     }
 
+    private var selectedSubtitleLanguageBinding: Binding<String> {
+        Binding(
+            get: { subtitles.selectedSubtitleLanguageCode ?? "" },
+            set: { subtitles.setSelectedSubtitleLanguageCode($0.isEmpty ? nil : $0) }
+        )
+    }
+
+    /// Compact enough for the inspector while covering the primary global release
+    /// languages. More languages can be added without changing persisted values.
+    private var subtitleLanguageCodes: [String] {
+        ["ko", "en", "ja", "zh", "es", "fr", "de", "pt", "it", "ru", "ar", "hi", "id", "th", "tr", "vi"]
+    }
+
     private var subtitleFileSection: some View {
         Group {
             if subtitles.isInspectingEmbeddedSubtitles,
@@ -751,6 +776,11 @@ struct PlayerView: View {
                 Label(L10n.string("subtitle.panel.files_empty"), systemImage: "captions.bubble")
                     .foregroundStyle(.secondary)
             } else {
+                if !subtitles.detectedSubtitles.isEmpty {
+                    Text(L10n.string("subtitle.source.external"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
                 ForEach(subtitles.detectedSubtitles) { subtitle in
                     Button { subtitles.load(subtitle) } label: {
                         HStack {
@@ -770,6 +800,11 @@ struct PlayerView: View {
                     .buttonStyle(.plain)
                 }
 
+                if !subtitles.embeddedSubtitleTracks.isEmpty {
+                    Text(L10n.string("subtitle.source.embedded"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
                 ForEach(subtitles.embeddedSubtitleTracks) { track in
                     Button {
                         guard let videoURL = playback.currentVideoURL else { return }
@@ -829,16 +864,21 @@ struct PlayerView: View {
                 if mediaAssets.isInspectingMedia {
                     HStack { ProgressView().controlSize(.small); Text(L10n.string("media.panel.inspecting")) }
                 } else if let inspection = mediaAssets.mediaInspection {
+                    LabeledContent(L10n.string("media.panel.file_name"), value: inspection.fileName)
                     LabeledContent {
                         Text(inspection.containerHint.isEmpty ? "–" : inspection.containerHint)
                     } label: {
                         GlazeHelpLabel("media.panel.container", help: "help.media.container")
                     }
                     LabeledContent(L10n.string("media.panel.duration"), value: inspection.duration)
-                    LabeledContent {
-                        Text(avKitSupportText(for: inspection.isPlayable))
-                    } label: {
-                        GlazeHelpLabel("media.panel.avkit", help: "help.media.playback")
+                    if let value = inspection.resolution {
+                        LabeledContent(L10n.string("media.panel.resolution"), value: value)
+                    }
+                    if let value = inspection.fileSize {
+                        LabeledContent(L10n.string("media.panel.file_size"), value: value)
+                    }
+                    if let value = inspection.bitRate {
+                        LabeledContent(L10n.string("media.panel.bit_rate"), value: value)
                     }
 
                     if let asset = mediaAssets.currentMediaAsset {
@@ -1045,7 +1085,7 @@ struct PlayerView: View {
         playlistStore.setInitial(nextPlaylist)
         // A match belongs to one film; carrying it to the next one would offer to write
         // the wrong title beside it.
-        metadata.reset()
+        metadata.prepare(videoURL: originalURL)
         let mediaResource = resource ?? .localFile(originalURL)
         playback.setCurrentResource(mediaResource)
         subtitles.currentResource = mediaResource
@@ -1100,8 +1140,15 @@ struct PlayerView: View {
     private func metadataSection(for videoURL: URL) -> some View {
         switch metadata.phase {
         case .idle:
-            Button(L10n.string("metadata.panel.action")) {
-                Task { await metadata.lookUp(videoURL: videoURL, apiKey: preferences.tmdbAPIKey) }
+            VStack(alignment: .leading, spacing: 8) {
+                TextField(L10n.string("metadata.panel.search_title"), text: $metadata.searchTitle)
+                TextField(L10n.string("metadata.panel.search_year"), text: $metadata.searchYear)
+                Button {
+                    Task { await metadata.lookUp(videoURL: videoURL, apiKey: preferences.tmdbAPIKey) }
+                } label: {
+                    Label(L10n.string("metadata.panel.action"), systemImage: "magnifyingglass")
+                }
+                .disabled(metadata.searchTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
 
         case .searching:
@@ -1119,7 +1166,7 @@ struct PlayerView: View {
 
                 ForEach(matches, id: \.externalIDs.tmdbID) { match in
                     Button {
-                        Task { await metadata.apply(match, to: videoURL) }
+                        metadata.select(match)
                     } label: {
                         candidateRow(match)
                     }
@@ -1130,6 +1177,9 @@ struct PlayerView: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+
+        case .reviewing(let match):
+            metadataReview(match, videoURL: videoURL)
 
         case .writing:
             HStack(spacing: 8) {
@@ -1151,6 +1201,17 @@ struct PlayerView: View {
                 }
             }
 
+        case .needsFolderAccess(let match):
+            VStack(alignment: .leading, spacing: 9) {
+                issueLabel(
+                    titleKey: "media.folder_access.title",
+                    message: L10n.string("media.folder_access.metadata_detail")
+                )
+                Button(L10n.string("media.folder_access.action")) {
+                    Task { await metadata.requestFolderAccessAndRetry(match, videoURL: videoURL) }
+                }
+            }
+
         case .failed(let message):
             VStack(alignment: .leading, spacing: 8) {
                 issueLabel(titleKey: "metadata.panel.section", message: message)
@@ -1161,6 +1222,7 @@ struct PlayerView: View {
 
     private func candidateRow(_ match: MediaMetadataMatch) -> some View {
         HStack(alignment: .top, spacing: 10) {
+            metadataPoster(match.posterURL, width: 46, height: 68)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(match.title).lineLimit(1)
@@ -1178,10 +1240,77 @@ struct PlayerView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                if let overview = match.overview, !overview.isEmpty {
+                    Text(overview)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(2)
+                }
+                if let rating = match.rating, rating > 0 {
+                    Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
+    }
+
+    private func metadataReview(_ match: MediaMetadataMatch, videoURL: URL) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                metadataPoster(match.posterURL, width: 72, height: 106)
+                VStack(alignment: .leading, spacing: 7) {
+                    TextField(L10n.string("metadata.field.title"), text: $metadata.draftTitle)
+                    TextField(L10n.string("metadata.field.original_title"), text: $metadata.draftOriginalTitle)
+                    TextField(L10n.string("metadata.field.year"), text: $metadata.draftYear)
+                }
+            }
+
+            Text(L10n.string("metadata.field.overview"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextEditor(text: $metadata.draftOverview)
+                .frame(minHeight: 78)
+                .scrollContentBackground(.hidden)
+                .padding(6)
+                .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+
+            HStack {
+                Button(L10n.string("metadata.panel.search_again")) { metadata.reset() }
+                Spacer()
+                Button {
+                    Task { await metadata.applySelected(match, to: videoURL) }
+                } label: {
+                    Label(L10n.string("metadata.panel.confirm"), systemImage: "checkmark")
+                }
+                .buttonStyle(.glassProminent)
+            }
+
+            Text(L10n.string("metadata.attribution"))
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    @ViewBuilder
+    private func metadataPoster(_ url: URL?, width: CGFloat, height: CGFloat) -> some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .success(let image):
+                image.resizable().scaledToFill()
+            default:
+                Image(systemName: "film")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(12)
+                    .foregroundStyle(.secondary)
+                    .background(.quaternary)
+            }
+        }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
     private func avKitSupportText(for isPlayable: Bool?) -> String {

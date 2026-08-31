@@ -20,6 +20,7 @@ final class GlazePreferences {
         static let translationEngine = "subtitle.translationEngine"
         static let translationQuality = "subtitle.translationQuality"
         static let translationOutput = "subtitle.translationOutput"
+        static let translationTargetLanguage = "subtitle.translationTargetLanguage"
         static let storageLocation = "subtitle.storageLocation"
         static let textSize = "subtitle.textSize"
         static let fontSize = "subtitle.fontSize"
@@ -47,6 +48,13 @@ final class GlazePreferences {
 
     var translationOutput: SubtitleTranslationOutput {
         didSet { store(translationOutput.rawValue, Key.translationOutput) }
+    }
+
+    /// The language the viewer wants to read. This is intentionally independent of
+    /// the Mac UI language: multilingual viewers often keep macOS in English while
+    /// asking Glaze for Korean, Japanese, or another subtitle language.
+    var translationTargetLanguageCode: String {
+        didSet { store(translationTargetLanguageCode, Key.translationTargetLanguage) }
     }
 
     /// Where finished subtitles are written. Beside the video by default, which on a
@@ -103,6 +111,8 @@ final class GlazePreferences {
         translationEngineID = Self.read(defaults, Key.translationEngine) ?? .appleTranslation
         translationQuality = Self.read(defaults, Key.translationQuality) ?? .default
         translationOutput = Self.read(defaults, Key.translationOutput) ?? .bilingual
+        translationTargetLanguageCode = defaults.string(forKey: Key.translationTargetLanguage)
+            ?? SubtitleLanguagePreference.targetLanguageCode
         storageLocation = Self.read(defaults, Key.storageLocation) ?? .default
         let storedTextSize: SubtitleTextSize = Self.read(defaults, Key.textSize) ?? .default
         textSize = storedTextSize

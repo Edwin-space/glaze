@@ -16,6 +16,7 @@ public actor UPnPContentDirectoryClient: NetworkMediaServerBrowsing {
     }
 
     private let session: URLSession
+    private var browseCache: [String: [NetworkMediaNode]] = [:]
 
     public init(session: URLSession? = nil) {
         if let session {
@@ -29,6 +30,67 @@ public actor UPnPContentDirectoryClient: NetworkMediaServerBrowsing {
     }
 
     public func browse(server: NetworkMediaServer, objectID: String) async throws -> [NetworkMediaNode] {
+        try await loadNodes(server: server, objectID: objectID)
+    }
+
+    /// Returns a media-server root suitable for a video player rather than a generic
+    /// UPnP browser. Synology, for example, labels both Photos and Videos as the same
+    /// `storageFolder` class, so ambiguous roots are inspected until a playable video
+    /// is found. This keeps photo and music branches out without relying on English or
+    /// Korean folder names.
+    public func browseVideoRoots(
+        server: NetworkMediaServer,
+        objectID: String = "0"
+    ) async throws -> [NetworkMediaNode] {
+        let nodes = try await loadNodes(server: server, objectID: objectID)
+        let ambiguousContainers = nodes.filter {
+            guard case .container = $0.kind else { return false }
+            return $0.containerRelevance == .unknown
+        }
+        let playableAmbiguousIDs = try await withThrowingTaskGroup(
+            of: String?.self,
+            returning: Set<String>.self
+        ) { group in
+            for node in ambiguousContainers {
+                group.addTask {
+                    try await self.containsPlayableVideo(server: server, rootID: node.id)
+                        ? node.id
+                        : nil
+                }
+            }
+
+            var result: Set<String> = []
+            for try await id in group {
+                if let id { result.insert(id) }
+            }
+            return result
+        }
+
+        return nodes.filter { node in
+            switch node.kind {
+            case .video:
+                return true
+            case .unsupported:
+                return false
+            case .container:
+                switch node.containerRelevance {
+                case .video:
+                    return true
+                case .nonVideo:
+                    return false
+                case .unknown:
+                    return playableAmbiguousIDs.contains(node.id)
+                }
+            }
+        }
+    }
+
+    private func loadNodes(server: NetworkMediaServer, objectID: String) async throws -> [NetworkMediaNode] {
+        let cacheKey = "\(server.id)#\(objectID)"
+        if let cached = browseCache[cacheKey] {
+            return cached
+        }
+
         var request = URLRequest(url: server.contentDirectoryControlURL)
         request.httpMethod = "POST"
         request.setValue("text/xml; charset=\"utf-8\"", forHTTPHeaderField: "Content-Type")
@@ -46,7 +108,62 @@ public actor UPnPContentDirectoryClient: NetworkMediaServerBrowsing {
             throw ClientError.httpStatus(httpResponse.statusCode)
         }
 
-        return UPnPContentDirectoryResponseParser.parse(data: data, serverID: server.id)
+        let nodes = UPnPContentDirectoryResponseParser.parse(data: data, serverID: server.id)
+        browseCache[cacheKey] = nodes
+        return nodes
+    }
+
+    private func containsPlayableVideo(
+        server: NetworkMediaServer,
+        rootID: String
+    ) async throws -> Bool {
+        let maximumDepth = 3
+        let maximumContainers = 48
+        var frontier = [rootID]
+        var visited: Set<String> = []
+        var inspected = 0
+
+        for depth in 0...maximumDepth where !frontier.isEmpty && inspected < maximumContainers {
+            let remainingBudget = maximumContainers - inspected
+            let batch = Array(frontier.prefix(remainingBudget)).filter {
+                visited.insert($0).inserted
+            }
+            inspected += batch.count
+            guard !batch.isEmpty else { break }
+
+            let levels = try await withThrowingTaskGroup(
+                of: [NetworkMediaNode].self,
+                returning: [[NetworkMediaNode]].self
+            ) { group in
+                for id in batch {
+                    group.addTask {
+                        try await self.loadNodes(server: server, objectID: id)
+                    }
+                }
+                var result: [[NetworkMediaNode]] = []
+                for try await nodes in group { result.append(nodes) }
+                return result
+            }
+
+            if levels.joined().contains(where: { node in
+                if case .video = node.kind { return true }
+                return node.containerRelevance == .video
+            }) {
+                return true
+            }
+
+            guard depth < maximumDepth else { break }
+            frontier = levels.joined().compactMap { child in
+                guard case .container = child.kind else { return nil }
+                switch child.containerRelevance {
+                case .video: return child.id
+                case .nonVideo: return nil
+                case .unknown: return child.id
+                }
+            }
+        }
+
+        return false
     }
 
     private static func browseEnvelope(objectID: String) -> Data {

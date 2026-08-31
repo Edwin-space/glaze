@@ -185,6 +185,18 @@ scripts/
 - [ ] 번역 엔진에 `SubtitleTranslationRequest` 실제 연결
 - [ ] 이미지 기반 자막 OCR 검증
 
+### 자막·미디어 정보 고도화 (2026-08-28)
+
+- [x] 외부 자막과 영상 내장 자막을 Inspector에서 소스별로 분리
+- [x] 잘못 기록된 내장 자막 언어를 사용자가 직접 교정
+- [x] 번역 대상 언어를 UI 언어와 독립적으로 선택하고 저장
+- [x] 기존 자막 선택·번역과 음성 기반 AI 신규 생성을 별도 섹션과 행동으로 분리
+- [x] ffprobe 기반 실제 파일명·컨테이너·길이·해상도·크기·비트레이트·트랙 표시
+- [x] TMDB 검색어·연도 편집, 후보 선택 후 검토·수정, 명시적 저장 흐름 구현
+- [x] 메타데이터 sidecar 저장 실패 시 폴더 권한 복구 액션 제공
+- [ ] 자막 싱크 조절과 오디오 트랙 선택
+- [ ] Apple 플랫폼 설정 동기화 구현(`NSUbiquitousKeyValueStore` + 기기별 보안 저장소)
+
 ## Phase 3. FFmpeg 검증
 
 ### 목표
@@ -362,18 +374,20 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] macOS 네트워크 미디어 화면에 DLNA와 저장된 WebDAV NAS를 통합 표시
 - [x] WebDAV 폴더 탐색과 인증 URL의 VLC 재생 경로 연결
 - [x] SMB는 Finder 마운트 경로로 안내하고 암호화되지 않은 FTP는 미지원으로 명시
+- [x] tvOS 서버 루트에서 사진·음악 컨테이너를 제외하고 영상이 있는 컨테이너만 노출
+- [x] tvOS 재생 중 Siri Remote 터치 탐색, 10초 이동, 자막 트랙·싱크·크기 제어
 
 ### 출시 전 검증
 
-- [ ] Synology Media Server 실기기 탐색·Browse·재생 회귀 테스트
+- [x] Synology Media Server 실기기 탐색·Browse·VLC 재생 회귀 테스트 (Apple TV 4K 3세대, tvOS 26.6, 2026-08-31)
 - [ ] NAS sleep/wake, IP 변경, 서버 중복 응답, 연결 손실 복구
 - [ ] DLNA가 제공하지 않는 sidecar 자막의 앱 내부 저장·연결 정책
 - [ ] iOS/iPadOS multicast entitlement 신청 및 실기기 검증
 - [x] tvOS 타깃, focus engine UI, 앱 아이콘/Top Shelf 자산 구성
 - [x] App Store Connect tvOS 플랫폼·공통 번들 ID·관리형 배포 인증서 확인
-- [ ] Apple TV를 Xcode에 페어링해 tvOS 개발 프로파일 생성
+- [x] Apple TV를 Xcode에 페어링·기기 등록하고 tvOS 개발 프로파일 생성
 - [ ] tvOS 서명 아카이브 업로드 및 TestFlight 내부 테스트
-- [ ] Synology/Emby/WebDAV 실기기 재생·sidecar 자막·이어보기 회귀 테스트
+- [ ] Emby/WebDAV 실기기 재생·sidecar 자막·이어보기 회귀 테스트 (Emby는 사무실 NAS에서 진행)
 
 ## Phase 3D. macOS 설정 허브 (2026-08-27)
 

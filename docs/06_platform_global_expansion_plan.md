@@ -1,7 +1,7 @@
 # 플랫폼 및 글로벌 확장 계획
 
 작성일: 2026-06-18  
-최종 수정: 2026-08-27 (tvOS 감상 앱·WebDAV·TestFlight 준비 상태 반영)
+최종 수정: 2026-08-28 (Apple 플랫폼 설정 동기화 경계 반영)
 프로젝트명: 글레이즈
 
 ## 문서 목적
@@ -129,6 +129,21 @@ Finder가 SMB 공유를 마운트하면 `/Volumes` 아래 일반 파일 경로�
 
 v1.2 범위로 둔다. 수동 복사보다 경험이 훨씬 낫고 인프라 요구는 0이다.
 
+#### 설정 동기화 계약 (2026-08-28)
+
+macOS에서 만든 설정과 NAS 연결을 Apple TV·iPhone·iPad가 이어받을 수 있지만, 모든 값을 하나의 설정 파일로 동기화하지 않는다.
+
+| 데이터 | 저장·동기화 | 이유 |
+|---|---|---|
+| 자막 크기·위치·배경, 선호 원문/번역 언어, 번역 출력 기본값 | `NSUbiquitousKeyValueStore` | 1MB 이하의 작은 환경 설정에 적합하고 같은 Apple 계정의 앱 인스턴스에서 공유 가능 |
+| NAS 표시 이름·기본 URL·사용자 이름 | `NSUbiquitousKeyValueStore` | 비밀이 아닌 연결 메타데이터이며 플랫폼 공통 키로 표현 가능 |
+| NAS 비밀번호·토큰 | 기기 Keychain | KVS에 비밀을 넣지 않는다. 특히 tvOS 앱 Keychain 항목은 iCloud Keychain으로 다른 기기와 동기화되지 않으므로 Apple TV에서 다시 입력하거나 향후 안전한 페어링을 제공한다 |
+| 보안 범위 폴더 bookmark·SMB 마운트 경로 | 기기 로컬 | 접근 권한과 경로가 기기마다 다르다 |
+| 모델 다운로드·캐시 상태 | 기기 로컬 | 기기 성능·용량·지원 엔진이 다르다 |
+| 영상별 언어 교정·TMDB 매칭·이어보기 | CloudKit private database/CKSyncEngine 후보 | KVS보다 큰 구조화 데이터이며 충돌·증분 동기화가 필요하다 |
+
+동일한 iCloud KVS 식별자와 안정된 locale 독립 키를 macOS/iOS/iPadOS/tvOS 타깃에서 공유한다. 현재는 배포 프로비저닝에 영향을 주지 않도록 iCloud entitlement를 켜지 않고 저장 계층 경계만 확정한다. 기능 구현 시 iCloud capability와 container를 App Store Connect 프로비저닝에 맞춰 한 번에 추가한다.
+
 ## 권장 확장 순서
 
 ### Phase A. macOS Apple Silicon
@@ -232,7 +247,9 @@ Apple TV 앱과 NAS/자체 미디어 서버는 장기 프리미엄 확장의 핵
 - `GlazeTV` 타깃과 focus engine 기반 NAS 탐색 UI를 추가했고, DLNA 자동 탐색과 WebDAV 수동 연결을 같은 감상 흐름으로 제공한다.
 - VLCKit 정적 링크 재생, WebDAV sidecar 자막 선택, 미디어 서버 관례의 언어 코드 자막 파일명까지 시뮬레이터에서 검증했다.
 - tvOS 앱 아이콘/Top Shelf 자산과 Release 빌드는 준비됐다. App Store Connect의 macOS·tvOS 통합 앱 레코드에 맞춰 공통 번들 ID `com.edwin.glaze`와 기존 관리형 배포 인증서를 사용한다.
-- 실제 Synology/Emby 장비의 인증·한글 경로·스트리밍 안정성은 Apple TV 실기기 TestFlight에서 최종 검증한다.
+- 2026-08-31 Apple TV 4K(3세대, tvOS 26.6)를 Xcode에 페어링·등록해 개발 프로파일을 만들고, 실기기에 설치한 빌드에서 Synology/Plex SSDP 발견과 Synology MKV 스트리밍 재생을 확인했다.
+- tvOS 재생기는 Siri Remote 터치 탐색, 10초 이동, 내장·외부 자막 트랙 선택, 자막 싱크·크기 조정을 제공한다. UPnP 루트는 사진·음악 대신 실제 영상이 있는 컨테이너만 노출한다.
+- Emby는 사무실 NAS, WebDAV 인증·한글 경로·sidecar 자막은 각 네트워크의 실기기 TestFlight에서 추가 검증한다.
 
 Apple 플랫폼 네트워크 계약:
 

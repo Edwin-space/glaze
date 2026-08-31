@@ -124,6 +124,9 @@ GPL 선언이 하나라도 남으면 App Store 배포가 막힌다. 2026-08-10�
 **비동기 결과를 반영하기 전에 대상이 아직 유효한지 확인한다.**
 사용자가 다른 영상으로 넘어간 뒤 도착한 결과가 새 영상에 덮어써지면 안 된다.
 
+**재생 엔진의 성공 여부를 미디어 정보로 대신하지 않는다.**
+VLC로 재생하는 파일을 AVFoundation 경량 경로로만 검사했더니 영상은 정상인데 정보 패널은 비어 있는 조용한 실패가 생겼다. 파일명·컨테이너·크기·비트레이트·해상도·트랙은 재생 엔진과 독립된 ffprobe 검사 결과를 우선 사용하고, 도구를 쓸 수 없을 때만 AVFoundation 경량 검사로 fallback한다.
+
 ## 6. 사용자 문구
 
 **구현 용어를 사용자 화면에 노출하지 않는다.**
@@ -166,6 +169,17 @@ GPL 선언이 하나라도 남으면 App Store 배포가 막힌다. 2026-08-10�
 Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze`는 그것까지 죽인다. PID를 특정해서 종료한다.
 
 ## 8. 아직 해결되지 않은 것
+
+### tvOS 실기기와 미디어 탐색
+
+**tvOS에는 SwiftUI `Slider`가 없다.**
+컴파일러가 명시적으로 unavailable 처리한다. Apple TV 재생바는 포커스 가능한 `UIView`와 `UIPanGestureRecognizer`로 만들고, 방향키·VoiceOver adjustable 액션도 같은 seek 경로로 합친다. 단순 `ProgressView`는 표시만 가능하고 Siri Remote로 조작할 수 없다.
+
+**UPnP 컨테이너 클래스만 믿으면 사진과 비디오를 구분하지 못한다.**
+Synology는 사진과 비디오 루트를 모두 `object.container.storageFolder`로 보낸다. 번역된 폴더명(`사진`, `비디오`)을 하드코딩하지 말고 명시적 audio/image 클래스는 제외한 뒤, 모호한 루트는 깊이·개수 제한을 둔 병렬 Browse로 실제 `video/*` 리소스 존재를 확인한다.
+
+**Apple TV 빌드 ID와 설치 ID는 다르다.**
+`xcodebuild -destination`에는 기기 UDID(`00008110-...`)를 쓰고 `xcrun devicectl --device`에는 CoreDevice 식별자(`FBC69999-...`)를 쓴다. 첫 실기기 빌드는 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration`이 필요하다. Codex 샌드박스 안의 `devicectl`은 CoreDeviceService XPC가 끊긴 것처럼 보일 수 있으므로 개발 도구 권한으로 실행해 구분한다.
 
 작업 전에 상태를 확인해야 하는 항목이다.
 

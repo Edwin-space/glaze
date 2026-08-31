@@ -132,8 +132,8 @@
 "subtitle.panel.preparation" = "생성 설정";
 "subtitle.panel.storage" = "저장 위치";
 "subtitle.panel.storage_ask" = "앱 내부 저장";
-"subtitle.panel.subtitle" = "재생 전에 재사용 가능한 자막을 준비합니다.";
-"subtitle.panel.title" = "AI 자막 준비";
+"subtitle.panel.subtitle" = "기존 자막을 선택하고 언어를 바로잡거나 새로 만듭니다.";
+"subtitle.panel.title" = "자막";
 "subtitle.panel.toggle" = "자막";
 "subtitle.status.hint" = "자막 생성은 사용자가 요청할 때만 시작됩니다.";
 "subtitle.status.detected_hint_format" = "감지됨: %@";
@@ -256,6 +256,19 @@
 
 "tv.playback.failed.title" = "재생할 수 없습니다";
 "tv.playback.failed.detail" = "NAS에서 이 영상을 불러오지 못했습니다. 서버가 켜져 있고 같은 네트워크인지 확인하세요.";
+"tv.player.timeline" = "재생 위치";
+"tv.player.play" = "재생";
+"tv.player.pause" = "일시 정지";
+"tv.player.rewind_10" = "10초 뒤로";
+"tv.player.forward_10" = "10초 앞으로";
+"tv.player.subtitles" = "자막";
+"tv.player.subtitle.settings" = "자막 설정";
+"tv.player.subtitle.track" = "자막 트랙";
+"tv.player.subtitle.off" = "자막 끄기";
+"tv.player.subtitle.none" = "이 영상에서 사용할 수 있는 자막이 없습니다.";
+"tv.player.subtitle.unknown" = "언어 정보 없음";
+"tv.player.subtitle.sync" = "자막 싱크";
+"tv.player.subtitle.sync_format" = "%+.1f초";
 
 "tv.detail.play" = "재생";
 "tv.detail.play_from_start" = "처음부터";
@@ -315,3 +328,38 @@
 "settings.network.not_supported" = "지원 안 함";
 "settings.network.remove_title" = "이 NAS를 삭제할까요?";
 "settings.network.remove_message" = "‘%@’의 저장된 주소와 Keychain 비밀번호가 이 Mac에서 삭제됩니다.";
+
+"subtitle.source.external" = "외부 자막 파일";
+"subtitle.source.embedded" = "영상에 포함된 자막";
+"subtitle.language.section" = "자막 언어";
+"subtitle.language.source" = "현재 자막 언어";
+"subtitle.language.target" = "번역할 언어";
+"subtitle.language.unknown" = "알 수 없음 / 자동";
+"help.subtitle.source_language" = "영상에 기록된 언어 정보가 잘못된 경우 여기서 바로잡으세요. 자막 내용은 바뀌지 않으며 번역 기준만 변경됩니다.";
+"help.subtitle.target_language" = "사용자가 자막을 읽을 언어입니다. macOS 표시 언어와 다르게 지정할 수 있습니다.";
+"subtitle.ai.section" = "AI로 자막 만들기";
+"subtitle.ai.description" = "영상에 사용할 수 있는 자막이 없을 때만 사용하세요. 사용자가 시작하면 영상의 음성을 Mac에서 분석합니다.";
+
+"media.panel.file_name" = "파일";
+"media.panel.file_size" = "크기";
+"media.panel.bit_rate" = "비트레이트";
+"media.panel.resolution" = "해상도";
+"media.folder_access.title" = "폴더 권한이 필요합니다";
+"media.folder_access.action" = "이 폴더 허용";
+"media.folder_access.metadata_detail" = "작품은 찾았지만 macOS가 영상 옆에 포스터와 작품 정보를 저장하지 못하게 막고 있습니다.";
+"media.folder_access.panel_message" = "‘%@’ 폴더의 자막을 읽고 영상 옆에 작품 정보를 저장할 수 있도록 이 폴더를 선택해 주세요.";
+"media.folder_access.panel_prompt" = "허용";
+
+"metadata.panel.search_title" = "작품 제목";
+"metadata.panel.search_year" = "개봉 연도(선택)";
+"metadata.panel.confirm" = "이 작품으로 저장";
+"metadata.panel.search_again" = "다시 검색";
+"metadata.field.title" = "표시 제목";
+"metadata.field.original_title" = "원제";
+"metadata.field.year" = "연도";
+"metadata.field.overview" = "줄거리";
+"metadata.error.empty_search" = "검색할 작품 제목을 입력하세요.";
+"subtitle.panel.output_loaded_format" = "%@ 자막 선택됨";
+"subtitle.panel.output_none" = "선택된 자막 없음";
+"subtitle.panel.output_available" = "아래에서 자막 선택";
+"subtitle.source.language_format" = "%@ 자막";

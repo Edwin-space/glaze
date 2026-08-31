@@ -8,9 +8,10 @@ final class MediaAssetStore {
     var mediaInspection: MediaInspection?
     var isInspectingMedia = false
     var currentMediaAsset: MediaAsset?
+    private let probeInspector = FFprobeMediaInspector()
 
-    /// Resets media state for a newly loaded video. Uses a lightweight, synchronous inspection for the
-    /// native VLC engine (no AVFoundation track loading available) and a full async inspection for AVKit.
+    /// Resets media state for a newly loaded video. ffprobe is the primary source so
+    /// MKV/VLC playback exposes the same real container information as AVKit media.
     func prepareForNewVideo(
         url: URL,
         hasDetectedSubtitles: Bool,
@@ -28,12 +29,7 @@ final class MediaAssetStore {
             hasSubtitles: hasDetectedSubtitles
         )
 
-        if engine == .nativeVLC {
-            mediaInspection = MediaInspector.lightweightInspection(url: url, isPlayable: nil)
-            isInspectingMedia = false
-        } else {
-            inspect(url: url, isStillCurrent: isStillCurrent)
-        }
+        inspect(url: url, engine: engine, isStillCurrent: isStillCurrent)
     }
 
     func markSubtitleExternallyLoaded() {
@@ -48,9 +44,20 @@ final class MediaAssetStore {
         currentMediaAsset?.subtitleReadiness = .generated
     }
 
-    private func inspect(url: URL, isStillCurrent: @escaping () -> Bool) {
+    private func inspect(
+        url: URL,
+        engine: PlaybackEngineKind,
+        isStillCurrent: @escaping () -> Bool
+    ) {
         Task {
-            let inspection = await MediaInspector.inspect(url: url)
+            let inspection: MediaInspection
+            do {
+                inspection = try await probeInspector.inspect(url: url)
+            } catch {
+                inspection = engine == .nativeVLC
+                    ? MediaInspector.lightweightInspection(url: url, isPlayable: nil)
+                    : await MediaInspector.inspect(url: url)
+            }
             guard isStillCurrent() else {
                 return
             }

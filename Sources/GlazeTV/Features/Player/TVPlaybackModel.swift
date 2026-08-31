@@ -3,6 +3,13 @@ import GlazeCore
 import Observation
 import VLCKit
 
+struct TVSubtitleTrackOption: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let languageCode: String?
+    let isSelected: Bool
+}
+
 /// Playback state for the Apple TV player.
 ///
 /// VLCKit rather than AVFoundation, because seven films in ten on the NAS this was
@@ -16,6 +23,10 @@ final class TVPlaybackModel {
     private(set) var currentTime: TimeInterval = 0
     private(set) var duration: TimeInterval = 0
     private(set) var hasFailed = false
+    private(set) var subtitleTracks: [TVSubtitleTrackOption] = []
+    private(set) var selectedSubtitleTrackID: String?
+    private(set) var subtitleDelay: TimeInterval = 0
+    private(set) var subtitleScale: Float = 100
 
     /// Seconds a single press of the remote skips. Matches what tvOS apps do.
     static let skipInterval: TimeInterval = 10
@@ -87,6 +98,13 @@ final class TVPlaybackModel {
         }
     }
 
+    func seek(to seconds: TimeInterval) {
+        guard duration > 0 else { return }
+        let target = min(max(seconds, 0), duration)
+        player.time = VLCTime(int: Int32(target * 1_000))
+        currentTime = target
+    }
+
     func stop() {
         player.stop()
         isPlaying = false
@@ -95,6 +113,29 @@ final class TVPlaybackModel {
     /// Adds a subtitle file the player did not find on its own, and selects it.
     func addSubtitle(_ url: URL) {
         player.addPlaybackSlave(url, type: .subtitle, enforce: true)
+    }
+
+    func selectSubtitleTrack(id: String) {
+        guard let track = player.textTracks.first(where: { $0.trackId == id }) else { return }
+        player.selectTextTracks([track])
+        refreshSubtitleState()
+    }
+
+    func disableSubtitles() {
+        player.deselectAllTextTracks()
+        refreshSubtitleState()
+    }
+
+    func adjustSubtitleDelay(by seconds: TimeInterval) {
+        let next = min(max(subtitleDelay + seconds, -10), 10)
+        player.currentVideoSubTitleDelay = Int(next * 1_000_000)
+        subtitleDelay = next
+    }
+
+    func setSubtitleScale(_ scale: Float) {
+        let next = min(max(scale, 75), 160)
+        player.currentSubTitleFontScale = next
+        subtitleScale = next
     }
 
     fileprivate func update(state: VLCMediaPlayerState) {
@@ -116,6 +157,7 @@ final class TVPlaybackModel {
         }
 
         chooseSubtitleIfReady()
+        refreshSubtitleState()
     }
 
     /// Selects the subtitle that came from the folder rather than the one inside the
@@ -142,6 +184,29 @@ final class TVPlaybackModel {
         }
 
         hasChosenSubtitle = true
+    }
+
+    private func refreshSubtitleState() {
+        let tracks = player.textTracks
+        subtitleTracks = tracks.map { track in
+            let normalizedLanguage = track.language.flatMap(SubtitleLanguageCode.normalized)
+            let localizedLanguage = normalizedLanguage.flatMap {
+                Locale.current.localizedString(forLanguageCode: $0)
+            }
+            let name = track.trackName.trimmingCharacters(in: .whitespacesAndNewlines)
+            return TVSubtitleTrackOption(
+                id: track.trackId,
+                title: localizedLanguage ?? (name.isEmpty ? L10n.string("tv.player.subtitle.unknown") : name),
+                languageCode: normalizedLanguage,
+                isSelected: track.isSelected
+            )
+        }
+        selectedSubtitleTrackID = subtitleTracks.first(where: \.isSelected)?.id
+        subtitleDelay = TimeInterval(player.currentVideoSubTitleDelay) / 1_000_000
+        let reportedScale = player.currentSubTitleFontScale
+        if reportedScale > 0 {
+            subtitleScale = reportedScale
+        }
     }
 
     /// Stores where the viewer got to, so the shelf can offer to resume.

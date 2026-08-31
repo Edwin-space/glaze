@@ -102,7 +102,13 @@ public final class NetworkMediaBrowserModel {
         phase = .browsing
         errorMessage = nil
         do {
-            let nodes = try await browser.browse(server: selectedServer, objectID: objectID)
+            let isServerRoot = levels.isEmpty && objectID == "0"
+            let sourceNodes = if isServerRoot {
+                try await browser.browseVideoRoots(server: selectedServer, objectID: objectID)
+            } else {
+                try await browser.browse(server: selectedServer, objectID: objectID)
+            }
+            let nodes = sourceNodes
                 .filter {
                     switch $0.kind {
                     case .container, .video: true

@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import GlazeCore
 
-/// Remembers folders the viewer has allowed Glaze to read subtitles from.
+/// Remembers media folders the viewer has allowed Glaze to read and update.
 ///
 /// Under the App Sandbox, opening a film grants access to that one file. The `.srt`
 /// beside it is a different file, and reading it is refused — so sidecar subtitles,
@@ -16,7 +16,7 @@ import GlazeCore
 /// Asking is not ideal, but it is asked once per folder and the alternative is a
 /// feature that silently does not work.
 @MainActor
-enum SubtitleFolderAccess {
+enum MediaFolderAccess {
     private static let defaultsKey = "subtitle.folderBookmarks"
 
     /// Folders currently being accessed, so `stopAccessing` is balanced and a folder is
@@ -74,10 +74,10 @@ enum SubtitleFolderAccess {
         panel.allowsMultipleSelection = false
         panel.directoryURL = folder
         panel.message = String(
-            format: L10n.string("subtitle.folder_access.panel_message"),
+            format: L10n.string("media.folder_access.panel_message"),
             folder.lastPathComponent
         )
-        panel.prompt = L10n.string("subtitle.folder_access.panel_prompt")
+        panel.prompt = L10n.string("media.folder_access.panel_prompt")
 
         guard panel.runModal() == .OK, let chosen = panel.url else { return false }
 

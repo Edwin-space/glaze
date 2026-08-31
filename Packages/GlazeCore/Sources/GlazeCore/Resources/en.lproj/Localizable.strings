@@ -132,8 +132,8 @@
 "subtitle.panel.preparation" = "Generation Settings";
 "subtitle.panel.storage" = "Save location";
 "subtitle.panel.storage_ask" = "Stored in app";
-"subtitle.panel.subtitle" = "Prepare reusable subtitles before playback.";
-"subtitle.panel.title" = "AI Subtitle Prep";
+"subtitle.panel.subtitle" = "Choose existing subtitles, correct their language, or create new ones.";
+"subtitle.panel.title" = "Subtitles";
 "subtitle.panel.toggle" = "Subtitles";
 "subtitle.status.hint" = "Subtitle generation starts only when you ask for it.";
 "subtitle.status.detected_hint_format" = "Detected: %@";
@@ -256,6 +256,19 @@
 
 "tv.playback.failed.title" = "Cannot play this video";
 "tv.playback.failed.detail" = "Glaze could not load this video from the NAS. Check that the server is on and on the same network.";
+"tv.player.timeline" = "Playback position";
+"tv.player.play" = "Play";
+"tv.player.pause" = "Pause";
+"tv.player.rewind_10" = "Back 10 seconds";
+"tv.player.forward_10" = "Forward 10 seconds";
+"tv.player.subtitles" = "Subtitles";
+"tv.player.subtitle.settings" = "Subtitle Settings";
+"tv.player.subtitle.track" = "Subtitle Track";
+"tv.player.subtitle.off" = "Subtitles Off";
+"tv.player.subtitle.none" = "No subtitles are available for this video.";
+"tv.player.subtitle.unknown" = "Unknown Language";
+"tv.player.subtitle.sync" = "Subtitle Timing";
+"tv.player.subtitle.sync_format" = "%+.1f sec";
 
 "tv.detail.play" = "Play";
 "tv.detail.play_from_start" = "Play from start";
@@ -315,3 +328,38 @@
 "settings.network.not_supported" = "Not supported";
 "settings.network.remove_title" = "Remove this NAS?";
 "settings.network.remove_message" = "The saved address and Keychain password for “%@” will be removed from this Mac.";
+
+"subtitle.source.external" = "External subtitle files";
+"subtitle.source.embedded" = "Subtitles in this video";
+"subtitle.language.section" = "Subtitle language";
+"subtitle.language.source" = "Subtitle is written in";
+"subtitle.language.target" = "Translate to";
+"subtitle.language.unknown" = "Unknown / Auto";
+"help.subtitle.source_language" = "Container language tags can be wrong. Correct the language here before translating; this does not change the subtitle text.";
+"help.subtitle.target_language" = "The language you want to read. It can be different from the language used by macOS.";
+"subtitle.ai.section" = "Create subtitles with AI";
+"subtitle.ai.description" = "Use this only when the video has no usable subtitle. Glaze transcribes the audio locally after you start it.";
+
+"media.panel.file_name" = "File";
+"media.panel.file_size" = "Size";
+"media.panel.bit_rate" = "Bit rate";
+"media.panel.resolution" = "Resolution";
+"media.folder_access.title" = "Folder access needed";
+"media.folder_access.action" = "Allow This Folder";
+"media.folder_access.metadata_detail" = "Glaze found the title, but macOS is blocking artwork and metadata from being saved beside the video.";
+"media.folder_access.panel_message" = "Select the “%@” folder so Glaze can read subtitles and save title information beside your videos.";
+"media.folder_access.panel_prompt" = "Allow";
+
+"metadata.panel.search_title" = "Movie title";
+"metadata.panel.search_year" = "Release year (optional)";
+"metadata.panel.confirm" = "Save This Match";
+"metadata.panel.search_again" = "Search Again";
+"metadata.field.title" = "Display title";
+"metadata.field.original_title" = "Original title";
+"metadata.field.year" = "Year";
+"metadata.field.overview" = "Overview";
+"metadata.error.empty_search" = "Enter a movie title to search.";
+"subtitle.panel.output_loaded_format" = "%@ subtitle selected";
+"subtitle.panel.output_none" = "No subtitle selected";
+"subtitle.panel.output_available" = "Choose a subtitle below";
+"subtitle.source.language_format" = "%@ subtitle";

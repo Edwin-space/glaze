@@ -41,6 +41,34 @@ public struct NetworkMediaNode: Identifiable, Equatable, Hashable, Sendable {
     }
 }
 
+public enum NetworkMediaContainerRelevance: Equatable, Sendable {
+    case video
+    case nonVideo
+    case unknown
+}
+
+public extension NetworkMediaNode {
+    /// UPnP servers often expose Music, Photos, and Videos as sibling containers.
+    /// Item MIME types are reliable, but container classes vary between vendors, so
+    /// only explicit media classes are decided here; generic folders are probed by the
+    /// content-directory client before they reach a video-first UI.
+    var containerRelevance: NetworkMediaContainerRelevance {
+        guard case .container = kind else { return .unknown }
+        let value = upnpClass?.lowercased() ?? ""
+
+        if value.contains("video") || value.contains("movie") {
+            return .video
+        }
+        if value.contains("audio")
+            || value.contains("music")
+            || value.contains("image")
+            || value.contains("photo") {
+            return .nonVideo
+        }
+        return .unknown
+    }
+}
+
 public protocol NetworkMediaServerDiscovering: Sendable {
     func discoverServers() async throws -> [NetworkMediaServer]
 }

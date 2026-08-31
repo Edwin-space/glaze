@@ -80,4 +80,40 @@ final class UPnPParsingTests: XCTestCase {
         XCTAssertEqual(resource.byteCount, 123_456)
         XCTAssertEqual(try XCTUnwrap(resource.duration), 3_723.5, accuracy: 0.001)
     }
+
+    func testClassifiesExplicitMediaContainersWithoutUsingDisplayNames() {
+        let video = NetworkMediaNode(
+            id: "video",
+            parentID: "0",
+            title: "ビデオ",
+            upnpClass: "object.container.genre.movieGenre",
+            kind: .container(childCount: nil)
+        )
+        let music = NetworkMediaNode(
+            id: "music",
+            parentID: "0",
+            title: "음악",
+            upnpClass: "object.container.album.musicAlbum",
+            kind: .container(childCount: nil)
+        )
+        let photos = NetworkMediaNode(
+            id: "photos",
+            parentID: "0",
+            title: "Photos",
+            upnpClass: "object.container.album.photoAlbum",
+            kind: .container(childCount: nil)
+        )
+        let genericFolder = NetworkMediaNode(
+            id: "folder",
+            parentID: "0",
+            title: "비디오",
+            upnpClass: "object.container.storageFolder",
+            kind: .container(childCount: nil)
+        )
+
+        XCTAssertEqual(video.containerRelevance, .video)
+        XCTAssertEqual(music.containerRelevance, .nonVideo)
+        XCTAssertEqual(photos.containerRelevance, .nonVideo)
+        XCTAssertEqual(genericFolder.containerRelevance, .unknown)
+    }
 }

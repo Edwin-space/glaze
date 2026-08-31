@@ -6,9 +6,34 @@ public struct MediaInspection: Sendable {
     public let fileName: String
     public let containerHint: String
     public let duration: String
+    public let fileSize: String?
+    public let bitRate: String?
+    public let resolution: String?
     public let isPlayable: Bool?
     public let tracks: [MediaTrackInspection]
     public let errorMessage: String?
+
+    public init(
+        fileName: String,
+        containerHint: String,
+        duration: String,
+        fileSize: String? = nil,
+        bitRate: String? = nil,
+        resolution: String? = nil,
+        isPlayable: Bool?,
+        tracks: [MediaTrackInspection],
+        errorMessage: String?
+    ) {
+        self.fileName = fileName
+        self.containerHint = containerHint
+        self.duration = duration
+        self.fileSize = fileSize
+        self.bitRate = bitRate
+        self.resolution = resolution
+        self.isPlayable = isPlayable
+        self.tracks = tracks
+        self.errorMessage = errorMessage
+    }
 }
 
 public struct MediaTrackInspection: Identifiable, Sendable {
@@ -16,6 +41,12 @@ public struct MediaTrackInspection: Identifiable, Sendable {
     public let title: String
     public let codec: String
     public let detail: String
+
+    public init(title: String, codec: String, detail: String) {
+        self.title = title
+        self.codec = codec
+        self.detail = detail
+    }
 }
 
 public enum MediaInspector {

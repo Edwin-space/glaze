@@ -101,6 +101,13 @@
 | `player.forward` | 15초 앞으로 | Forward 15 Seconds | 재생 컨트롤 | 구현 |
 | `player.volume` | 음량 | Volume | 재생 컨트롤 | 구현 |
 | `player.full_screen` | 전체 화면 | Enter Full Screen | 재생 컨트롤 | 구현 |
+| `tv.player.timeline` | 재생 위치 | Playback position | Apple TV 재생 컨트롤 | 구현 |
+| `tv.player.rewind_10/forward_10` | 10초 뒤로 / 10초 앞으로 | Back / Forward 10 seconds | Apple TV 재생 컨트롤 | 구현 |
+| `tv.player.subtitles` | 자막 | Subtitles | Apple TV 재생 컨트롤 | 구현 |
+| `tv.player.subtitle.settings` | 자막 설정 | Subtitle Settings | Apple TV 패널 제목 | 구현 |
+| `tv.player.subtitle.track/off/none/unknown` | 자막 트랙 / 자막 끄기 / 자막 없음 / 언어 정보 없음 | Subtitle Track / Subtitles Off / No subtitles / Unknown Language | Apple TV 자막 | 구현 |
+| `tv.player.subtitle.sync` | 자막 싱크 | Subtitle Timing | Apple TV 자막 설정 | 구현 |
+| `tv.player.subtitle.sync_format` | `%+.1f초` | `%+.1f sec` | Apple TV 자막 값 | 구현 |
 | `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |
 | `player.next_video` | 다음 영상 | Next Video | 버튼 | 구현 |
 | `player.status.buffering` | 재생 준비 중입니다. | Preparing playback. | 상태 | 구현 |
@@ -121,8 +128,8 @@
 | `subtitle.kind.original` | 원어 | Original | 상태 | 구현 |
 | `subtitle.kind.unknown` | 자막 | Subtitle | 상태 | 구현 |
 | `subtitle.panel.toggle` | 자막 | Subtitles | 버튼 | 구현 |
-| `subtitle.panel.title` | AI 자막 준비 | AI Subtitle Prep | 패널 제목 | 구현 |
-| `subtitle.panel.subtitle` | 재생 전에 재사용 가능한 자막을 준비합니다. | Prepare reusable subtitles before playback. | 안내 | 구현 |
+| `subtitle.panel.title` | 자막 | Subtitles | 패널 제목 | 구현 |
+| `subtitle.panel.subtitle` | 기존 자막을 선택하고 언어를 바로잡거나 새로 만듭니다. | Choose an existing subtitle, correct its language, or create a new one. | 안내 | 구현 |
 | `subtitle.panel.files` | 자막 파일 | Subtitle files | 패널 제목 | 구현 |
 | `subtitle.panel.files_count_format` | %d개 | %d files | 상태 | 구현 |
 | `subtitle.panel.files_empty` | 연결된 자막 파일이 없습니다. | No subtitle files connected yet. | 안내 | 구현 |
@@ -160,6 +167,19 @@
 | `subtitle.status.embedded_translation_ready_format` | 내장 자막 구간을 %@ 번역 입력으로 준비했습니다. | Embedded subtitle cues are ready as the %@ translation source. | 상태 | 구현 |
 | `subtitle.error.embedded_inspection_failed` | 영상의 내장 자막을 확인하지 못했습니다. | Could not inspect subtitles embedded in this video. | 오류 | 구현 |
 | `subtitle.error.embedded_extraction_failed` | 영상의 내장 자막을 불러오지 못했습니다. | Could not load subtitles embedded in this video. | 오류 | 구현 |
+| `subtitle.source.external/embedded` | 외부 자막 파일 / 영상에 포함된 자막 | External Subtitle Files / Subtitles in Video | 소스 그룹 | 구현 |
+| `subtitle.language.section` | 자막 언어 | Subtitle Languages | 섹션 | 구현 |
+| `subtitle.language.source/target` | 현재 자막 언어 / 번역할 언어 | Current Subtitle Language / Translate To | 설정 | 구현 |
+| `subtitle.language.unknown` | 알 수 없음 / 자동 | Unknown / Auto | 설정값 | 구현 |
+| `help.subtitle.source_language` | 영상의 언어 정보가 잘못된 경우 번역 기준만 바로잡습니다. | Correct an incorrect language tag without changing subtitle text. | 도움말 | 구현 |
+| `subtitle.ai.section` | AI로 자막 만들기 | Create Subtitles with AI | 섹션 | 구현 |
+| `subtitle.ai.description` | 사용할 수 있는 자막이 없을 때 음성을 분석한다는 안내 | Explains that audio is analyzed only when no usable subtitle exists | 안내 | 구현 |
+| `subtitle.panel.output_loaded_format` | %@ 자막 선택됨 | %@ subtitles selected | 상태 | 구현 |
+| `media.panel.file_name/file_size/bit_rate/resolution` | 파일 / 크기 / 비트레이트 / 해상도 | File / Size / Bit Rate / Resolution | 미디어 정보 | 구현 |
+| `media.folder_access.*` | 폴더 권한이 필요합니다 / 이 폴더 허용 | Folder Access Required / Allow This Folder | 권한 복구 | 구현 |
+| `metadata.panel.search_title/search_year` | 작품 제목 / 개봉 연도(선택) | Title / Release Year (Optional) | 검색 입력 | 구현 |
+| `metadata.panel.confirm/search_again` | 이 작품으로 저장 / 다시 검색 | Save This Match / Search Again | 검토 액션 | 구현 |
+| `metadata.field.*` | 표시 제목 / 원제 / 연도 / 줄거리 | Display Title / Original Title / Year / Overview | 메타데이터 편집 | 구현 |
 | `NSLocalNetworkUsageDescription` | 글레이즈는 Synology NAS 같은 미디어 서버에서 영상을 찾고 재생하기 위해 로컬 네트워크를 사용합니다. | Glaze uses your local network to find and play videos from media servers such as Synology NAS. | 시스템 권한 | 구현 |
 | `network.browser.open` | 네트워크 미디어 | Network Media | 버튼 | 구현 |
 | `network.browser.title` | 네트워크 미디어 | Network Media | 시트 제목 | 구현 |

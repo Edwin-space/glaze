@@ -15,6 +15,9 @@ final class SubtitleController {
     var selectedSubtitleName: String?
     var selectedSubtitlePath: String?
     var selectedEmbeddedTrackID: String?
+    /// What the currently loaded subtitle is written in. Container tags are only a
+    /// default: users can correct incorrect/missing tags before translating.
+    private(set) var selectedSubtitleLanguageCode: String?
     var status: SubtitleStatus = .noVideo
     var errorMessage: String?
     var isInspectingEmbeddedSubtitles = false
@@ -69,6 +72,13 @@ final class SubtitleController {
         get { preferences.translationOutput }
         set { preferences.translationOutput = newValue }
     }
+    var preferredTranslationLanguageCode: String {
+        get { preferences.translationTargetLanguageCode }
+        set {
+            preferences.translationTargetLanguageCode = newValue
+            refreshTranslationOffer()
+        }
+    }
     /// Set to start a translation. SwiftUI's `.translationTask` observes this and
     /// hands back a session, which is the only way to obtain one.
     var translationConfiguration: TranslationSession.Configuration?
@@ -87,6 +97,7 @@ final class SubtitleController {
     /// against a file the user has already moved on from.
     private var translationVideoURL: URL?
     private var translationStartedAt: Date?
+    private var selectedSubtitleDisplayName: String?
 
     init(preferences: GlazePreferences = .shared) {
         self.preferences = preferences
@@ -99,7 +110,7 @@ final class SubtitleController {
         needsFolderAccess = false
         // Reopen a folder the viewer already allowed, before looking for subtitles in
         // it — under the sandbox the search itself comes up empty otherwise.
-        SubtitleFolderAccess.restoreAccess(toFolderOf: url)
+        MediaFolderAccess.restoreAccess(toFolderOf: url)
         detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
         embeddedSubtitleTracks = []
         subtitleCues = []
@@ -108,6 +119,8 @@ final class SubtitleController {
         selectedSubtitleName = nil
         selectedSubtitlePath = nil
         selectedEmbeddedTrackID = nil
+        selectedSubtitleLanguageCode = nil
+        selectedSubtitleDisplayName = nil
         errorMessage = nil
         isInspectingEmbeddedSubtitles = true
         subtitlePreparationPlan = nil
@@ -124,11 +137,6 @@ final class SubtitleController {
         }
     }
 
-    /// The language the viewer reads, which is what anything else gets translated into.
-    static var preferredTargetLanguageCode: String {
-        SubtitleLanguagePreference.targetLanguageCode
-    }
-
     /// Decides whether the subtitle now loaded is worth offering to translate.
     ///
     /// Translation used to be offered only for subtitles extracted from the video
@@ -136,7 +144,7 @@ final class SubtitleController {
     /// translated at all. The offer now follows the loaded subtitle rather than where it
     /// came from.
     private func offerTranslation(displayName: String, sourceLanguageCode: String?) {
-        let target = Self.preferredTargetLanguageCode
+        let target = preferredTranslationLanguageCode
 
         // Nothing to translate, or it already reads in the viewer's language.
         guard !subtitleCues.isEmpty, sourceLanguageCode != target else {
@@ -188,32 +196,56 @@ final class SubtitleController {
                 url: subtitle.url,
                 relatedTo: currentResource?.localFileURL
             )
-            selectedSubtitleName = subtitle.displayName
+            selectedSubtitleName = displayName ?? subtitle.displayName
             selectedSubtitlePath = subtitle.url.path
             selectedEmbeddedTrackID = nil
+            selectedSubtitleLanguageCode = SubtitleLanguageCode.normalized(
+                sourceLanguageCode ?? subtitle.languageCode
+            )
+            selectedSubtitleDisplayName = displayName ?? subtitle.displayName
             activeSubtitleText = ""
             isSubtitleVisible = true
             status = computeStatus(for: detectedSubtitles)
             errorMessage = nil
             needsFolderAccess = false
             offerTranslation(
-                displayName: displayName ?? subtitle.displayName,
-                sourceLanguageCode: sourceLanguageCode ?? subtitle.languageCode
+                displayName: selectedSubtitleDisplayName ?? subtitle.displayName,
+                sourceLanguageCode: selectedSubtitleLanguageCode
             )
         } catch {
             subtitleCues = []
             selectedSubtitleName = nil
             selectedSubtitlePath = nil
             selectedEmbeddedTrackID = nil
+            selectedSubtitleLanguageCode = nil
+            selectedSubtitleDisplayName = nil
             activeSubtitleText = ""
             status = computeStatus(for: detectedSubtitles)
             // A file that is on disk but unreadable is almost always the sandbox
             // refusing a folder, not a damaged subtitle.
             let existsButUnreadable = FileManager.default.fileExists(atPath: subtitle.url.path)
-            needsFolderAccess = existsButUnreadable && !SubtitleFolderAccess.hasAccess(toFolderOf: subtitle.url)
+            needsFolderAccess = existsButUnreadable && !MediaFolderAccess.hasAccess(toFolderOf: subtitle.url)
             errorMessage = needsFolderAccess ? nil : subtitleErrorMessage(for: error)
             pendingTranslationRequest = nil
         }
+    }
+
+    /// Corrects an incorrect container/file language tag without changing subtitle
+    /// contents. The translation offer is rebuilt immediately from the same cues.
+    func setSelectedSubtitleLanguageCode(_ languageCode: String?) {
+        selectedSubtitleLanguageCode = SubtitleLanguageCode.normalized(languageCode)
+        refreshTranslationOffer()
+    }
+
+    private func refreshTranslationOffer() {
+        guard let displayName = selectedSubtitleDisplayName, !subtitleCues.isEmpty else {
+            pendingTranslationRequest = nil
+            return
+        }
+        let correctedDisplayName = selectedSubtitleLanguageCode.flatMap {
+            Locale.current.localizedString(forLanguageCode: $0)
+        } ?? displayName
+        offerTranslation(displayName: correctedDisplayName, sourceLanguageCode: selectedSubtitleLanguageCode)
     }
 
     /// Starts on-device AI subtitle generation for the given video. No-op if a generation is already running.
@@ -670,12 +702,16 @@ final class SubtitleController {
     }
 
     var panelOutputValue: String {
-        guard !detectedSubtitles.isEmpty else {
-            return L10n.string("subtitle.panel.output_dual")
+        if !subtitleCues.isEmpty {
+            let language = selectedSubtitleLanguageCode.flatMap {
+                Locale.current.localizedString(forLanguageCode: $0)
+            } ?? L10n.string("subtitle.language.unknown")
+            return String(format: L10n.string("subtitle.panel.output_loaded_format"), language)
         }
 
-        let hasKorean = detectedSubtitles.contains { $0.kind == .korean }
-        return hasKorean ? L10n.string("subtitle.panel.output_korean_available") : L10n.string("subtitle.panel.output_original_available")
+        return detectedSubtitles.isEmpty && embeddedSubtitleTracks.isEmpty
+            ? L10n.string("subtitle.panel.output_none")
+            : L10n.string("subtitle.panel.output_available")
     }
 
     private func loadPreferredIfAvailable() {
@@ -720,7 +756,7 @@ final class SubtitleController {
 
     /// Asks for the folder, then retries whatever failed to load.
     func requestFolderAccess(for videoURL: URL) {
-        guard SubtitleFolderAccess.requestAccess(toFolderOf: videoURL) else { return }
+        guard MediaFolderAccess.requestAccess(toFolderOf: videoURL) else { return }
 
         needsFolderAccess = false
         detectedSubtitles = SubtitleSidecarDetector.detect(for: videoURL)

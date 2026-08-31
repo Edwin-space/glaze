@@ -9,6 +9,7 @@
 - `GlazeCore`를 tvOS에서 컴파일 가능하게 분리했다. WhisperKit이 tvOS를 지원하지 않아 전사 코드만 `GlazeTranscription`으로 떼어냈다. Apple TV는 전사를 하지 않으므로 이건 우회가 아니라 실제 경계다.
 - `GlazeTV` 타깃이 Apple TV 4K 시뮬레이터에서 빌드·실행된다.
 - SSDP 탐색과 ContentDirectory 탐색을 `GlazeCore`로 옮겨 Mac과 Apple TV가 같은 코드를 쓴다. 시뮬레이터에서 실제 LAN의 미디어 서버 2대를 찾는 것까지 확인했다.
+- Apple TV 4K(3세대, tvOS 26.6)를 Xcode에 페어링·등록하고 개발 프로파일로 설치했다. Synology/Plex 발견, Synology Browse와 MKV 재생을 실기기에서 확인했다(2026-08-31).
 
 ## 재생 엔진 — AVPlayer로는 부족하다
 
@@ -48,7 +49,7 @@ Mac에 이미 `FFmpegRemuxer`가 있어 MKV를 재인코딩 없이 MP4로 리먹
 1. VLCKit SPM 의존성 추가, tvOS 플레이어를 VLCKit으로 교체
 2. xcframework 포함 모듈 라이선스 확인
 3. 자막: DLNA는 sidecar를 표준적으로 노출하지 않는다. Mac이 만든 자막을 Apple TV가 가져오는 경로 결정(`docs/18`의 미해결 항목)
-4. 리모컨 조작(재생/일시정지, 탐색, 자막 선택)과 포커스 동선
+4. ~~리모컨 조작(재생/일시정지, 탐색, 자막 선택)과 포커스 동선~~ — 터치 스크러버·10초 이동·자막 트랙/싱크/크기까지 실기기 빌드에 반영
 5. 이어보기 — `PlaybackPositionStore`는 `MediaResource` 기준이라 그대로 쓸 수 있다
 
 ## UI 구조 (2026-08-24)
@@ -120,5 +121,14 @@ Mac이 만드는 자막은 `Film.<ISO 언어 코드>.srt`로 저장한다. 예�
 - tvOS generic device Release 빌드와 자산 카탈로그 컴파일은 오류 없이 통과했다. 이미지 스택은 레이어마다 중첩 `imageset`이 필요하며, 단순히 이미지 파일을 `imagestacklayer`에 두면 `actool`이 오류를 출력하면서도 빌드 종료 코드를 0으로 내놓으므로 로그까지 확인해야 한다.
 - App Store Connect의 Glaze 앱(Apple ID `6800189560`)에는 macOS와 tvOS 1.0 플랫폼이 이미 함께 등록돼 있으며 공통 번들 ID는 `com.edwin.glaze`다. tvOS 타깃에 임시로 사용하던 `com.edwin.glaze.tv`는 등록된 App ID가 아니므로 통합 앱 레코드와 같은 `com.edwin.glaze`로 정정했다.
 - 개발자 팀에는 2027-07-29까지 유효한 `Distribution Managed` 인증서가 이미 있다. 인증서를 중복 생성하지 않고 Apple의 관리형 배포 인증서를 사용한다.
-- 현재 Xcode에 페어링된 Apple TV 실기기는 없다. 자동 서명의 아카이브 단계는 개발 서명 프로파일을 먼저 만들기 때문에 Apple TV를 Xcode에 한 번 페어링·등록해야 한다. 그 뒤 개발 서명 아카이브를 만들고 Organizer가 기존 관리형 인증서로 클라우드 배포 서명해 App Store Connect에 올린다. 로컬 Apple Distribution 인증서를 중복 생성하지 않는다.
-- 다음 순서는 Apple TV 페어링 → 정정한 번들 ID로 서명 아카이브 생성 → App Store Connect 업로드 → 내부 TestFlight 설치 → Synology/Emby 실기기 검증이다.
+- Apple TV 실기기 페어링·등록과 개발 프로파일 생성은 완료했다. Organizer가 기존 관리형 인증서로 클라우드 배포 서명하도록 하며 로컬 Apple Distribution 인증서를 중복 생성하지 않는다.
+- 다음 순서는 서명 아카이브 생성 → App Store Connect 업로드 → 내부 TestFlight 설치 → Synology 회귀 테스트와 사무실 Emby/WebDAV 검증이다.
+
+### Apple TV 실기기 개발 설치 (2026-08-31)
+
+- `거실` Apple TV 4K(3세대, tvOS 26.6)를 무선 네트워크로 페어링하고 기기 UDID를 개발자 팀에 자동 등록했다.
+- `tvOS Team Provisioning Profile: com.edwin.glaze`로 Debug 실기기 빌드, 설치, 프로세스 실행을 확인했다. 기존 개발 인증서를 사용했으며 새 인증서는 만들지 않았다.
+- Xcode의 Devices 창이 간헐적으로 `needs to be unlocked`를 잘못 반환했지만, 같은 연결에서 `xcrun devicectl` 설치·실행은 정상 동작했다.
+- 실기기에서 Synology와 Plex SSDP 서버가 발견됐고 Synology UPnP 영상의 VLC 재생을 확인했다. 집에는 Emby가 없으므로 Emby 회귀 테스트는 사무실 NAS에서 이어간다.
+- 일반 UPnP 브라우저처럼 사진·음악 루트를 노출하지 않도록, 명시적 미디어 클래스와 제한된 하위 탐색을 결합해 영상이 있는 루트만 남긴다.
+- SwiftUI `Slider`는 tvOS에서 사용할 수 없어 포커스 가능한 `UIView` 스크러버를 사용한다. Siri Remote pan, 좌우 10초, VoiceOver adjustable 액션이 같은 시간 이동 경로를 쓴다.
