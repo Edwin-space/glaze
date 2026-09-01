@@ -380,6 +380,8 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] tvOS 최초 실행 3단계(환영 → 기본 자막 언어 → DLNA/UPnP·WebDAV 소스) 구성
 - [x] tvOS 기본 자막 언어·자동 선택·글자 크기 저장과 재생 트랙 우선순위 연결
 - [x] Apple TV 4K(3세대) tvOS 26.5 시뮬레이터 빌드·온보딩 포커스·홈·사이드바·설정 시각 회귀 검증 (2026-09-01)
+- [x] 실제 GlazeTV 구현과 시뮬레이터 캡처를 기존 Figma `Glaze Brand Guidelines`의 tvOS 승인·온보딩·재생·컴포넌트 페이지에 동기화 (2026-09-01)
+- [x] tvOS semantic color/metric variables, 10-foot typography, Sidebar Item·Media Card·Transport Control·Timeline·Subtitle Panel 재사용 컴포넌트 구성 및 화면 QA (2026-09-01)
 
 ### 출시 전 검증
 

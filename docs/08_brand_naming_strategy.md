@@ -57,9 +57,12 @@
 - 기본 앱: `Glaze`
 - 한국어 표기: `글레이즈`
 - macOS 앱: `Glaze for Mac`
+- Apple TV 앱: `Glaze for Apple TV`
 - 브라우저 확장: `Glaze Extension`
 - 웹/프리미엄 제품군: `Glaze Pro` 또는 `Glaze Premium`
 - 모바일 앱: `Glaze Mobile`보다는 `Glaze for iPhone`, `Glaze for iPad`처럼 플랫폼명을 붙이는 쪽이 자연스럽다.
+
+제품 내 헤더와 앱 이름은 플랫폼 접미사 없이 `Glaze`로 통일한다. `for Mac`, `for Apple TV`, `for iPhone`, `for iPad`는 App Store·웹사이트·문서처럼 제품군을 구분해야 하는 외부 문맥에서만 사용한다.
 
 ## 태그라인 후보
 
@@ -92,6 +95,7 @@
 - 한국어 감상
 - 원본을 해치지 않는 레이어
 - 전문가적인 플레이어
+- 거실에서 바로 이해되는 10-foot 미디어 경험
 
 ## 디자인 방향과의 연결
 
@@ -103,6 +107,8 @@
 - 유리처럼 투명한 캡션 박스
 - G 형태와 subtitle line의 결합
 - 과한 AI 심볼보다 플레이어/자막/레이어 감각
+
+플랫폼별 표현은 같은 브랜드를 유지하되 화면의 사용 거리를 따른다. Mac은 정밀한 도구 밀도와 필요한 구간의 Liquid Glass를 사용하고, Apple TV는 거의 검정인 stage·큰 시스템 타입·흰 focus surface·제한된 앰버 선택 상태로 재구성한다. Mac 화면을 단순 확대하거나 모든 TV 표면을 유리 패널로 만들지 않는다.
 
 주의:
 

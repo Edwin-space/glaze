@@ -1,7 +1,7 @@
 # UI 레퍼런스 및 디자인 방향
 
 작성일: 2026-06-18  
-최종 수정: 2026-09-01 (Apple TV TV 앱 정보 구조·최초 설정·네이티브 재생 반영)
+최종 수정: 2026-09-01 (Apple TV 구현 화면·토큰·재사용 컴포넌트를 Figma에 동기화)
 프로젝트명: 글레이즈 / Glaze
 
 ## 확정된 브랜드 (2026-08-10)
@@ -156,6 +156,19 @@ Apple TV는 Mac 플레이어를 10-foot UI로 키우지 않고 Apple TV의 TV �
 - 자막 상세는 full-height panel이 아니라 우측 하단 compact material로 표시한다. 트랙, 끄기, 싱크, 글자 크기를 같은 문법으로 조절한다.
 - 최초 실행에서 기본 자막 언어와 같은 네트워크의 DLNA/UPnP 또는 WebDAV 소스를 설정한다. 설정은 다시 실행할 수 있고, 서버 없이도 끝낼 수 있다.
 - 실물 기기로 보내기 전 시뮬레이터에서 3840×2160 상태 캡처와 리모컨 포커스를 검증한다. 실물 Apple TV 설치는 사용자 승인 후에만 진행한다.
+
+### Figma 구현 동기화 기준
+
+tvOS 설계 역시 별도 시안 파일을 만들지 않고 기존 [Glaze Brand Guidelines](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa)에 누적한다. 아래 페이지는 아이디어 시안이 아니라 `Sources/GlazeTV`의 실제 SwiftUI 수치와 2026-09-01 시뮬레이터 검증 결과를 기준으로 한다.
+
+- [Approved / tvOS App Experience](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=70-86): TV 앱형 홈과 transient sidebar의 승인 기준
+- [tvOS / Onboarding & Settings](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=70-92): 환영, 기본 자막 언어, 동일 네트워크 미디어 소스, 설정 화면의 실제 시뮬레이터 상태
+- [tvOS / Playback](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=70-98): 1920×1080 재생 기본 상태와 자막 설정 표시 상태
+- [tvOS / Components](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=77-2): Sidebar Item, Media Card, Transport Control, Timeline, Subtitle Panel 재사용 원본
+
+Figma 변수는 `Primitives → Color semantics → tvOS Metrics`의 3계층으로 유지한다. 브랜드 앰버는 선택·진행·주요 재생 행동에만 사용하고, 포커스는 tvOS 표준의 흰 표면/검정 콘텐츠 대비를 따른다. 플레이어의 기본 transport 표면은 흰색 16%로 영상이 계속 보이게 하며, Timeline은 코드와 동일하게 idle `6pt/22pt`, focused `8pt/28pt`의 track/thumb를 사용한다. 자막 패널은 `620pt`, 모서리 `28pt`, 화면 우측 `74pt`, 하단 `150pt` 계약을 유지한다.
+
+Figma 컴포넌트의 설명에는 대응 Swift 파일을 기록한다. 설계 수치가 바뀌면 먼저 실제 구현과 시뮬레이터를 검증하고 Figma 변수·컴포넌트·이 문서를 같은 작업에서 갱신한다. SF Pro가 Figma 실행 환경에서 렌더링되지 않는 경우 표본만 Inter로 표시할 수 있지만, text style 정의와 SwiftUI 계약은 SF Pro system font를 유지한다.
 
 ## macOS 설정 허브 (2026-08-27)
 
