@@ -400,6 +400,8 @@
 "tv.home.connect" = "미디어 소스 연결";
 "tv.home.connect.detail" = "같은 네트워크의 NAS, Synology, Emby 또는 WebDAV를 연결하세요.";
 "tv.home.library.title" = "보관함 준비";
+"tv.home.library.loading" = "선택한 미디어 소스에서 영상을 불러오는 중입니다…";
+"tv.home.library.empty" = "이 미디어 소스에서 재생 가능한 영상을 찾지 못했습니다.";
 "tv.home.source.detail_format" = "%@의 영상 보관함";
 "tv.search.placeholder" = "제목 검색";
 "tv.search.start" = "찾고 싶은 제목을 입력하세요";

@@ -50,7 +50,12 @@ struct TVMediaSourcesView: View {
                     .font(.system(size: 31, weight: .semibold))
                 Spacer()
                 Button {
-                    Task { await model.discover() }
+                    Task {
+                        await model.discover()
+                        if let preferredID = preferences.preferredServerID {
+                            await model.restorePreferredServer(id: preferredID)
+                        }
+                    }
                 } label: {
                     Label(L10n.string("network.browser.refresh"), systemImage: "arrow.clockwise")
                 }
@@ -72,8 +77,10 @@ struct TVMediaSourcesView: View {
                 VStack(spacing: 14) {
                     ForEach(model.servers) { server in
                         Button {
-                            preferences.preferredServerID = server.id
-                            Task { await model.select(server) }
+                            Task {
+                                await model.select(server)
+                                preferences.preferredServerID = server.id
+                            }
                         } label: {
                             HStack(spacing: 22) {
                                 Image(systemName: "externaldrive.connected.to.line.below.fill")

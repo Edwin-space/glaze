@@ -47,21 +47,23 @@ public actor UPnPContentDirectoryClient: NetworkMediaServerBrowsing {
             guard case .container = $0.kind else { return false }
             return $0.containerRelevance == .unknown
         }
-        let playableAmbiguousIDs = try await withThrowingTaskGroup(
-            of: String?.self,
+        let playableAmbiguousIDs = await withTaskGroup(
+            of: (String, Bool).self,
             returning: Set<String>.self
         ) { group in
             for node in ambiguousContainers {
                 group.addTask {
-                    try await self.containsPlayableVideo(server: server, rootID: node.id)
-                        ? node.id
-                        : nil
+                    let containsVideo = (try? await self.containsPlayableVideo(
+                        server: server,
+                        rootID: node.id
+                    )) == true
+                    return (node.id, containsVideo)
                 }
             }
 
             var result: Set<String> = []
-            for try await id in group {
-                if let id { result.insert(id) }
+            for await (id, containsVideo) in group {
+                if containsVideo { result.insert(id) }
             }
             return result
         }

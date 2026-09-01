@@ -15,18 +15,20 @@ public final class NetworkMediaBrowserModel {
         case browsing
     }
 
-    private let discoveryService: UPnPMediaServerDiscoveryService
-    private let browser: UPnPContentDirectoryClient
+    private let discoveryService: any NetworkMediaServerDiscovering
+    private let browser: any NetworkMediaServerBrowsing
 
     public var servers: [NetworkMediaServer] = []
     public var selectedServer: NetworkMediaServer?
     public var levels: [Level] = []
+    public var homeNodes: [NetworkMediaNode] = []
     public var phase: Phase = .idle
+    public var isHomeCatalogLoading = false
     public var errorMessage: String?
 
     public init(
-        discoveryService: UPnPMediaServerDiscoveryService = UPnPMediaServerDiscoveryService(),
-        browser: UPnPContentDirectoryClient = UPnPContentDirectoryClient()
+        discoveryService: any NetworkMediaServerDiscovering = UPnPMediaServerDiscoveryService(),
+        browser: any NetworkMediaServerBrowsing = UPnPContentDirectoryClient()
     ) {
         self.discoveryService = discoveryService
         self.browser = browser
@@ -54,6 +56,7 @@ public final class NetworkMediaBrowserModel {
         errorMessage = nil
         selectedServer = nil
         levels = []
+        homeNodes = []
         do {
             servers = try await discoveryService.discoverServers()
         } catch is CancellationError {
@@ -65,9 +68,33 @@ public final class NetworkMediaBrowserModel {
     }
 
     public func select(_ server: NetworkMediaServer) async {
+        if selectedServer?.id == server.id, !levels.isEmpty {
+            if homeNodes.isEmpty, !isHomeCatalogLoading {
+                await loadHomeCatalog(from: levels[0].nodes)
+            }
+            return
+        }
         selectedServer = server
         levels = []
+        homeNodes = []
         await browse(objectID: "0", title: server.friendlyName)
+        guard errorMessage == nil, let root = levels.first else { return }
+        await loadHomeCatalog(from: root.nodes)
+    }
+
+    @discardableResult
+    public func restorePreferredServer(id: String) async -> Bool {
+        if selectedServer?.id == id, !levels.isEmpty {
+            if homeNodes.isEmpty, !isHomeCatalogLoading {
+                await loadHomeCatalog(from: levels[0].nodes)
+            }
+            return errorMessage == nil
+        }
+
+        await discoverIfNeeded()
+        guard let server = servers.first(where: { $0.id == id }) else { return false }
+        await select(server)
+        return errorMessage == nil
     }
 
     public func open(_ node: NetworkMediaNode) async {
@@ -122,5 +149,72 @@ public final class NetworkMediaBrowserModel {
             errorMessage = error.localizedDescription
         }
         phase = .idle
+    }
+
+    /// Builds a bounded, navigation-independent video catalog for Home.
+    ///
+    /// A UPnP server normally exposes a Videos container at its root, so rendering
+    /// only `currentNodes` makes a connected library look empty. The catalog walks
+    /// the video branches without moving the user's Library navigation position.
+    private func loadHomeCatalog(from rootNodes: [NetworkMediaNode]) async {
+        guard let selectedServer else { return }
+
+        isHomeCatalogLoading = true
+        defer { isHomeCatalogLoading = false }
+
+        let maximumDepth = 4
+        let maximumContainers = 64
+        let maximumVideos = 300
+        let browser = browser
+        var catalog: [NetworkMediaNode] = []
+        var seenVideos: Set<String> = []
+        var visitedContainers: Set<String> = []
+
+        func appendVideos(from nodes: [NetworkMediaNode]) {
+            for node in nodes where catalog.count < maximumVideos {
+                guard case .video = node.kind, seenVideos.insert(node.id).inserted else { continue }
+                catalog.append(node)
+            }
+        }
+
+        appendVideos(from: rootNodes)
+        homeNodes = catalog
+
+        var frontier = rootNodes.compactMap(Self.relevantContainerID)
+        for _ in 0..<maximumDepth where !frontier.isEmpty && catalog.count < maximumVideos {
+            let remainingBudget = maximumContainers - visitedContainers.count
+            guard remainingBudget > 0 else { break }
+            let batch = Array(frontier.prefix(remainingBudget)).filter {
+                visitedContainers.insert($0).inserted
+            }
+            guard !batch.isEmpty else { break }
+
+            let levels = await withTaskGroup(
+                of: [NetworkMediaNode]?.self,
+                returning: [[NetworkMediaNode]].self
+            ) { group in
+                for objectID in batch {
+                    group.addTask {
+                        try? await browser.browse(server: selectedServer, objectID: objectID)
+                    }
+                }
+                var result: [[NetworkMediaNode]] = []
+                for await nodes in group {
+                    if let nodes { result.append(nodes) }
+                }
+                return result
+            }
+
+            for nodes in levels {
+                appendVideos(from: nodes)
+            }
+            homeNodes = catalog
+            frontier = levels.joined().compactMap(Self.relevantContainerID)
+        }
+    }
+
+    private static func relevantContainerID(_ node: NetworkMediaNode) -> String? {
+        guard case .container = node.kind, node.containerRelevance != .nonVideo else { return nil }
+        return node.id
     }
 }

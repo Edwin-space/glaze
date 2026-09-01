@@ -8,6 +8,7 @@ struct TVOnboardingView: View {
 
     @State private var step: Step = .welcome
     @State private var selectedServerID: String?
+    @State private var isFinishing = false
     @State private var isAddingWebDAV = false
     @State private var webdav = TVWebDAVConnections()
     @FocusState private var focusedControl: FocusControl?
@@ -186,9 +187,18 @@ struct TVOnboardingView: View {
                     .focused($focusedControl, equals: .sourceBack)
                 Button(L10n.string("webdav.add")) { isAddingWebDAV = true }
                     .focused($focusedControl, equals: .sourceWebDAV)
-                Button(L10n.string("tv.onboarding.finish")) { finish() }
+                Button {
+                    Task { await finish() }
+                } label: {
+                    if isFinishing {
+                        ProgressView()
+                    } else {
+                        Text(L10n.string("tv.onboarding.finish"))
+                    }
+                }
                     .buttonStyle(.borderedProminent)
                     .tint(TVTheme.amber)
+                    .disabled(isFinishing)
                     .focused($focusedControl, equals: .sourceFinish)
             }
             .focusSection()
@@ -253,10 +263,15 @@ struct TVOnboardingView: View {
         }
     }
 
-    private func finish() {
+    private func finish() async {
+        guard !isFinishing else { return }
+        isFinishing = true
+        defer { isFinishing = false }
+
         let serverID = selectedServerID ?? model.servers.first?.id
+        if let server = model.servers.first(where: { $0.id == serverID }) {
+            await model.select(server)
+        }
         preferences.finishOnboarding(serverID: serverID)
-        guard let server = model.servers.first(where: { $0.id == serverID }) else { return }
-        Task { await model.select(server) }
     }
 }

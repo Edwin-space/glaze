@@ -400,6 +400,8 @@
 "tv.home.connect" = "Connect a Media Source";
 "tv.home.connect.detail" = "Connect a NAS, Synology, Emby, or WebDAV location.";
 "tv.home.library.title" = "Set up your library";
+"tv.home.library.loading" = "Loading videos from your selected media source…";
+"tv.home.library.empty" = "No playable videos were found in this media source.";
 "tv.home.source.detail_format" = "Videos from %@";
 "tv.search.placeholder" = "Search titles";
 "tv.search.start" = "Enter a title to search";

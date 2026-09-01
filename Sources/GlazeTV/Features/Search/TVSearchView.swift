@@ -49,7 +49,7 @@ struct TVSearchView: View {
     private var results: [PlayableItem] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return [] }
-        return model.currentNodes.compactMap { node in
+        return model.homeNodes.compactMap { node in
             guard case .video(let resource) = node.kind,
                   node.title.localizedCaseInsensitiveContains(needle) else { return nil }
             return PlayableItem(resource: resource, title: node.title)

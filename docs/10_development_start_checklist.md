@@ -382,6 +382,8 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] Apple TV 4K(3세대) tvOS 26.5 시뮬레이터 빌드·온보딩 포커스·홈·사이드바·설정 시각 회귀 검증 (2026-09-01)
 - [x] 실제 GlazeTV 구현과 시뮬레이터 캡처를 기존 Figma `Glaze Brand Guidelines`의 tvOS 승인·온보딩·재생·컴포넌트 페이지에 동기화 (2026-09-01)
 - [x] tvOS semantic color/metric variables, 10-foot typography, Sidebar Item·Media Card·Transport Control·Timeline·Subtitle Panel 재사용 컴포넌트 구성 및 화면 QA (2026-09-01)
+- [x] tvOS 온보딩 완료 전 선택 서버 연결 보장, 다음 실행 시 저장 서버 자동 복원, 다단계 영상 폴더의 홈·검색 카탈로그 구성 및 사진 분기 제외 회귀 테스트 (2026-09-02)
+- [x] Apple TV 4K(3세대) tvOS 26.5 시뮬레이터 빌드·설치·첫 실행 확인 (2026-09-02, 실물 기기 미설치)
 
 ### 출시 전 검증
 

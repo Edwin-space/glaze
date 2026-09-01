@@ -75,4 +75,23 @@ public protocol NetworkMediaServerDiscovering: Sendable {
 
 public protocol NetworkMediaServerBrowsing: Sendable {
     func browse(server: NetworkMediaServer, objectID: String) async throws -> [NetworkMediaNode]
+    func browseVideoRoots(server: NetworkMediaServer, objectID: String) async throws -> [NetworkMediaNode]
+}
+
+public extension NetworkMediaServerBrowsing {
+    func browseVideoRoots(
+        server: NetworkMediaServer,
+        objectID: String = "0"
+    ) async throws -> [NetworkMediaNode] {
+        try await browse(server: server, objectID: objectID).filter { node in
+            switch node.kind {
+            case .video:
+                true
+            case .container:
+                node.containerRelevance != .nonVideo
+            case .unsupported:
+                false
+            }
+        }
+    }
 }

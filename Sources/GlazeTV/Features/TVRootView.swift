@@ -42,12 +42,12 @@ private struct TVAppShell: View {
                 .transition(.move(edge: .leading).combined(with: .opacity))
             }
         }
-        .task {
-            await media.discoverIfNeeded()
-            guard media.selectedServer == nil,
-                  let preferredID = preferences.preferredServerID,
-                  let server = media.servers.first(where: { $0.id == preferredID }) else { return }
-            await media.select(server)
+        .task(id: preferences.preferredServerID) {
+            guard let preferredID = preferences.preferredServerID else {
+                await media.discoverIfNeeded()
+                return
+            }
+            await media.restorePreferredServer(id: preferredID)
         }
         .onExitCommand {
             if isSidebarVisible {

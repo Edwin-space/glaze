@@ -178,6 +178,9 @@ Xcode 디버거에 물린 앱 프로세스가 있을 수 있다. `pkill -x Glaze
 **UPnP 컨테이너 클래스만 믿으면 사진과 비디오를 구분하지 못한다.**
 Synology는 사진과 비디오 루트를 모두 `object.container.storageFolder`로 보낸다. 번역된 폴더명(`사진`, `비디오`)을 하드코딩하지 말고 명시적 audio/image 클래스는 제외한 뒤, 모호한 루트는 깊이·개수 제한을 둔 병렬 Browse로 실제 `video/*` 리소스 존재를 확인한다.
 
+**tvOS 홈은 현재 탐색 폴더의 직접 자식만 읽지 않는다.**
+2026-09-02 온보딩에서 서버 선택은 저장됐지만 홈이 `currentNodes`만 읽어, 루트 아래 `Videos/Movies`에 있는 정상 영상이 빈 보관함으로 보였다. 폴더 UI의 위치와 홈·검색 카탈로그는 별도 상태로 유지한다. 저장 서버 복원 뒤 사진·음악 분기를 제외한 제한 깊이 Browse로 카탈로그를 구성하고, 카탈로그 테스트는 최소 두 단계 폴더와 제외 분기를 함께 넣는다. 온보딩 완료 플래그는 선택 서버의 최초 Browse보다 먼저 바꾸지 않는다.
+
 **Apple TV 빌드 ID와 설치 ID는 다르다.**
 `xcodebuild -destination`에는 기기 UDID(`00008110-...`)를 쓰고 `xcrun devicectl --device`에는 CoreDevice 식별자(`FBC69999-...`)를 쓴다. 첫 실기기 빌드는 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration`이 필요하다. Codex 샌드박스 안의 `devicectl`은 CoreDeviceService XPC가 끊긴 것처럼 보일 수 있으므로 개발 도구 권한으로 실행해 구분한다.
 

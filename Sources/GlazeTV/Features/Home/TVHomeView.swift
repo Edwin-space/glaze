@@ -25,6 +25,8 @@ struct TVHomeView: View {
 
                     if !videos.isEmpty {
                         shelf(L10n.string("tv.home.recent"), items: videos)
+                    } else if model.selectedServer != nil {
+                        libraryStatusShelf
                     } else {
                         connectShelf
                     }
@@ -150,8 +152,37 @@ struct TVHomeView: View {
         .padding(.horizontal, 76)
     }
 
+    private var libraryStatusShelf: some View {
+        HStack(spacing: 24) {
+            if model.isHomeCatalogLoading || model.phase == .browsing {
+                ProgressView().controlSize(.large)
+            } else {
+                Image(systemName: "film.stack")
+                    .font(.system(size: 42))
+                    .foregroundStyle(TVTheme.dim)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.string("tv.home.library.title"))
+                    .font(.system(size: 31, weight: .semibold))
+                Text(
+                    L10n.string(
+                        model.isHomeCatalogLoading || model.phase == .browsing
+                            ? "tv.home.library.loading"
+                            : "tv.home.library.empty"
+                    )
+                )
+                .font(.system(size: 22))
+                .foregroundStyle(TVTheme.dim)
+            }
+        }
+        .padding(28)
+        .frame(maxWidth: 1000, alignment: .leading)
+        .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 24))
+        .padding(.horizontal, 76)
+    }
+
     private var videos: [PlayableItem] {
-        model.currentNodes.compactMap { node in
+        model.homeNodes.compactMap { node in
             guard case .video(let resource) = node.kind else { return nil }
             return PlayableItem(resource: resource, title: node.title)
         }

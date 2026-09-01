@@ -196,6 +196,7 @@
 | `network.browser.empty_hint` | NAS의 DLNA/UPnP 미디어 서버가 켜져 있고 Mac과 같은 네트워크인지 확인하세요. | Check that your NAS DLNA/UPnP media server is enabled and on the same network as this Mac. | 안내 | 구현 |
 | `network.browser.loading` | 폴더를 불러오는 중입니다 | Loading folder | 상태 | 구현 |
 | `network.browser.folder_empty` | 이 폴더에 재생 가능한 영상이 없습니다 | No playable videos in this folder | 빈 상태 | 구현 |
+| `tv.home.library.loading/empty` | 선택한 미디어 소스에서 영상을 불러오는 중입니다… / 이 미디어 소스에서 재생 가능한 영상을 찾지 못했습니다. | Loading videos from your selected media source… / No playable videos were found in this media source. | tvOS 홈 보관함 상태 | 구현 |
 | `network.browser.error` | 네트워크 미디어를 불러오지 못했습니다 | Couldn’t load network media | 오류 | 구현 |
 | `network.browser.back/close/refresh/retry` | 뒤로/닫기/새로고침/다시 시도 | Back/Close/Refresh/Try Again | 탐색 버튼 | 구현 |
 | `settings.title` | 설정 | Settings | 창/버튼 | 구현 |
