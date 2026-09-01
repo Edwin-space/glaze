@@ -376,6 +376,10 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] SMB는 Finder 마운트 경로로 안내하고 암호화되지 않은 FTP는 미지원으로 명시
 - [x] tvOS 서버 루트에서 사진·음악 컨테이너를 제외하고 영상이 있는 컨테이너만 노출
 - [x] tvOS 재생 중 Siri Remote 터치 탐색, 10초 이동, 자막 트랙·싱크·크기 제어
+- [x] Apple TV TV 앱 문법의 transient 사이드바·시네마틱 홈·보관함·미디어 소스·설정 정보 구조
+- [x] tvOS 최초 실행 3단계(환영 → 기본 자막 언어 → DLNA/UPnP·WebDAV 소스) 구성
+- [x] tvOS 기본 자막 언어·자동 선택·글자 크기 저장과 재생 트랙 우선순위 연결
+- [x] Apple TV 4K(3세대) tvOS 26.5 시뮬레이터 빌드·온보딩 포커스·홈·사이드바·설정 시각 회귀 검증 (2026-09-01)
 
 ### 출시 전 검증
 
@@ -387,6 +391,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] App Store Connect tvOS 플랫폼·공통 번들 ID·관리형 배포 인증서 확인
 - [x] Apple TV를 Xcode에 페어링·기기 등록하고 tvOS 개발 프로파일 생성
 - [ ] tvOS 서명 아카이브 업로드 및 TestFlight 내부 테스트
+- [ ] 개편 UI의 실물 Apple TV 재설치·리모컨 회귀 테스트(사용자 승인 후 진행)
 - [ ] Emby/WebDAV 실기기 재생·sidecar 자막·이어보기 회귀 테스트 (Emby는 사무실 NAS에서 진행)
 
 ## Phase 3D. macOS 설정 허브 (2026-08-27)

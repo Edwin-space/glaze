@@ -39,6 +39,8 @@ final class TVPlaybackModel {
     private var pendingSeek: TimeInterval?
     /// The subtitle the folder listing found beside the film, still to be selected.
     private var pendingSubtitleLanguage: String?
+    private var preferredSubtitleLanguage: String?
+    private var shouldAutomaticallySelectSubtitles = true
     private var hasChosenSubtitle = false
 
     /// - Parameter subtitleURL: a subtitle found sitting beside the film. Attached to
@@ -48,9 +50,17 @@ final class TVPlaybackModel {
     func start(
         _ resource: NetworkMediaResource,
         at startAt: TimeInterval = 0,
-        subtitleURL: URL? = nil
+        subtitleURL: URL? = nil,
+        preferredSubtitleLanguageCode: String? = nil,
+        automaticallySelectSubtitles: Bool = true,
+        preferredSubtitleScale: Float = 100
     ) {
         let media = VLCMedia(url: resource.playbackURL)
+
+        preferredSubtitleLanguage = preferredSubtitleLanguageCode.flatMap(SubtitleLanguageCode.normalized)
+        shouldAutomaticallySelectSubtitles = automaticallySelectSubtitles
+        subtitleScale = preferredSubtitleScale
+        hasChosenSubtitle = false
 
         if let subtitleURL {
             // Priority 4 is VLC's "user selected". It gets the file loaded, but does
@@ -63,6 +73,7 @@ final class TVPlaybackModel {
         }
 
         player.media = media
+        player.currentSubTitleFontScale = preferredSubtitleScale
         pendingSeek = startAt > 0 ? startAt : nil
 
         let observer = PlayerObserver(
@@ -166,18 +177,21 @@ final class TVPlaybackModel {
     /// Tracks do not exist until the media has been read, so this runs on the time
     /// updates and does its work once.
     private func chooseSubtitleIfReady() {
-        guard !hasChosenSubtitle, pendingSubtitleLanguage != nil else { return }
+        guard !hasChosenSubtitle, shouldAutomaticallySelectSubtitles else { return }
 
         let tracks = player.textTracks
         guard !tracks.isEmpty else { return }
 
-        // The slave is appended after whatever the container carried, so the last track
-        // is it — but prefer a language match when the tracks say what they are, since
-        // that survives a film that carries no subtitles at all.
+        // The viewer's saved reading language wins. A sidecar found beside the film is
+        // next, then the track already marked as selected by the container/player.
         let chosen = tracks.first { track in
+            guard let language = track.language, let wanted = preferredSubtitleLanguage else { return false }
+            return SubtitleLanguageCode.normalized(language) == wanted
+        } ?? tracks.first { track in
             guard let language = track.language, let wanted = pendingSubtitleLanguage else { return false }
             return SubtitleLanguageCode.normalized(language) == wanted
-        } ?? tracks.last
+        } ?? tracks.first(where: \.isSelected)
+        ?? tracks.first
 
         if let chosen {
             player.selectTextTracks([chosen])

@@ -7,6 +7,7 @@ import SwiftUI
 /// whole reason WebDAV is here: the subtitle sitting beside a film comes with it.
 struct TVWebDAVLibraryView: View {
     let connection: WebDAVConnection
+    @Bindable var preferences: TVUserPreferences
 
     @State private var model = WebDAVBrowserModel()
     @State private var route: WebDAVRoute?
@@ -23,7 +24,10 @@ struct TVWebDAVLibraryView: View {
                 TVPlayerView(
                     resource: resource(for: entry),
                     title: MediaTitleParser.parse(entry.name).title,
-                    externalSubtitleURL: subtitleURL
+                    externalSubtitleURL: subtitleURL,
+                    preferredSubtitleLanguageCode: preferences.defaultSubtitleLanguageCode,
+                    automaticallySelectSubtitles: preferences.automaticallySelectSubtitles,
+                    preferredSubtitleScale: preferences.subtitleScale
                 )
             }
         }
@@ -123,7 +127,7 @@ struct TVWebDAVLibraryView: View {
 
     /// The viewer's own language first; failing that, whatever is there.
     private func preferredSubtitle(from companions: WebDAVCompanions) -> WebDAVEntry? {
-        let target = SubtitleLanguagePreference.targetLanguageCode
+        let target = preferences.defaultSubtitleLanguageCode
         return companions.subtitles.first { entry in
             SubtitleFile.manual(url: entry.url).languageCode == target
         } ?? companions.subtitles.first

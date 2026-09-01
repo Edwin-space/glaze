@@ -11,6 +11,9 @@ struct TVPlayerView: View {
     let title: String
     var startAt: TimeInterval = 0
     var externalSubtitleURL: URL?
+    var preferredSubtitleLanguageCode: String = SubtitleLanguagePreference.targetLanguageCode
+    var automaticallySelectSubtitles = true
+    var preferredSubtitleScale: Float = 100
 
     @Environment(\.dismiss) private var dismiss
     @State private var model = TVPlaybackModel()
@@ -50,7 +53,14 @@ struct TVPlayerView: View {
             }
         }
         .onAppear {
-            model.start(resource, at: startAt, subtitleURL: externalSubtitleURL)
+            model.start(
+                resource,
+                at: startAt,
+                subtitleURL: externalSubtitleURL,
+                preferredSubtitleLanguageCode: preferredSubtitleLanguageCode,
+                automaticallySelectSubtitles: automaticallySelectSubtitles,
+                preferredSubtitleScale: preferredSubtitleScale
+            )
             scrubTime = startAt
             focusedControl = .timeline
             scheduleHide()
@@ -119,9 +129,16 @@ struct TVPlayerView: View {
             .frame(height: 430)
             .overlay(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text(title)
-                        .font(.system(size: 34, weight: .semibold))
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(title)
+                            .font(.system(size: 36, weight: .semibold))
+                            .lineLimit(1)
+                        if let selectedSubtitleStatus {
+                            Label(selectedSubtitleStatus, systemImage: "captions.bubble.fill")
+                                .font(.system(size: 21, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.68))
+                        }
+                    }
 
                     timeline
                     transport
@@ -195,14 +212,15 @@ struct TVPlayerView: View {
             Button {
                 openSubtitleSettings()
             } label: {
-                Label(L10n.string("tv.player.subtitles"), systemImage: "captions.bubble")
-                    .font(.system(size: 25, weight: .semibold))
-                    .padding(.horizontal, 8)
-                    .frame(minHeight: 64)
+                Image(systemName: "captions.bubble")
+                    .font(.system(size: 28, weight: .semibold))
+                    .frame(width: 66, height: 66)
             }
             .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
             .tint(model.selectedSubtitleTrackID == nil ? .white.opacity(0.16) : TVTheme.amber)
             .focused($focusedControl, equals: .subtitles)
+            .accessibilityLabel(L10n.string("tv.player.subtitles"))
         }
     }
 
@@ -226,19 +244,28 @@ struct TVPlayerView: View {
     }
 
     private var subtitleSettings: some View {
-        ZStack(alignment: .trailing) {
+        ZStack(alignment: .bottomTrailing) {
             Color.black.opacity(0.32)
                 .ignoresSafeArea()
                 .onTapGesture { closeSubtitleSettings() }
 
             TVSubtitleSettingsPanel(model: model, onClose: closeSubtitleSettings)
-                .frame(width: 650)
-                .background(.ultraThinMaterial)
-                .overlay(alignment: .leading) {
-                    Rectangle().fill(.white.opacity(0.12)).frame(width: 1)
+                .frame(width: 620)
+                .frame(maxHeight: 760)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .strokeBorder(.white.opacity(0.14), lineWidth: 1)
                 }
-                .ignoresSafeArea()
+                .padding(.trailing, 74)
+                .padding(.bottom, 150)
         }
+    }
+
+    private var selectedSubtitleStatus: String? {
+        guard let selectedID = model.selectedSubtitleTrackID,
+              let track = model.subtitleTracks.first(where: { $0.id == selectedID }) else { return nil }
+        return String(format: L10n.string("tv.player.subtitle.selected_format"), track.title)
     }
 
     private var failure: some View {
@@ -330,7 +357,7 @@ private struct TVSubtitleSettingsPanel: View {
                 .accessibilityLabel(L10n.string("network.browser.close"))
             }
             .padding(.horizontal, 42)
-            .padding(.top, 52)
+            .padding(.top, 32)
             .padding(.bottom, 28)
 
             ScrollView {
@@ -342,7 +369,7 @@ private struct TVSubtitleSettingsPanel: View {
                     sizeSection
                 }
                 .padding(.horizontal, 42)
-                .padding(.bottom, 60)
+                .padding(.bottom, 34)
             }
         }
     }

@@ -1,7 +1,7 @@
 # UI 레퍼런스 및 디자인 방향
 
 작성일: 2026-06-18  
-최종 수정: 2026-08-28 (경쟁 제품 실기기 감사·자막 Inspector 정보 구조 반영)
+최종 수정: 2026-09-01 (Apple TV TV 앱 정보 구조·최초 설정·네이티브 재생 반영)
 프로젝트명: 글레이즈 / Glaze
 
 ## 확정된 브랜드 (2026-08-10)
@@ -144,6 +144,18 @@ macOS의 시각적 소스 오브 트루스는 [승인된 macOS 플레이어 UI](
 - production design은 현재 deployment baseline과 맞는 macOS 26 / iOS·iPadOS 26 UI Kit를 사용한다. Apple 27 UI Kit는 forward exploration에만 사용한다.
 
 Liquid Glass는 영상 위 controls와 navigation 같은 기능 레이어에 제한한다. 영상·설정 내용 자체를 Glass content layer로 만들지 않으며, 텍스트가 많은 Inspector와 Sheet에는 regular material 또는 standard material을 사용한다. 영상 위에서는 넓은 Glass bar나 캡슐을 만들지 않고 각 조작의 원형 micro control에만 clear variant를 적용한다.
+
+## Apple TV TV 앱 구조 (2026-09-01)
+
+Apple TV는 Mac 플레이어를 10-foot UI로 키우지 않고 Apple TV의 TV 앱 문법을 기본으로 삼는다. 확정한 구조는 `시네마틱 홈 → 개인 보관함 → 네이티브 재생`이다.
+
+- 홈은 이어보기·최근 추가를 최상위에 두며, 연결 소스가 없을 때도 서버 오류 대신 다음 행동을 보여준다.
+- 왼쪽 탐색은 `검색 / 홈 / 보관함 / 미디어 소스 / 설정`의 transient Liquid Glass 사이드바다. 사이드바는 Menu/Back으로 호출하고 선택 후 물러난다.
+- 보관함은 포스터가 없는 DLNA도 실패한 표지처럼 보이지 않도록 16:9 셀프와 제목 기반 식별을 사용한다.
+- 재생은 화면을 영상에 양보하고, 시간축·일시정지·10초 이동·자막만 transient 기능 레이어로 올린다.
+- 자막 상세는 full-height panel이 아니라 우측 하단 compact material로 표시한다. 트랙, 끄기, 싱크, 글자 크기를 같은 문법으로 조절한다.
+- 최초 실행에서 기본 자막 언어와 같은 네트워크의 DLNA/UPnP 또는 WebDAV 소스를 설정한다. 설정은 다시 실행할 수 있고, 서버 없이도 끝낼 수 있다.
+- 실물 기기로 보내기 전 시뮬레이터에서 3840×2160 상태 캡처와 리모컨 포커스를 검증한다. 실물 Apple TV 설치는 사용자 승인 후에만 진행한다.
 
 ## macOS 설정 허브 (2026-08-27)
 

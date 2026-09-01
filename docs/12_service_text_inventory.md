@@ -108,6 +108,14 @@
 | `tv.player.subtitle.track/off/none/unknown` | 자막 트랙 / 자막 끄기 / 자막 없음 / 언어 정보 없음 | Subtitle Track / Subtitles Off / No subtitles / Unknown Language | Apple TV 자막 | 구현 |
 | `tv.player.subtitle.sync` | 자막 싱크 | Subtitle Timing | Apple TV 자막 설정 | 구현 |
 | `tv.player.subtitle.sync_format` | `%+.1f초` | `%+.1f sec` | Apple TV 자막 값 | 구현 |
+| `tv.navigation.*` | 검색 / 홈 / 보관함 / 미디어 소스 / 메뉴 버튼을 눌러 탐색을 여세요 | Search / Home / Library / Media Sources / Press Menu to open navigation | Apple TV 사이드바 | 구현 |
+| `tv.onboarding.*` | 환영 / 기본 자막 언어 / 영상이 있는 곳을 연결하세요 / 글레이즈 시작 | Welcome / Default subtitle language / Connect where your videos are / Start Glaze | Apple TV 최초 설정 | 구현 |
+| `tv.settings.default_subtitle_language*` | 기본 자막 언어 / 재생 시 이 언어의 내장·외부 자막을 먼저 선택합니다 | Default Subtitle Language / Prefer embedded and external subtitles in this language | Apple TV 설정 | 구현 |
+| `tv.settings.auto_select_subtitles*` | 자막 자동 선택 / 기본 언어 자막이 있으면 재생과 함께 표시합니다 | Automatically Select Subtitles / Show preferred-language subtitles when playback starts | Apple TV 설정 | 구현 |
+| `tv.settings.setup_again*` | 초기 설정 다시 하기 / 기본 자막 언어와 미디어 소스를 다시 선택합니다 | Run Setup Again / Choose subtitle language and media sources again | Apple TV 설정 | 구현 |
+| `tv.home.*` | 내 영상, 한곳에서 / 이어보기 / 최근 추가 / 미디어 소스 연결 | Your videos, all in one place / Continue Watching / Recently Added / Connect Media Source | Apple TV 홈 | 구현 |
+| `tv.search.*` | 제목 검색 / 찾고 싶은 제목을 입력하세요 / 일치하는 영상이 없습니다 | Search Titles / Enter a title to find / No matching videos | Apple TV 검색 | 구현 |
+| `tv.player.subtitle.selected_format` | `%@ 자막 자동 선택됨` | `%@ subtitles selected automatically` | Apple TV 재생 상태 | 구현 |
 | `player.previous_video` | 이전 영상 | Previous Video | 버튼 | 구현 |
 | `player.next_video` | 다음 영상 | Next Video | 버튼 | 구현 |
 | `player.status.buffering` | 재생 준비 중입니다. | Preparing playback. | 상태 | 구현 |

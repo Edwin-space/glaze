@@ -8,7 +8,8 @@ import SwiftUI
 /// Giving both the same row treatment — which is what this screen did first — makes a
 /// NAS look like a file browser projected onto a television.
 struct TVLibraryView: View {
-    @State private var model = NetworkMediaBrowserModel()
+    let model: NetworkMediaBrowserModel
+    @Bindable var preferences: TVUserPreferences
     @State private var positions = PlaybackPositionStore()
     /// One route at a time. Two `fullScreenCover` modifiers on the same view do not
     /// both work — the second silently never presents, which looked exactly like the
@@ -17,6 +18,14 @@ struct TVLibraryView: View {
     @State private var webdav = TVWebDAVConnections()
     @State private var isAddingWebDAV = false
     @State private var openWebDAV: WebDAVConnection?
+
+    init(
+        model: NetworkMediaBrowserModel = NetworkMediaBrowserModel(),
+        preferences: TVUserPreferences = TVUserPreferences()
+    ) {
+        self.model = model
+        self.preferences = preferences
+    }
 
     var body: some View {
         ZStack {
@@ -34,7 +43,10 @@ struct TVLibraryView: View {
                 TVPlayerView(
                     resource: item.resource,
                     title: item.parsed.title,
-                    startAt: startAt
+                    startAt: startAt,
+                    preferredSubtitleLanguageCode: preferences.defaultSubtitleLanguageCode,
+                    automaticallySelectSubtitles: preferences.automaticallySelectSubtitles,
+                    preferredSubtitleScale: preferences.subtitleScale
                 )
             }
         }
@@ -44,9 +56,8 @@ struct TVLibraryView: View {
             }
         }
         .fullScreenCover(item: $openWebDAV) { connection in
-            TVWebDAVLibraryView(connection: connection)
+            TVWebDAVLibraryView(connection: connection, preferences: preferences)
         }
-        .onExitCommand { model.navigateBack() }
     }
 
     @ViewBuilder
