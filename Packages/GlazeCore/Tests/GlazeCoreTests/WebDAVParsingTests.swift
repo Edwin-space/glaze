@@ -53,6 +53,23 @@ struct WebDAVPropfindParserTests {
         #expect(!entries.contains { $0.name == "video" })
     }
 
+    @Test func leavesOutTheFolderWhenTheServerChangesURLSpelling() {
+        let response = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <D:multistatus xmlns:D="DAV:">
+          <D:response>
+            <D:href>HTTPS://NAS.LOCAL:5006/video</D:href>
+            <D:propstat><D:prop>
+              <D:displayname>video</D:displayname>
+              <D:resourcetype><D:collection/></D:resourcetype>
+            </D:prop></D:propstat>
+          </D:response>
+        </D:multistatus>
+        """
+
+        #expect(WebDAVPropfindParser.parse(Data(response.utf8), baseURL: base).isEmpty)
+    }
+
     @Test func readsSizeAndDate() {
         let entries = WebDAVPropfindParser.parse(Data(synology.utf8), baseURL: base)
         let film = entries[1]

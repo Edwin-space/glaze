@@ -96,7 +96,7 @@ public enum WebDAVPropfindParser {
 
             // The folder being listed comes back as the first response. Listing it
             // inside itself would give every folder a phantom child of the same name.
-            guard url.standardized != baseURL.standardized else { return }
+            guard Self.folderKey(url) != Self.folderKey(baseURL) else { return }
 
             let name = displayName ?? url.lastPathComponent
             guard !name.isEmpty else { return }
@@ -132,6 +132,18 @@ public enum WebDAVPropfindParser {
             formatter.timeZone = TimeZone(identifier: "GMT")
             formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
             return formatter.date(from: text)
+        }
+
+        /// Synology may echo the collection with a different trailing slash or URL
+        /// spelling. Compare normalized origin and decoded path so it cannot appear
+        /// as a child of itself.
+        private static func folderKey(_ url: URL) -> String {
+            let scheme = url.scheme?.lowercased() ?? ""
+            let host = url.host?.lowercased() ?? ""
+            let port = url.port.map(String.init) ?? ""
+            var path = url.standardized.path.removingPercentEncoding ?? url.standardized.path
+            while path.count > 1, path.hasSuffix("/") { path.removeLast() }
+            return "\(scheme)://\(host):\(port)\(path)"
         }
     }
 }

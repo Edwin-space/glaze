@@ -199,6 +199,12 @@
 | `tv.home.library.loading/empty` | 선택한 미디어 소스에서 영상을 불러오는 중입니다… / 이 미디어 소스에서 재생 가능한 영상을 찾지 못했습니다. | Loading videos from your selected media source… / No playable videos were found in this media source. | tvOS 홈 보관함 상태 | 구현 |
 | `network.browser.error` | 네트워크 미디어를 불러오지 못했습니다 | Couldn’t load network media | 오류 | 구현 |
 | `network.browser.back/close/refresh/retry` | 뒤로/닫기/새로고침/다시 시도 | Back/Close/Refresh/Try Again | 탐색 버튼 | 구현 |
+| `network.browser.locations/favorites` | 위치/즐겨찾기 | Locations/Favorites | 네트워크 사이드바 | 구현 |
+| `network.browser.choose_location/*` | 미디어 위치를 선택하세요/저장된 NAS 또는 미디어 서버 선택 안내 | Choose a media location/saved source guidance | 네트워크 빈 상태 | 구현 |
+| `network.browser.path` | 현재 폴더 경로 | Current folder path | 경로 바 접근성 | 구현 |
+| `network.browser.favorite.add/remove` | 폴더를 즐겨찾기에 추가/제거 | Add/Remove Folder from Favorites | 폴더 액션 | 구현 |
+| `network.browser.view.icons/list/columns/gallery` | 아이콘/목록/계층/갤러리 보기 | Icon/List/Column/Gallery View | 보기 전환 | 구현 |
+| `network.browser.open_folder/play` | 폴더 열기/재생 | Open Folder/Play | 항목 액션 | 구현 |
 | `settings.title` | 설정 | Settings | 창/버튼 | 구현 |
 | `settings.tab.network` | 네트워크 | Network | 설정 사이드바 | 구현 |
 | `settings.*.description` | 화면별 기본값과 적용 범위 설명 | Per-page defaults and scope | 설정 안내 | 구현 |

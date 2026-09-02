@@ -29,13 +29,23 @@ public final class WebDAVBrowserModel {
 
     private let client: WebDAVClient
     private let credentials: WebDAVCredentialStore
+    private let cacheLifetime: TimeInterval
+    private var cache: [String: CachedFolder] = [:]
+    private var activeRequestID: UUID?
+
+    private struct CachedFolder {
+        let entries: [WebDAVEntry]
+        let loadedAt: Date
+    }
 
     public init(
         client: WebDAVClient = WebDAVClient(),
-        credentials: WebDAVCredentialStore = WebDAVCredentialStore()
+        credentials: WebDAVCredentialStore = WebDAVCredentialStore(),
+        cacheLifetime: TimeInterval = 60
     ) {
         self.client = client
         self.credentials = credentials
+        self.cacheLifetime = cacheLifetime
     }
 
     public var currentEntries: [WebDAVEntry] {
@@ -59,9 +69,14 @@ public final class WebDAVBrowserModel {
     }
 
     public func open(_ connection: WebDAVConnection) async {
+        await open(connection, at: connection.rootURL, title: connection.name)
+    }
+
+    /// Opens a saved subfolder directly without changing the connection's root.
+    public func open(_ connection: WebDAVConnection, at url: URL, title: String) async {
         self.connection = connection
         levels = []
-        await load(connection.rootURL, title: connection.name)
+        await load(url, title: title)
     }
 
     public func open(_ entry: WebDAVEntry) async {
@@ -71,7 +86,28 @@ public final class WebDAVBrowserModel {
 
     public func navigateBack() {
         guard canNavigateBack else { return }
+        activeRequestID = nil
         levels.removeLast()
+        errorMessage = nil
+        phase = .ready
+    }
+
+    /// Returns to an ancestor selected from the path bar or column browser.
+    public func navigate(to levelID: String) {
+        guard let index = levels.firstIndex(where: { $0.id == levelID }) else { return }
+        activeRequestID = nil
+        levels = Array(levels.prefix(through: index))
+        errorMessage = nil
+        phase = .ready
+    }
+
+    /// Reloads only the visible folder. Cached ancestors remain available for
+    /// instant back navigation.
+    public func reloadCurrent() async {
+        guard let level = levels.last else { return }
+        cache.removeValue(forKey: Self.cacheKey(for: level.url))
+        levels.removeLast()
+        await load(level.url, title: level.title)
     }
 
     /// Everything in the current folder that belongs to this film.
@@ -88,14 +124,27 @@ public final class WebDAVBrowserModel {
     private func load(_ url: URL, title: String) async {
         guard let connection else { return }
 
+        let key = Self.cacheKey(for: url)
+        if let cached = cache[key], Date().timeIntervalSince(cached.loadedAt) < cacheLifetime {
+            levels.append(Level(id: key, title: title, url: url, entries: cached.entries))
+            errorMessage = nil
+            phase = .ready
+            return
+        }
+
+        let requestID = UUID()
+        activeRequestID = requestID
         phase = .loading
         errorMessage = nil
 
         do {
             let entries = try await client.list(url, credentials: credentialPair(for: connection))
-            levels.append(Level(id: url.absoluteString, title: title, url: url, entries: entries))
+            guard activeRequestID == requestID else { return }
+            cache[key] = CachedFolder(entries: entries, loadedAt: Date())
+            levels.append(Level(id: key, title: title, url: url, entries: entries))
             phase = .ready
         } catch {
+            guard activeRequestID == requestID else { return }
             errorMessage = Self.message(for: error)
             phase = .ready
         }
@@ -118,5 +167,17 @@ public final class WebDAVBrowserModel {
         case .notWebDAV: L10n.string("webdav.error.not_webdav")
         case .network: L10n.string("webdav.error.network")
         }
+    }
+
+    private static func cacheKey(for url: URL) -> String {
+        var components = URLComponents(url: url.standardized, resolvingAgainstBaseURL: false)
+        let normalizedScheme = components?.scheme?.lowercased()
+        let normalizedHost = components?.host?.lowercased()
+        components?.scheme = normalizedScheme
+        components?.host = normalizedHost
+        var path = components?.percentEncodedPath ?? url.path
+        while path.count > 1, path.hasSuffix("/") { path.removeLast() }
+        components?.percentEncodedPath = path
+        return components?.string ?? url.standardized.absoluteString
     }
 }

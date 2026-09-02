@@ -184,6 +184,9 @@ Synology는 사진과 비디오 루트를 모두 `object.container.storageFolder
 **DLNA 탐색 실패로 저장된 WebDAV를 숨기지 않는다.**
 2026-09-02 macOS 네트워크 미디어 화면이 SSDP 수신 오류를 전체 화면 오류로 먼저 표시해, HTTPS·Keychain 인증과 `PROPFIND`가 모두 정상인 WebDAV 연결까지 사용할 수 없었다. 자동 발견 소스의 오류는 수동 저장 소스의 가용성을 무효화하지 않는다. 전체 오류 화면은 DLNA 결과와 저장 WebDAV가 모두 없을 때만 사용한다.
 
+**`NavigationSplitView` 상세 도구 막대는 intrinsic height에 맡기지 않는다.**
+2026-09-02 macOS 네트워크 브라우저의 상세 `VStack`이 내용 높이만 가져 상단 경로·보기 막대가 화면 중간에 떠 보였다. 브라우저 상세 루트는 가용 폭과 높이를 채우고 `.top`에 정렬해야 한다. 성공한 빌드만으로 판정하지 말고 선택 전 빈 상태까지 Release 캡처로 상단 고정을 확인한다.
+
 **Apple TV 빌드 ID와 설치 ID는 다르다.**
 `xcodebuild -destination`에는 기기 UDID(`00008110-...`)를 쓰고 `xcrun devicectl --device`에는 CoreDevice 식별자(`FBC69999-...`)를 쓴다. 첫 실기기 빌드는 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration`이 필요하다. Codex 샌드박스 안의 `devicectl`은 CoreDeviceService XPC가 끊긴 것처럼 보일 수 있으므로 개발 도구 권한으로 실행해 구분한다.
 

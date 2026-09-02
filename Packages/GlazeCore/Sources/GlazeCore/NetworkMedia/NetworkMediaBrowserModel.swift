@@ -5,8 +5,8 @@ import Observation
 public final class NetworkMediaBrowserModel {
     public struct Level: Identifiable {
         public let id: String
-        let title: String
-        let nodes: [NetworkMediaNode]
+        public let title: String
+        public let nodes: [NetworkMediaNode]
     }
 
     public enum Phase: Equatable {
@@ -110,6 +110,17 @@ public final class NetworkMediaBrowserModel {
             selectedServer = nil
         }
         errorMessage = nil
+    }
+
+    public func navigate(to levelID: String) {
+        guard let index = levels.firstIndex(where: { $0.id == levelID }) else { return }
+        levels = Array(levels.prefix(through: index))
+        errorMessage = nil
+    }
+
+    public func open(_ node: NetworkMediaNode, from levelID: String) async {
+        navigate(to: levelID)
+        await open(node)
     }
 
     public func retryCurrentLocation() async {
