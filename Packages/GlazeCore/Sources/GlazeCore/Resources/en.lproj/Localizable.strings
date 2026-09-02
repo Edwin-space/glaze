@@ -55,6 +55,7 @@
 "network.browser.view.gallery" = "Gallery View";
 "network.browser.open_folder" = "Open Folder";
 "network.browser.play" = "Play";
+"network.browser.discovery_unavailable" = "DLNA / UPnP unavailable";
 "media.source.server" = "Media Server";
 "open_panel.title" = "Choose a video";
 "media.error.title" = "Media info issue";

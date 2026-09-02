@@ -30,7 +30,7 @@ struct PlayerView: View {
         videoStage
             .inspector(isPresented: inspectorPresentation) {
                 playerInspector
-                    .inspectorColumnWidth(min: 300, ideal: 340, max: 420)
+                    .inspectorColumnWidth(min: 340, ideal: 380, max: 440)
             }
             .toolbar { playerToolbar }
             // Let the backdrop run up under the title bar instead of stopping at
@@ -250,15 +250,18 @@ struct PlayerView: View {
             HStack(spacing: 10) {
                 Button(action: openVideo) {
                     Label(L10n.string("player.open_video"), systemImage: "folder")
-                        .padding(.horizontal, 6)
+                        .foregroundStyle(.white)
+                        .frame(minWidth: 120)
                 }
                 .buttonStyle(.glassProminent)
-                .tint(.accentColor)
+                .tint(GlazeGlass.amber)
                 .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
 
                 Button { isNetworkBrowserPresented = true } label: {
                     Label(L10n.string("network.browser.open"), systemImage: "externaldrive.badge.wifi")
+                        .foregroundStyle(.white.opacity(0.92))
+                        .frame(minWidth: 132)
                 }
                 .buttonStyle(.glass)
                 .controlSize(.large)
@@ -489,7 +492,7 @@ struct PlayerView: View {
         // The inspector is a separate column from the video, so it gets its own
         // (unanimated — it sits still next to moving footage) backdrop to refract.
         .background {
-            GlazeAmbientBackdrop(isAnimated: false)
+            GlazeAmbientBackdrop(isAnimated: false, scrimOpacity: 0.36)
         }
     }
 
@@ -633,6 +636,7 @@ struct PlayerView: View {
                     .glazeGlassRow()
             }
         }
+        .contentMargins(.bottom, 28, for: .scrollContent)
         .formStyle(.grouped)
     }
 
@@ -848,6 +852,7 @@ struct PlayerView: View {
                 .glazeGlassRow()
         }
         .listStyle(.inset)
+        .contentMargins(.bottom, 24, for: .scrollContent)
         .safeAreaInset(edge: .top) {
             inspectorTitleBar("playlist.panel.title", detail: playlistSummary)
         }
@@ -930,6 +935,7 @@ struct PlayerView: View {
                     .glazeGlassRow()
             }
         }
+        .contentMargins(.bottom, 28, for: .scrollContent)
         .formStyle(.grouped)
     }
 

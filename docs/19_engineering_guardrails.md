@@ -187,6 +187,9 @@ Synology는 사진과 비디오 루트를 모두 `object.container.storageFolder
 **`NavigationSplitView` 상세 도구 막대는 intrinsic height에 맡기지 않는다.**
 2026-09-02 macOS 네트워크 브라우저의 상세 `VStack`이 내용 높이만 가져 상단 경로·보기 막대가 화면 중간에 떠 보였다. 브라우저 상세 루트는 가용 폭과 높이를 채우고 `.top`에 정렬해야 한다. 성공한 빌드만으로 판정하지 말고 선택 전 빈 상태까지 Release 캡처로 상단 고정을 확인한다.
 
+**같은 브랜드 배경을 모든 정보 밀도에 같은 밝기로 쓰지 않는다.**
+2026-09-02 Release 감사에서 시작 화면에는 적절했던 앰버·셀라돈 조명이 설정의 보조 문구와 영상 옆 Inspector의 트랙 정보를 침범했다. 브랜드 배경은 공통으로 유지하되 정보량에 맞는 scrim 토큰을 적용하고, 설정·Inspector·네트워크의 전후 캡처를 각각 확인한다.
+
 **Apple TV 빌드 ID와 설치 ID는 다르다.**
 `xcodebuild -destination`에는 기기 UDID(`00008110-...`)를 쓰고 `xcrun devicectl --device`에는 CoreDevice 식별자(`FBC69999-...`)를 쓴다. 첫 실기기 빌드는 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration`이 필요하다. Codex 샌드박스 안의 `devicectl`은 CoreDeviceService XPC가 끊긴 것처럼 보일 수 있으므로 개발 도구 권한으로 실행해 구분한다.
 

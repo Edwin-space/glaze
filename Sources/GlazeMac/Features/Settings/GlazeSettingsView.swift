@@ -52,7 +52,7 @@ struct GlazeSettingsView: View {
             .navigationSplitViewColumnWidth(min: 172, ideal: 188, max: 220)
         } detail: {
             ZStack {
-                GlazeAmbientBackdrop(isAnimated: false)
+                GlazeAmbientBackdrop(isAnimated: false, scrimOpacity: 0.18)
                 selectedPage
             }
         }
@@ -452,7 +452,7 @@ private struct SettingsPage<Content: View>: View {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(L10n.string(titleKey))
-                        .font(.system(size: 27, weight: .semibold, design: .rounded))
+                        .font(.title2.weight(.semibold))
                     Text(L10n.string(descriptionKey))
                         .font(.callout)
                         .foregroundStyle(.secondary)
@@ -461,8 +461,9 @@ private struct SettingsPage<Content: View>: View {
 
                 content
             }
-            .padding(28)
-            .frame(maxWidth: 700, alignment: .leading)
+            .padding(.horizontal, 30)
+            .padding(.vertical, 28)
+            .frame(maxWidth: 680, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
         .scrollContentBackground(.hidden)

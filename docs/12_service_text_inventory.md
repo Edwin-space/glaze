@@ -205,6 +205,7 @@
 | `network.browser.favorite.add/remove` | 폴더를 즐겨찾기에 추가/제거 | Add/Remove Folder from Favorites | 폴더 액션 | 구현 |
 | `network.browser.view.icons/list/columns/gallery` | 아이콘/목록/계층/갤러리 보기 | Icon/List/Column/Gallery View | 보기 전환 | 구현 |
 | `network.browser.open_folder/play` | 폴더 열기/재생 | Open Folder/Play | 항목 액션 | 구현 |
+| `network.browser.discovery_unavailable` | DLNA / UPnP 자동 발견 불가 | DLNA / UPnP unavailable | 사이드바 상태 | 구현 |
 | `settings.title` | 설정 | Settings | 창/버튼 | 구현 |
 | `settings.tab.network` | 네트워크 | Network | 설정 사이드바 | 구현 |
 | `settings.*.description` | 화면별 기본값과 적용 범위 설명 | Per-page defaults and scope | 설정 안내 | 구현 |

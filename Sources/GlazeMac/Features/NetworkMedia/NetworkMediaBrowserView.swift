@@ -78,7 +78,7 @@ struct NetworkMediaBrowserView: View {
         .scrollContentBackground(.hidden)
         .toolbarBackground(.hidden, for: .windowToolbar)
         .frame(minWidth: 900, minHeight: 600)
-        .presentationBackground { GlazeAmbientBackdrop(isAnimated: false) }
+        .presentationBackground { GlazeAmbientBackdrop(isAnimated: false, scrimOpacity: 0.12) }
         .preferredColorScheme(.dark)
         .task { await model.discoverIfNeeded() }
     }
@@ -144,9 +144,10 @@ struct NetworkMediaBrowserView: View {
                 }
             } else if let errorMessage = model.errorMessage, !webDAVConnections.connections.isEmpty {
                 Section {
-                    Label(errorMessage, systemImage: "wifi.exclamationmark")
+                    Label(L10n.string("network.browser.discovery_unavailable"), systemImage: "wifi.exclamationmark")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .help(errorMessage)
                 }
             }
         }

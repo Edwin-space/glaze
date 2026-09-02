@@ -174,6 +174,8 @@ Figma 컴포넌트의 설명에는 대응 Swift 파일을 기록한다. 설계 �
 
 설정은 480pt 고정 탭 툴바 대신 `NavigationSplitView` 기반의 작업별 사이드바로 구성한다. `자막`, `번역`, `네트워크`, `작품 정보`를 1차 항목으로 두고, 현재 영상 하나에만 적용되는 행동은 플레이어 Inspector에 남긴다.
 
+브랜드 조명은 정보보다 앞서지 않는다. 같은 `GlazeAmbientBackdrop`을 사용하되 시작 화면은 scrim 없이, 네트워크 브라우저는 12%, 설정 상세는 18%, 영상 옆 Inspector는 36%의 검정 scrim을 사용한다. 설정 페이지 제목은 macOS 시스템 `title2`를 사용하고, Inspector는 기본 380pt 폭과 하단 28pt 스크롤 여백을 유지한다.
+
 - 자막 화면은 결과 미리보기를 먼저 보여주고 글자 크기(14–48pt), 위·아래 앵커, 세부 여백, 반투명 배경 농도를 실제 렌더러와 같은 값으로 조절한다.
 - 설정 본문은 regular material 카드와 표준 `Slider`·`Picker`·`LabeledContent`를 사용한다. Liquid Glass 강조 버튼은 `NAS 추가` 같은 명시적 1차 행동에만 쓴다.
 - 네트워크 화면은 자동 발견(DLNA/UPnP), 저장 연결(WebDAV), 시스템 마운트(SMB), 미지원(FTP)을 혼합하지 않고 지원 수준을 함께 표시한다.

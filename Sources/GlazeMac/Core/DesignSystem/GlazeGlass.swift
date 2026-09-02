@@ -191,6 +191,10 @@ extension View {
 /// a subtitle panel without competing with the video beside it.
 struct GlazeAmbientBackdrop: View {
     var isAnimated = true
+    /// Structural surfaces need the brand light without letting it compete with
+    /// dense settings or inspector copy. Keep the launch stage unscreened and add
+    /// a controlled dark scrim only where the foreground carries information.
+    var scrimOpacity: Double = 0
 
     @State private var drift = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -222,6 +226,10 @@ struct GlazeAmbientBackdrop: View {
                 blob(GlazeGlass.plum, opacity: 0.85, diameter: size * 0.90)
                     .position(x: geo.size.width * (drift ? 0.12 : 0.06),
                               y: geo.size.height * (drift ? 0.88 : 0.78))
+
+                if scrimOpacity > 0 {
+                    Color.black.opacity(scrimOpacity)
+                }
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipped()
