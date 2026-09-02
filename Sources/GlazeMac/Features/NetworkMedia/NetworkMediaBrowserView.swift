@@ -65,13 +65,13 @@ struct NetworkMediaBrowserView: View {
 
     @ViewBuilder
     private var serverList: some View {
-        if model.phase == .discovering {
+        if model.phase == .discovering, webDAVConnections.connections.isEmpty {
             ContentUnavailableView {
                 Label(L10n.string("network.browser.discovering"), systemImage: "externaldrive.badge.wifi")
             } description: {
                 ProgressView()
             }
-        } else if let errorMessage = model.errorMessage {
+        } else if let errorMessage = model.errorMessage, webDAVConnections.connections.isEmpty {
             issueView(message: errorMessage)
         } else if model.servers.isEmpty, webDAVConnections.connections.isEmpty {
             ContentUnavailableView {

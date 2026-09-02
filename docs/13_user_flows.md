@@ -390,6 +390,7 @@ Apple TV 4K(3세대, tvOS 26.6)에서 Synology Media Server 자동 발견, Conte
 - WebDAV 추가·편집·삭제·연결 확인, UserDefaults/Keychain 분리 저장 구현
 - macOS/tvOS 공통 `WebDAVConnectionStore` 구현
 - 네트워크 미디어 화면의 DLNA/WebDAV 통합 목록과 WebDAV 폴더·영상 탐색 구현
+- DLNA/UPnP 자동 탐색이 실패해도 저장된 WebDAV 소스는 독립적으로 목록에 남고 열 수 있다. 전체 오류 화면은 사용할 수 있는 저장 소스가 하나도 없을 때만 표시한다.
 - Synology/Emby/WebDAV 실기기 인증 재생은 같은 네트워크에서 회귀 테스트 필요
 
 ## FAQ로 이어질 질문

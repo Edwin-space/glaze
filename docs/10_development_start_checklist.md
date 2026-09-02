@@ -372,6 +372,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] WebDAV 메타데이터(UserDefaults)와 비밀번호(Keychain) 분리 저장
 - [x] macOS/tvOS 공통 `WebDAVConnectionStore` 적용
 - [x] macOS 네트워크 미디어 화면에 DLNA와 저장된 WebDAV NAS를 통합 표시
+- [x] DLNA/UPnP 탐색 오류가 저장된 WebDAV 연결 목록을 가리지 않도록 소스별 오류 상태 분리 및 Release 샌드박스 실연결 확인 (2026-09-02)
 - [x] WebDAV 폴더 탐색과 인증 URL의 VLC 재생 경로 연결
 - [x] SMB는 Finder 마운트 경로로 안내하고 암호화되지 않은 FTP는 미지원으로 명시
 - [x] tvOS 서버 루트에서 사진·음악 컨테이너를 제외하고 영상이 있는 컨테이너만 노출
