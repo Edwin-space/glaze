@@ -406,6 +406,7 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 ### 구현 완료
 
 - [x] macOS Release 전체 화면 감사(시작·네트워크·설정 4종·재생·Inspector 3종)와 대비·폭·스크롤·현지화 수정 및 전후 캡처 보관 (2026-09-02)
+- [x] 기존 Figma `Glaze Brand Guidelines`에 macOS Release Metrics 9개, 실제 재생·설정 화면, 10단계 UX 감사와 개인정보 보호 기준 동기화 (2026-09-03)
 
 - [x] 480pt 탭 툴바를 `NavigationSplitView` 기반 자막·번역·네트워크·작품 정보 사이드바로 전환
 - [x] 플레이어 툴바에 설정 진입점 추가, 기존 ⌘, 유지

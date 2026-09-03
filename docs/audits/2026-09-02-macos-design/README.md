@@ -73,3 +73,12 @@
 
 - 확인: 주요 버튼 이름, Inspector 탭 선택 상태, 자막 토글 상태, 슬라이더 adjustable action, 사이드바 선택 구조, 스크롤 컨테이너 존재.
 - 미확인: VoiceOver 실제 발화 순서, Increase Contrast/Reduce Transparency 조합, 색각별 대비 수치, 200% 확대와 모든 영어 장문 상태. 스크린샷만으로 WCAG 또는 Apple 접근성 준수를 확정하지 않는다.
+
+## Figma 동기화
+
+- [macOS Release Metrics](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=125-2)
+- [Verified Release Implementation](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=126-2)
+- [Settings Release Alignment](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=126-9)
+- [macOS Release UX Audit](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=126-71)
+
+개인 NAS 주소와 포트가 포함된 네트워크 설정 캡처는 Figma 외부 전송에서 제외했다. 네트워크 브라우저 증거는 주소 영역을 제거한 캡처를 사용하고, 제외된 감사 단계에는 검증 상태와 개인정보 보호 사유를 명시했다.

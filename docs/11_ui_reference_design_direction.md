@@ -1,7 +1,7 @@
 # UI 레퍼런스 및 디자인 방향
 
 작성일: 2026-06-18  
-최종 수정: 2026-09-01 (Apple TV 구현 화면·토큰·재사용 컴포넌트를 Figma에 동기화)
+최종 수정: 2026-09-03 (macOS Release 감사 화면·surface contrast·Inspector 수치를 Figma에 동기화)
 프로젝트명: 글레이즈 / Glaze
 
 ## 확정된 브랜드 (2026-08-10)
@@ -13,7 +13,7 @@ macOS 설정 허브의 구현 기준은 같은 문서의 [Settings / macOS](http
 - **브랜드 콘셉트**: "글레이즈"(유약을 입히다) — 자막 없는 영상이 재생 전에 이해 가능한 상태로 "코팅"된다는 은유. 브랜드마크는 앱 아이콘과 마케팅 자산에서 사용하고, 플레이어 크롬에는 반복 노출하지 않는다.
 - **포지셔닝**: 한국 사용자에서 시작하지만 메시지는 처음부터 글로벌 — "언어는 더 이상 장벽이 아닙니다 / Language is no longer a barrier." (Messaging 페이지에 미션·태그라인·헤드라인 공식·App Store 카피 정리됨)
 - **색**: `Color.accentColor`는 `Assets.xcassets/AccentColor`를 통해 브랜드 앰버(Light `#B36F2E` / Dark `#E0954A`)로 바인딩한다. 그 외 화면 색은 macOS 시스템 semantic color를 사용한다.
-- **타입**: 실제 앱은 시스템 폰트를 그대로 쓰되, 헤드라인·타이틀 역할에는 `Font.system(_, design: .rounded)`를 적용해 Figma Typography 페이지의 SF Pro Rounded 지정과 맞춘다.
+- **타입**: 실제 앱은 시스템 폰트를 그대로 쓴다. 브랜드 헤드라인에는 `Font.system(_, design: .rounded)`를 사용할 수 있지만, 설정 페이지 제목과 네이티브 패널 제목은 macOS 정보 계층을 따라 `.title2.weight(.semibold)`를 사용한다.
 - **로고 에셋**: `Sources/GlazeMac/Resources/Assets.xcassets/AppIcon.appiconset`에 Figma에서 내보낸 실제 PNG가 채워져 있다(플레이스홀더 아님).
 - **카피 원칙**: 다국어 보이스 원칙(짧은 문장, 관용구 지양, 용어집 고정, 한/영 직접 검수)과 UX 라이팅 Do/Don't는 Figma Voice & Tone 페이지 참고.
 
@@ -184,6 +184,17 @@ Figma 컴포넌트의 설명에는 대응 Swift 파일을 기록한다. 설계 �
 - 아이콘·목록·계층·갤러리 보기는 같은 탐색 상태를 공유한다. 보기 전환은 폴더 위치를 초기화하지 않으며 선택한 방식은 다음 실행에도 유지한다.
 - 설정은 앱 메뉴의 ⌘, 외에도 플레이어 툴바의 `gearshape` 아이콘으로 접근할 수 있다.
 - 한국어와 영어가 40% 이상 길어져도 설명은 세로로 확장하고, URL은 가운데 생략하며, 상태 배지는 trailing에 유지한다.
+
+### Figma Release 동기화 (2026-09-03)
+
+서명된 macOS Release 앱의 2026-09-02 감사 결과를 기존 `Glaze Brand Guidelines`에 반영했다. 8월 승인 화면은 이력으로 보존하고 아래 노드를 현재 구현·검증 기준으로 사용한다.
+
+- [macOS Release Metrics](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=125-2): 설정 18%, 네트워크 12%, Inspector 36% scrim과 340/380/440pt Inspector 폭, 콘텐츠·스크롤 여백 변수
+- [Verified Release Implementation](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=126-2): 실제 재생 화면과 자막 Inspector Release 캡처
+- [Settings Release Alignment](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=126-9): 실제 설정 화면과 개인정보가 제거된 네트워크 브라우저 캡처
+- [macOS Release UX Audit](https://www.figma.com/design/p1Y9SkEuKnXdfMHWBiSmRa?node-id=126-71): 10단계 감사와 수정된 시작 화면
+
+개인 NAS 주소와 포트가 표시된 네트워크 설정 캡처는 Figma로 전송하지 않는다. 해당 감사 카드는 검증 완료 상태와 제외 사유만 기록하고, 주소 영역이 없는 네트워크 브라우저 캡처만 시각 증거로 사용한다.
 
 ## 플레이어 크롬 기준
 
