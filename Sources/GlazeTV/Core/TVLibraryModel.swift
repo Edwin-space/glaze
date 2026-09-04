@@ -156,6 +156,7 @@ final class TVLibraryModel {
         case WebDAVError.unauthorized: L10n.string("webdav.error.unauthorized")
         case WebDAVError.notFound: L10n.string("webdav.error.not_found")
         case WebDAVError.notWebDAV: L10n.string("webdav.error.not_webdav")
+        case WebDAVError.certificateMismatch: L10n.string("webdav.error.certificate")
         default: L10n.string("webdav.error.network")
         }
     }

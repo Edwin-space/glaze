@@ -478,3 +478,4 @@
 "common.close" = "Close";
 "common.cancel" = "Cancel";
 "library.scan.summary.episodes" = "TV episodes (not yet supported)";
+"webdav.error.certificate" = "The server's certificate does not match this address. Try the domain name on the certificate rather than the NAS's IP address.";

@@ -41,6 +41,7 @@ final class LibraryScanController {
     private(set) var connectionName = ""
 
     private var task: Task<Void, Never>?
+    private var root: URL?
     private var connection: WebDAVConnection?
     private var password: String?
     private let session = URLSession.shared
@@ -54,7 +55,10 @@ final class LibraryScanController {
 
     var currentQuestion: Question? { questions.first }
 
-    func start(_ connection: WebDAVConnection, password: String?, apiKey: String) {
+    /// - Parameter root: the folder to describe. The share's own root describes
+    ///   everything; a folder inside it describes just that, which is how a large
+    ///   library gets tried on a corner of itself first.
+    func start(_ connection: WebDAVConnection, root: URL, password: String?, apiKey: String) {
         guard !apiKey.isEmpty else {
             phase = .failed(L10n.string("metadata.error.no_api_key"))
             return
@@ -62,8 +66,11 @@ final class LibraryScanController {
 
         cancel()
         self.connection = connection
+        self.root = root
         self.password = password
-        connectionName = connection.name
+        connectionName = root == connection.rootURL
+            ? connection.name
+            : "\(connection.name) › \(Self.folderName(of: root))"
         questions = []
         summary = Summary()
         phase = .scanning(foldersRead: 0)
@@ -76,7 +83,7 @@ final class LibraryScanController {
             let loader = WebDAVLibraryLoader()
             let library: MediaLibrary
             do {
-                library = try await loader.load(root: connection.rootURL, credentials: credentials) { read in
+                library = try await loader.load(root: root, credentials: credentials) { read in
                     Task { @MainActor [weak self] in self?.noteScanProgress(read) }
                 }
             } catch {
@@ -207,11 +214,17 @@ final class LibraryScanController {
         phase = pending.isEmpty ? .finished : .reviewing
     }
 
+    private static func folderName(of url: URL) -> String {
+        let name = url.lastPathComponent
+        return name.isEmpty ? url.host ?? "" : name
+    }
+
     private static func message(for error: Error) -> String {
         switch error {
         case WebDAVError.unauthorized: L10n.string("webdav.error.unauthorized")
         case WebDAVError.notFound: L10n.string("webdav.error.not_found")
         case WebDAVError.notWebDAV: L10n.string("webdav.error.not_webdav")
+        case WebDAVError.certificateMismatch: L10n.string("webdav.error.certificate")
         default: L10n.string("webdav.error.network")
         }
     }

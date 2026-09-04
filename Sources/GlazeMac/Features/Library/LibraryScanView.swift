@@ -4,6 +4,8 @@ import SwiftUI
 /// Fills in what a library is, and asks about the films it cannot settle on its own.
 struct LibraryScanView: View {
     let connection: WebDAVConnection
+    /// The folder being described — the share root, or whatever the viewer had open.
+    let root: URL
     let password: String?
     @Bindable var preferences: GlazePreferences
 
@@ -26,12 +28,18 @@ struct LibraryScanView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L10n.string("library.scan.title"))
                 .font(.title2.weight(.semibold))
-            Text(String(format: L10n.string("library.scan.subtitle_format"), connection.name))
+            Text(String(format: L10n.string("library.scan.subtitle_format"), scopeName))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
+    }
+
+    private var scopeName: String {
+        guard root != connection.rootURL else { return connection.name }
+        let folder = root.lastPathComponent
+        return folder.isEmpty ? connection.name : "\(connection.name) › \(folder)"
     }
 
     @ViewBuilder
@@ -190,7 +198,7 @@ struct LibraryScanView: View {
             } else {
                 Button(L10n.string("common.close")) { dismiss() }
                 Button(startTitle) {
-                    controller.start(connection, password: password, apiKey: preferences.tmdbAPIKey)
+                    controller.start(connection, root: root, password: password, apiKey: preferences.tmdbAPIKey)
                 }
                 .keyboardShortcut(.defaultAction)
             }

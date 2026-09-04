@@ -173,6 +173,30 @@ struct WebDAVLibraryLoaderTests {
         #expect(library.movies.count == 1)
     }
 
+
+    /// A Synology share root lists the shared folders, so a film is two levels down
+    /// before the library begins, and a series adds a season folder on top.
+    @Test func reachesAFilmInASynologyShapedShare() async throws {
+        StubWebDAVProtocol.reset(folders: [
+            "/": [("video", true)],
+            "/video": [("Media", true)],
+            "/video/Media": [("Parasite (2019)", true), ("The Bear", true)],
+            "/video/Media/Parasite (2019)": [("Parasite.2019.1080p.mkv", false)],
+            "/video/Media/The Bear": [("Season 01", true)],
+            "/video/Media/The Bear/Season 01": [("The.Bear.S01E01.1080p.mkv", false)]
+        ])
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubWebDAVProtocol.self]
+        let loader = WebDAVLibraryLoader(
+            client: WebDAVClient(session: URLSession(configuration: configuration))
+        )
+
+        let library = try await loader.load(root: URL(string: "https://nas.local:5006/")!, credentials: nil)
+        #expect(library.movies.count == 1)
+        #expect(library.series.first?.episodeCount == 1)
+    }
+
     @Test func reportsProgressSoALargeShareCanSaySomethingTrue() async throws {
         StubWebDAVProtocol.reset(folders: [
             "/media": [("A", true), ("B", true)],
@@ -203,28 +227,30 @@ final class LockedCounts: @unchecked Sendable {
     }
 }
 
-@Suite(.serialized)
-struct WebDAVLibraryLoaderDepthTests {
-    /// A Synology share root lists the shared folders, so a film is two levels down
-    /// before the library begins, and a series adds a season folder on top.
-    @Test func reachesAFilmInASynologyShapedShare() async throws {
-        StubWebDAVProtocol.reset(folders: [
-            "/": [("video", true)],
-            "/video": [("Media", true)],
-            "/video/Media": [("Parasite (2019)", true), ("The Bear", true)],
-            "/video/Media/Parasite (2019)": [("Parasite.2019.1080p.mkv", false)],
-            "/video/Media/The Bear": [("Season 01", true)],
-            "/video/Media/The Bear/Season 01": [("The.Bear.S01E01.1080p.mkv", false)]
-        ])
+@Suite struct WebDAVTransportErrorTests {
+    /// Reaching a NAS by IP when its certificate names a domain is an ordinary mistake,
+    /// and "could not connect" says nothing about how to fix it.
+    @Test func namesACertificateMismatchRatherThanCallingItANetworkFailure() {
+        let cases: [URLError.Code] = [
+            .secureConnectionFailed,
+            .serverCertificateUntrusted,
+            .serverCertificateHasUnknownRoot,
+            .serverCertificateHasBadDate,
+            .serverCertificateNotYetValid
+        ]
+        for code in cases {
+            #expect(WebDAVError.transport(URLError(code)) == .certificateMismatch)
+        }
+    }
 
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [StubWebDAVProtocol.self]
-        let loader = WebDAVLibraryLoader(
-            client: WebDAVClient(session: URLSession(configuration: configuration))
-        )
-
-        let library = try await loader.load(root: URL(string: "https://nas.local:5006/")!, credentials: nil)
-        #expect(library.movies.count == 1)
-        #expect(library.series.first?.episodeCount == 1)
+    @Test func leavesOtherFailuresAsNetworkFailures() {
+        guard case .network = WebDAVError.transport(URLError(.timedOut)) else {
+            Issue.record("a timeout is a network failure")
+            return
+        }
+        guard case .network = WebDAVError.transport(URLError(.cannotFindHost)) else {
+            Issue.record("an unknown host is a network failure")
+            return
+        }
     }
 }

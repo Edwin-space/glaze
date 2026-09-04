@@ -90,6 +90,9 @@ struct NetworkMediaBrowserView: View {
         .sheet(item: $scanTarget) { connection in
             LibraryScanView(
                 connection: connection,
+                // Whatever folder is open, so a large library can be tried on one
+                // corner before it is described whole.
+                root: webDAVModel.levels.last?.url ?? connection.rootURL,
                 password: webDAVConnections.password(for: connection),
                 preferences: .shared
             )

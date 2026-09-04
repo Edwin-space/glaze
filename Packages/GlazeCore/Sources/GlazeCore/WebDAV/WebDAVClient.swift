@@ -26,7 +26,30 @@ public enum WebDAVError: Error, Sendable, Equatable {
     case unauthorized
     case notFound
     case notWebDAV
+    /// The server's certificate does not cover the address it was reached at.
+    ///
+    /// The usual cause is typing a NAS's IP when its certificate names a domain:
+    /// a Synology with a real certificate for `home.example.com` fails on
+    /// `https://192.168.0.100:5006/` and nothing about "could not connect" says why.
+    case certificateMismatch
     case network(String)
+}
+
+extension WebDAVError {
+    /// Reads a URLSession failure closely enough to say something useful about it.
+    static func transport(_ error: Error) -> WebDAVError {
+        guard let urlError = error as? URLError else { return .network(error.localizedDescription) }
+        switch urlError.code {
+        case .serverCertificateHasBadDate,
+             .serverCertificateHasUnknownRoot,
+             .serverCertificateNotYetValid,
+             .serverCertificateUntrusted,
+             .secureConnectionFailed:
+            return .certificateMismatch
+        default:
+            return .network(urlError.localizedDescription)
+        }
+    }
 }
 
 /// Lists folders on a WebDAV server.
@@ -74,7 +97,7 @@ public struct WebDAVClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            throw WebDAVError.network(error.localizedDescription)
+            throw WebDAVError.transport(error)
         }
 
         guard let http = response as? HTTPURLResponse else {
@@ -121,7 +144,7 @@ public struct WebDAVClient: Sendable {
         do {
             (_, response) = try await session.data(for: request)
         } catch {
-            throw WebDAVError.network(error.localizedDescription)
+            throw WebDAVError.transport(error)
         }
 
         guard let http = response as? HTTPURLResponse else {
@@ -156,7 +179,7 @@ public struct WebDAVClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            throw WebDAVError.network(error.localizedDescription)
+            throw WebDAVError.transport(error)
         }
 
         if let http = response as? HTTPURLResponse {

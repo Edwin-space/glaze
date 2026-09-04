@@ -165,6 +165,7 @@ public final class WebDAVBrowserModel {
         case .unauthorized: L10n.string("webdav.error.unauthorized")
         case .notFound: L10n.string("webdav.error.not_found")
         case .notWebDAV: L10n.string("webdav.error.not_webdav")
+        case .certificateMismatch: L10n.string("webdav.error.certificate")
         case .network: L10n.string("webdav.error.network")
         }
     }

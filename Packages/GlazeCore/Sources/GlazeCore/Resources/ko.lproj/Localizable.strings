@@ -478,3 +478,4 @@
 "common.close" = "닫기";
 "common.cancel" = "취소";
 "library.scan.summary.episodes" = "TV 에피소드(아직 미지원)";
+"webdav.error.certificate" = "서버 인증서가 이 주소와 맞지 않습니다. NAS의 IP 대신 인증서에 적힌 도메인 주소(예: home.example.com)로 접속해 보세요.";
