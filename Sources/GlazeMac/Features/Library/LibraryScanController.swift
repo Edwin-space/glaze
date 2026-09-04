@@ -10,6 +10,14 @@ import Observation
 @MainActor
 @Observable
 final class LibraryScanController {
+    /// Shared, and deliberately not owned by the screen that shows it.
+    ///
+    /// Describing a library takes minutes and writes to a NAS as it goes. Held as view
+    /// state it was cancelled the moment anything re-created the window it sat in —
+    /// which happened mid-run, halfway through a library, losing both the remaining
+    /// work and the questions already gathered.
+    static let shared = LibraryScanController()
+
     enum Phase: Equatable {
         case idle
         case scanning(foldersRead: Int)

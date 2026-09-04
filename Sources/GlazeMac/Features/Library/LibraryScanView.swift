@@ -9,7 +9,7 @@ struct LibraryScanView: View {
     let password: String?
     @Bindable var preferences: GlazePreferences
 
-    @State private var controller = LibraryScanController()
+    private var controller: LibraryScanController { .shared }
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -21,7 +21,7 @@ struct LibraryScanView: View {
             footer
         }
         .frame(width: 760, height: 560)
-        .onDisappear { controller.cancel() }
+        // Closing the window does not stop the work; reopening shows where it got to.
     }
 
     private var header: some View {

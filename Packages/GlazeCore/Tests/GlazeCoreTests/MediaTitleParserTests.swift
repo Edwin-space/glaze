@@ -177,3 +177,31 @@ struct DIDLResourceDetailTests {
         #expect(MediaTitleParser.parse("기생충").title == "기생충")
     }
 }
+
+/// Numbering seen in a real Korean library, neither of which is `S01E01`.
+@Suite struct EpisodeNumberingVariantsTests {
+    @Test func readsAnEpisodeWrittenWithoutASeason() {
+        let parsed = MediaTitleParser.parse("메이드 인 코리아.Made In Korea.E02.1080p.DSNP.WEB-DL.DD+-Sniper")
+        #expect(parsed.episode == 2)
+        #expect(parsed.season == nil)
+        #expect(parsed.title == "메이드 인 코리아 Made In Korea")
+    }
+
+    @Test func readsAKoreanEpisodeNumber() {
+        let parsed = MediaTitleParser.parse("라이어니스- 특수 작전팀 2 3회.mp4")
+        #expect(parsed.episode == 3)
+        #expect(parsed.title == "라이어니스- 특수 작전팀 2")
+    }
+
+    /// A release group with digits in its name is not an episode number.
+    @Test func doesNotReadAReleaseGroupAsAnEpisode() {
+        #expect(MediaTitleParser.parse("Film.2019.1080p.BluRay.x264-SPARKS").episode == nil)
+        #expect(MediaTitleParser.parse("Dune.Part.Two.2024.2160p.BluRay.x265").episode == nil)
+    }
+
+    @Test func stillPrefersTheSeasonFormWhenBothCouldMatch() {
+        let parsed = MediaTitleParser.parse("Show.S02E07.The.Name.1080p.WEB-DL")
+        #expect(parsed.season == 2)
+        #expect(parsed.episode == 7)
+    }
+}

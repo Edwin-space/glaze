@@ -51,7 +51,7 @@ public enum MediaTitleParser {
         working = working.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
 
         let year = year(in: working)
-        working = truncate(working, atYear: year, season: season)
+        working = truncate(working, atYear: year, season: season, episode: episode)
         working = separatorsToSpaces(working)
 
         let title = working
@@ -84,16 +84,29 @@ public enum MediaTitleParser {
         return Int(digits)
     }
 
+    /// `S01E02` is the common form, but not the only one a real library holds.
+    /// Korean releases number episodes as `3회`, and a single-season show is often
+    /// written `E01` with no season at all.
     private static func episodeNumbers(in text: String) -> (Int?, Int?) {
-        let pattern = #"[Ss](\d{1,2})(?:[Ee](\d{1,3}))?"#
-        guard let range = text.range(of: pattern, options: .regularExpression) else { return (nil, nil) }
-        let token = String(text[range])
-        let numbers = token
-            .dropFirst()
-            .split(whereSeparator: { !$0.isNumber })
-            .compactMap { Int($0) }
-        return (numbers.first, numbers.count > 1 ? numbers[1] : nil)
+        if let range = text.range(of: #"[Ss](\d{1,2})(?:[Ee](\d{1,3}))?"#, options: .regularExpression) {
+            let numbers = String(text[range])
+                .dropFirst()
+                .split(whereSeparator: { !$0.isNumber })
+                .compactMap { Int($0) }
+            return (numbers.first, numbers.count > 1 ? numbers[1] : nil)
+        }
+
+        if let range = text.range(of: episodeOnlyPattern, options: .regularExpression) {
+            let digits = String(text[range]).filter(\.isNumber)
+            return (nil, Int(digits))
+        }
+
+        return (nil, nil)
     }
+
+    /// A separator in front so `E01` is not found inside a word, and so `RE07` in a
+    /// release group's name is not read as an episode.
+    static let episodeOnlyPattern = #"(?:^|[\s._\-])(?:[Ee](\d{1,3})\b|(\d{1,3})회)"#
 
     /// What sits between `S01E01` and the first piece of release metadata.
     ///
@@ -129,7 +142,12 @@ public enum MediaTitleParser {
     /// That last case is not a nicety. Plenty of releases carry no year at all
     /// (`Nosferatu.1080p.WEB-DL.x265-GROUP`), and without a cut the "title" became the
     /// whole filename, which no metadata service can find anything for.
-    private static func truncate(_ text: String, atYear year: Int?, season: Int?) -> String {
+    private static func truncate(
+        _ text: String,
+        atYear year: Int?,
+        season: Int?,
+        episode: Int?
+    ) -> String {
         var cutIndex: String.Index?
 
         if let year, let range = text.range(of: String(year)) {
@@ -138,6 +156,13 @@ public enum MediaTitleParser {
 
         if season != nil,
            let range = text.range(of: #"[\s.][Ss]\d{1,2}(?:[Ee]\d{1,3})?"#, options: .regularExpression) {
+            cutIndex = min(cutIndex ?? range.lowerBound, range.lowerBound)
+        }
+
+        // A show numbered without a season still has to be cut before its number,
+        // or the title becomes "메이드 인 코리아 Made In Korea E01".
+        if season == nil, episode != nil,
+           let range = text.range(of: episodeOnlyPattern, options: .regularExpression) {
             cutIndex = min(cutIndex ?? range.lowerBound, range.lowerBound)
         }
 
