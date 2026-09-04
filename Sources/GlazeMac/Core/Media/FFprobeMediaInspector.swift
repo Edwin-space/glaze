@@ -6,6 +6,73 @@ import GlazeCore
 /// VLC is the reference engine for formats such as MKV, so AVFoundation cannot be
 /// the source of truth for the Info panel. ffprobe is already bundled for embedded
 /// subtitle discovery and gives both playback paths the same, complete inspection.
+struct MediaProbeResult: Sendable {
+    let inspection: MediaInspection
+    let spokenLanguageCode: String?
+    let subtitleTracks: [EmbeddedSubtitleTrack]
+}
+
+/// Shares one container read between the Info and Subtitle panels. Remote media used
+/// to launch three ffprobe processes for the same URL, competing with VLC for the first
+/// bytes of the film.
+actor MediaProbeCoordinator {
+    static let shared = MediaProbeCoordinator()
+
+    private let inspector = FFprobeMediaInspector()
+    /// Probes still running, so a second panel joins the first rather than starting
+    /// its own ffprobe.
+    private var tasks: [String: Task<MediaProbeResult, Error>] = [:]
+    /// Finished probes, kept only long enough for the panels of the film being watched
+    /// to agree. Holding every result for the life of the process would both grow
+    /// without bound and keep answering with a container the file no longer has.
+    private var recentResults: [(key: String, result: MediaProbeResult)] = []
+    private let recentResultLimit = 4
+
+    func probe(url: URL, deferForPlayback: Bool) async throws -> MediaProbeResult {
+        let key = url.absoluteString
+        if let cached = recentResults.first(where: { $0.key == key })?.result {
+            return cached
+        }
+        if let task = tasks[key] {
+            return try await task.value
+        }
+
+        let inspector = inspector
+        let task = Task<MediaProbeResult, Error> {
+            if deferForPlayback {
+                try await Task.sleep(for: .milliseconds(750))
+            }
+            return try await inspector.probe(url: url)
+        }
+        tasks[key] = task
+        do {
+            let result = try await task.value
+            release(key: key, task: task)
+            remember(result, for: key)
+            return result
+        } catch {
+            release(key: key, task: task)
+            throw error
+        }
+    }
+
+    /// Drops the in-flight entry only when it is still the task this call started.
+    /// Two callers failing on the same probe would otherwise let the second one evict
+    /// a newer, still-running probe of the same film.
+    private func release(key: String, task: Task<MediaProbeResult, Error>) {
+        guard tasks[key] == task else { return }
+        tasks.removeValue(forKey: key)
+    }
+
+    private func remember(_ result: MediaProbeResult, for key: String) {
+        recentResults.removeAll { $0.key == key }
+        recentResults.append((key: key, result: result))
+        if recentResults.count > recentResultLimit {
+            recentResults.removeFirst(recentResults.count - recentResultLimit)
+        }
+    }
+}
+
 actor FFprobeMediaInspector {
     enum InspectionError: Error {
         case toolUnavailable
@@ -13,6 +80,10 @@ actor FFprobeMediaInspector {
     }
 
     func inspect(url: URL) async throws -> MediaInspection {
+        try await probe(url: url).inspection
+    }
+
+    func probe(url: URL) async throws -> MediaProbeResult {
         guard let ffprobeURL = FFmpegTool.ffprobeURL else {
             throw InspectionError.toolUnavailable
         }
@@ -22,7 +93,7 @@ actor FFprobeMediaInspector {
             arguments: [
                 "-v", "error",
                 "-show_entries",
-                "format=format_name,duration,size,bit_rate:stream=index,codec_type,codec_name,width,height,r_frame_rate,sample_rate,channels,bit_rate:stream_tags=language,title",
+                "format=format_name,duration,size,bit_rate:stream=index,codec_type,codec_name,width,height,r_frame_rate,sample_rate,channels,bit_rate:stream_tags=language,title:stream_disposition=default,forced",
                 "-of", "json",
                 url.isFileURL ? url.path : url.absoluteString
             ]
@@ -30,7 +101,7 @@ actor FFprobeMediaInspector {
         let response = try JSONDecoder().decode(ProbeResponse.self, from: data)
         let video = response.streams.first { $0.codecType == "video" }
 
-        return MediaInspection(
+        let inspection = MediaInspection(
             fileName: url.lastPathComponent,
             containerHint: displayContainer(response.format?.formatName, fallback: url.pathExtension),
             duration: formatDuration(response.format?.duration),
@@ -40,6 +111,25 @@ actor FFprobeMediaInspector {
             isPlayable: nil,
             tracks: response.streams.map(makeTrack),
             errorMessage: nil
+        )
+        let audioLanguage = response.streams
+            .first { $0.codecType == "audio" }
+            .flatMap { SubtitleLanguageCode.normalized($0.tags?.language) }
+        let subtitleTracks = response.streams.compactMap { stream -> EmbeddedSubtitleTrack? in
+            guard stream.codecType == "subtitle" else { return nil }
+            return EmbeddedSubtitleTrack(
+                streamIndex: stream.index,
+                codec: stream.codecName ?? "unknown",
+                languageCode: stream.tags?.language,
+                title: stream.tags?.title,
+                isDefault: stream.disposition?.defaultValue == 1,
+                isForced: stream.disposition?.forced == 1
+            )
+        }
+        return MediaProbeResult(
+            inspection: inspection,
+            spokenLanguageCode: audioLanguage,
+            subtitleTracks: subtitleTracks
         )
     }
 
@@ -173,9 +263,10 @@ private extension FFprobeMediaInspector {
         let channels: Int?
         let bitRate: String?
         let tags: ProbeTags?
+        let disposition: ProbeDisposition?
 
         enum CodingKeys: String, CodingKey {
-            case index, width, height, channels, tags
+            case index, width, height, channels, tags, disposition
             case codecType = "codec_type"
             case codecName = "codec_name"
             case frameRate = "r_frame_rate"
@@ -187,5 +278,15 @@ private extension FFprobeMediaInspector {
     struct ProbeTags: Decodable {
         let language: String?
         let title: String?
+    }
+
+    struct ProbeDisposition: Decodable {
+        let defaultValue: Int?
+        let forced: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case defaultValue = "default"
+            case forced
+        }
     }
 }

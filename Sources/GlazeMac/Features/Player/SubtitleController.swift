@@ -87,9 +87,14 @@ final class SubtitleController {
     var onEmbeddedSubtitleLoaded: (() -> Void)?
 
     private var generationTask: Task<Void, Never>?
+    private var sidecarDiscoveryTask: Task<Void, Never>?
     private var embeddedSubtitleTask: Task<Void, Never>?
     private var translationTask: Task<Void, Never>?
     private let embeddedSubtitleService = EmbeddedSubtitleService()
+    private let probeCoordinator = MediaProbeCoordinator.shared
+    private let networkSubtitleLoader = NetworkSubtitleLoader(
+        convertToSRT: FFmpegSubtitleConverter.convert
+    )
     private let subtitleStore: SubtitleStoring = FileSubtitleStore(
         libraryDirectory: SubtitleController.defaultLibraryDirectory
     )
@@ -98,6 +103,12 @@ final class SubtitleController {
     private var translationVideoURL: URL?
     private var translationStartedAt: Date?
     private var selectedSubtitleDisplayName: String?
+    private var mediaSessionID = UUID()
+    /// Held while a sidecar is still being found or downloaded. An embedded track must
+    /// not claim the screen ahead of the subtitle sitting beside the film.
+    private var pendingSidecarLoad = false
+    /// The embedded track the planner chose, parked until the sidecar gate opens.
+    private var pendingEmbeddedSelection: (track: EmbeddedSubtitleTrack, videoURL: URL)?
 
     init(preferences: GlazePreferences = .shared) {
         self.preferences = preferences
@@ -105,13 +116,18 @@ final class SubtitleController {
 
     /// Resets subtitle state for a newly loaded video and auto-loads the best sidecar match, if any.
     func prepareForNewVideo(url: URL) {
+        mediaSessionID = UUID()
+        let sessionID = mediaSessionID
+        sidecarDiscoveryTask?.cancel()
         embeddedSubtitleTask?.cancel()
         cancelTranslating()
         needsFolderAccess = false
         // Reopen a folder the viewer already allowed, before looking for subtitles in
         // it — under the sandbox the search itself comes up empty otherwise.
-        MediaFolderAccess.restoreAccess(toFolderOf: url)
-        detectedSubtitles = SubtitleSidecarDetector.detect(for: url)
+        if url.isFileURL {
+            MediaFolderAccess.restoreAccess(toFolderOf: url)
+        }
+        detectedSubtitles = []
         embeddedSubtitleTracks = []
         subtitleCues = []
         activeSubtitleText = ""
@@ -126,8 +142,102 @@ final class SubtitleController {
         subtitlePreparationPlan = nil
         pendingTranslationRequest = nil
         spokenLanguageCode = nil
-        loadPreferredIfAvailable()
-        discoverEmbeddedSubtitles(in: url)
+        pendingSidecarLoad = false
+        pendingEmbeddedSelection = nil
+        discoverSidecarSubtitles(in: url, sessionID: sessionID)
+        discoverEmbeddedSubtitles(in: url, sessionID: sessionID)
+    }
+
+    /// A mounted SMB share is still a file URL, and synchronously enumerating its
+    /// directory here used to freeze the player on the main actor. WebDAV sidecars are
+    /// downloaded from the listing that selected the film. Both paths finish in the
+    /// same local subtitle parser and translation workflow.
+    private func discoverSidecarSubtitles(in videoURL: URL, sessionID: UUID) {
+        if case .network(let resource) = currentResource, !resource.subtitleResources.isEmpty {
+            let ordered = orderedNetworkSubtitles(resource.subtitleResources)
+            pendingSidecarLoad = true
+            sidecarDiscoveryTask = Task { [weak self] in
+                guard let self else { return }
+                var loadedAny = false
+                for remoteSubtitle in ordered {
+                    guard !Task.isCancelled, mediaSessionID == sessionID else { return }
+                    do {
+                        let localURL = try await networkSubtitleLoader.load(remoteSubtitle)
+                        guard mediaSessionID == sessionID else { return }
+                        let subtitle = SubtitleFile.manual(url: localURL)
+                        if !detectedSubtitles.contains(where: { $0.url == localURL }) {
+                            detectedSubtitles.append(subtitle)
+                        }
+                        if !loadedAny, subtitleCues.isEmpty {
+                            load(
+                                subtitle,
+                                sourceLanguageCode: remoteSubtitle.languageCode,
+                                displayName: remoteSubtitle.displayName
+                            )
+                        } else {
+                            // Every later sidecar still changes what the panel can offer.
+                            status = computeStatus(for: detectedSubtitles)
+                        }
+                        loadedAny = true
+                    } catch {
+                        continue
+                    }
+                }
+                guard mediaSessionID == sessionID else { return }
+                if !loadedAny, !ordered.isEmpty, errorMessage == nil {
+                    errorMessage = L10n.string("subtitle.error.read_failed")
+                }
+                await finishSidecarDiscovery(sessionID: sessionID)
+            }
+            return
+        }
+
+        guard videoURL.isFileURL else {
+            sidecarDiscoveryTask = nil
+            return
+        }
+        pendingSidecarLoad = true
+        sidecarDiscoveryTask = Task { [weak self] in
+            let found = await Task.detached(priority: .utility) {
+                SubtitleSidecarDetector.detect(for: videoURL)
+            }.value
+            guard let self, !Task.isCancelled, mediaSessionID == sessionID else { return }
+            detectedSubtitles = found
+            loadPreferredIfAvailable()
+            await finishSidecarDiscovery(sessionID: sessionID)
+        }
+    }
+
+    /// Opens the gate the embedded track waits behind. The embedded list itself is
+    /// never held back this way — a NAS that answers slowly would otherwise leave the
+    /// subtitle panel empty for as long as its own timeout.
+    private func finishSidecarDiscovery(sessionID: UUID) async {
+        guard mediaSessionID == sessionID else { return }
+        pendingSidecarLoad = false
+        await applyEmbeddedPlanIfNeeded(sessionID: sessionID)
+    }
+
+    /// Loads the planned embedded track, once it is clear no sidecar claimed the screen.
+    private func applyEmbeddedPlanIfNeeded(sessionID: UUID) async {
+        guard mediaSessionID == sessionID,
+              !pendingSidecarLoad,
+              subtitleCues.isEmpty,
+              let pending = pendingEmbeddedSelection
+        else { return }
+        pendingEmbeddedSelection = nil
+        await extractAndLoadEmbedded(pending.track, from: pending.videoURL)
+    }
+
+    private func orderedNetworkSubtitles(
+        _ resources: [NetworkSubtitleResource]
+    ) -> [NetworkSubtitleResource] {
+        let target = SubtitleLanguageCode.normalized(preferredTranslationLanguageCode)
+        return resources.enumerated().sorted { lhs, rhs in
+            let leftMatches = SubtitleLanguageCode.normalized(lhs.element.languageCode) == target
+            let rightMatches = SubtitleLanguageCode.normalized(rhs.element.languageCode) == target
+            if leftMatches != rightMatches { return leftMatches }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
     }
 
     func loadEmbedded(_ track: EmbeddedSubtitleTrack, from videoURL: URL) {
@@ -304,13 +414,17 @@ final class SubtitleController {
         status = computeStatus(for: detectedSubtitles)
     }
 
-    private func discoverEmbeddedSubtitles(in videoURL: URL) {
-        let preferredLanguages = Locale.preferredLanguages
+    private func discoverEmbeddedSubtitles(in videoURL: URL, sessionID: UUID) {
+        let preferredLanguages = [preferredTranslationLanguageCode] + Locale.preferredLanguages
         embeddedSubtitleTask = Task {
-            spokenLanguageCode = await embeddedSubtitleService.spokenLanguageCode(in: videoURL)
             do {
-                let tracks = try await embeddedSubtitleService.discoverTracks(in: videoURL)
-                guard !Task.isCancelled else { return }
+                let probe = try await probeCoordinator.probe(
+                    url: videoURL,
+                    deferForPlayback: currentResource?.isNetwork == true
+                )
+                guard !Task.isCancelled, mediaSessionID == sessionID else { return }
+                spokenLanguageCode = probe.spokenLanguageCode
+                let tracks = probe.subtitleTracks
                 embeddedSubtitleTracks = tracks
                 isInspectingEmbeddedSubtitles = false
 
@@ -326,16 +440,15 @@ final class SubtitleController {
                 subtitlePreparationPlan = plan
                 status = computeStatus(for: detectedSubtitles)
 
-                guard subtitleCues.isEmpty,
-                      let track = plan.selectedTrack,
-                      track.canProvideTimedText else {
+                guard let track = plan.selectedTrack, track.canProvideTimedText else {
                     return
                 }
 
-                await extractAndLoadEmbedded(track, from: videoURL)
+                pendingEmbeddedSelection = (track: track, videoURL: videoURL)
+                await applyEmbeddedPlanIfNeeded(sessionID: sessionID)
             } catch is CancellationError {
                 return
-            } catch EmbeddedSubtitleService.ServiceError.toolUnavailable {
+            } catch FFprobeMediaInspector.InspectionError.toolUnavailable {
                 isInspectingEmbeddedSubtitles = false
                 status = computeStatus(for: detectedSubtitles)
             } catch {

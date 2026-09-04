@@ -602,17 +602,32 @@ struct NetworkMediaBrowserView: View {
 
     private func openWebDAVVideo(_ entry: WebDAVEntry) {
         guard let connection = selectedWebDAV else { return }
+        let password = webDAVConnections.password(for: connection)
         let playbackURL = authenticatedURL(
             entry.url,
             username: connection.username,
-            password: webDAVConnections.password(for: connection)
+            password: password
         )
+        let subtitleResources = webDAVModel.companions(for: entry).subtitles.map { subtitle in
+            let authenticatedSubtitleURL = authenticatedURL(
+                subtitle.url,
+                username: connection.username,
+                password: password
+            )
+            let subtitleFile = SubtitleFile.manual(url: subtitle.url)
+            return NetworkSubtitleResource(
+                url: authenticatedSubtitleURL,
+                displayName: subtitle.name,
+                languageCode: subtitleFile.languageCode
+            )
+        }
         let resource = NetworkMediaResource(
             serverID: connection.id,
             objectID: entry.url.absoluteString,
             playbackURL: playbackURL,
             byteCount: entry.byteCount,
-            dateAdded: entry.lastModified
+            dateAdded: entry.lastModified,
+            subtitleResources: subtitleResources
         )
         onOpen(resource, .nas)
         dismiss()

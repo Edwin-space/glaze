@@ -23,6 +23,11 @@ public enum MediaResource: Equatable, Hashable, Sendable {
             nil
         }
     }
+
+    public var isNetwork: Bool {
+        if case .network = self { return true }
+        return false
+    }
 }
 
 public struct NetworkMediaResource: Equatable, Hashable, Sendable {
@@ -39,6 +44,11 @@ public struct NetworkMediaResource: Equatable, Hashable, Sendable {
     /// When the server first saw the file. The only thing available to order a
     /// "recently added" shelf by.
     public let dateAdded: Date?
+    /// Subtitle files exposed beside a network video. DLNA normally cannot provide
+    /// these, while WebDAV can derive them from the directory listing it already has.
+    /// The player downloads them after playback starts so subtitle preparation never
+    /// delays the first frame.
+    public let subtitleResources: [NetworkSubtitleResource]
 
     public init(
         serverID: String,
@@ -49,7 +59,8 @@ public struct NetworkMediaResource: Equatable, Hashable, Sendable {
         byteCount: Int64? = nil,
         duration: TimeInterval? = nil,
         resolution: String? = nil,
-        dateAdded: Date? = nil
+        dateAdded: Date? = nil,
+        subtitleResources: [NetworkSubtitleResource] = []
     ) {
         self.serverID = serverID
         self.objectID = objectID
@@ -60,5 +71,18 @@ public struct NetworkMediaResource: Equatable, Hashable, Sendable {
         self.duration = duration
         self.resolution = resolution
         self.dateAdded = dateAdded
+        self.subtitleResources = subtitleResources
+    }
+}
+
+public struct NetworkSubtitleResource: Equatable, Hashable, Sendable {
+    public let url: URL
+    public let displayName: String
+    public let languageCode: String?
+
+    public init(url: URL, displayName: String, languageCode: String? = nil) {
+        self.url = url
+        self.displayName = displayName
+        self.languageCode = SubtitleLanguageCode.normalized(languageCode)
     }
 }

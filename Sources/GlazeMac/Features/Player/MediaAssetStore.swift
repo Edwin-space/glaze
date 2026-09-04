@@ -8,7 +8,7 @@ final class MediaAssetStore {
     var mediaInspection: MediaInspection?
     var isInspectingMedia = false
     var currentMediaAsset: MediaAsset?
-    private let probeInspector = FFprobeMediaInspector()
+    private let probeCoordinator = MediaProbeCoordinator.shared
 
     /// Resets media state for a newly loaded video. ffprobe is the primary source so
     /// MKV/VLC playback exposes the same real container information as AVKit media.
@@ -29,7 +29,7 @@ final class MediaAssetStore {
             hasSubtitles: hasDetectedSubtitles
         )
 
-        inspect(url: url, engine: engine, isStillCurrent: isStillCurrent)
+        inspect(url: url, engine: engine, resource: resource, isStillCurrent: isStillCurrent)
     }
 
     func markSubtitleExternallyLoaded() {
@@ -47,12 +47,16 @@ final class MediaAssetStore {
     private func inspect(
         url: URL,
         engine: PlaybackEngineKind,
+        resource: MediaResource?,
         isStillCurrent: @escaping () -> Bool
     ) {
         Task {
             let inspection: MediaInspection
             do {
-                inspection = try await probeInspector.inspect(url: url)
+                inspection = try await probeCoordinator.probe(
+                    url: url,
+                    deferForPlayback: resource?.isNetwork == true
+                ).inspection
             } catch {
                 inspection = engine == .nativeVLC
                     ? MediaInspector.lightweightInspection(url: url, isPlayable: nil)
