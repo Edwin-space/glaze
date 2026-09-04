@@ -56,6 +56,11 @@ final class TVPlaybackModel {
         preferredSubtitleScale: Float = 100
     ) {
         let media = VLCMedia(url: resource.playbackURL)
+        // Apple TV was left on VLCKit's default buffer, which a 4K remux over the
+        // network outruns — see `MediaCachingPolicy`.
+        for option in MediaCachingPolicy.mediaOptions(for: resource.playbackURL) {
+            media?.addOption(option)
+        }
 
         preferredSubtitleLanguage = preferredSubtitleLanguageCode.flatMap(SubtitleLanguageCode.normalized)
         shouldAutomaticallySelectSubtitles = automaticallySelectSubtitles

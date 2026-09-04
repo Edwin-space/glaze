@@ -1,4 +1,5 @@
 import Darwin
+import GlazeCore
 import Foundation
 
 enum NativeVLCError: LocalizedError {
@@ -161,8 +162,10 @@ final class NativeVLCLibrary: @unchecked Sendable {
             "--quiet",
             "--avcodec-hw=any",
             "--no-sub-autodetect-file",
-            "--file-caching=100",
-            "--network-caching=300"
+            // Instance-wide floor; each media item then sets its own from
+            // `MediaCachingPolicy` once its address is known.
+            "--file-caching=\(MediaCachingPolicy.localMilliseconds)",
+            "--network-caching=\(MediaCachingPolicy.remoteMilliseconds)"
         ]
 
         let instance = args.withCStringArray { pointer in

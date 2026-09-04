@@ -1,3 +1,4 @@
+import GlazeCore
 import AppKit
 import Observation
 import SwiftUI
@@ -160,9 +161,9 @@ final class NativeVLCPlayerView: NSView {
             return
         }
 
-        [
-            ":file-caching=100",
-            ":network-caching=300",
+        // Sized to where the film is coming from — see `MediaCachingPolicy`. A fixed
+        // small buffer stalled 4K over the network and made seeking unusable.
+        (MediaCachingPolicy.mediaOptions(for: url) + [
             ":no-sub-autodetect-file",
             // Glaze draws subtitles itself — it has to, to show a translation, or an
             // original and a translation together, in its own styling. Left to its own
@@ -171,7 +172,7 @@ final class NativeVLCPlayerView: NSView {
             // up with the same line drawn twice, once by each.
             ":no-spu",
             ":avcodec-fast"
-        ].forEach { option in
+        ]).forEach { option in
             option.withCString { library.addMediaOption(media, $0) }
         }
 

@@ -10,6 +10,10 @@ struct PlayerView: View {
     @State private var subtitles = SubtitleController()
     @State private var mediaAssets = MediaAssetStore()
     @State private var metadata = MetadataController()
+    /// What is playing, kept so a compatibility remux can reload the same film
+    /// without losing which film it is.
+    @State private var currentMediaResource: MediaResource?
+    @State private var currentLibrarySource: MediaLibrarySource = .localFolder
     @State private var preferences = GlazePreferences.shared
 
     @State private var activePanel: PlayerPanel?
@@ -984,7 +988,17 @@ struct PlayerView: View {
         playback.onPlaybackFailureNeedsAttention = { activePanel = .media }
         playback.onPlaybackEnded = { playNextPlaylistItem() }
         playback.onCompatibilityRemuxSucceeded = { originalURL, remuxedURL in
-            loadVideo(originalURL: originalURL, playbackURL: remuxedURL, playlist: playlistStore.items, shouldStartPlayback: true)
+            // Reloading without these two dropped the film's identity: the resume
+            // position was then stored against the remuxed path rather than the
+            // resource, so reopening the same film from the NAS never found it.
+            loadVideo(
+                originalURL: originalURL,
+                playbackURL: remuxedURL,
+                playlist: playlistStore.items,
+                shouldStartPlayback: true,
+                resource: currentMediaResource,
+                source: currentLibrarySource
+            )
         }
         subtitles.onGenerationFinished = { mediaAssets.markSubtitleGenerated() }
         subtitles.onEmbeddedSubtitleLoaded = { mediaAssets.markSubtitleEmbeddedLoaded() }
@@ -1044,7 +1058,7 @@ struct PlayerView: View {
         resource: MediaResource? = nil,
         source: MediaLibrarySource = .localFolder
     ) {
-        switch PlaybackEngineRouter.preferredEngine(for: url) {
+        switch PlaybackEngineRouter.preferredEngine(for: resource ?? .localFile(url)) {
         case .nativeVLC:
             playback.loadWithNativeEngine(url)
             prepareCurrentMediaState(
@@ -1093,6 +1107,8 @@ struct PlayerView: View {
         // the wrong title beside it.
         metadata.prepare(videoURL: originalURL)
         let mediaResource = resource ?? .localFile(originalURL)
+        currentMediaResource = mediaResource
+        currentLibrarySource = source
         playback.setCurrentResource(mediaResource)
         subtitles.currentResource = mediaResource
         subtitles.prepareForNewVideo(url: originalURL)
