@@ -202,3 +202,29 @@ final class LockedCounts: @unchecked Sendable {
         return storage
     }
 }
+
+@Suite(.serialized)
+struct WebDAVLibraryLoaderDepthTests {
+    /// A Synology share root lists the shared folders, so a film is two levels down
+    /// before the library begins, and a series adds a season folder on top.
+    @Test func reachesAFilmInASynologyShapedShare() async throws {
+        StubWebDAVProtocol.reset(folders: [
+            "/": [("video", true)],
+            "/video": [("Media", true)],
+            "/video/Media": [("Parasite (2019)", true), ("The Bear", true)],
+            "/video/Media/Parasite (2019)": [("Parasite.2019.1080p.mkv", false)],
+            "/video/Media/The Bear": [("Season 01", true)],
+            "/video/Media/The Bear/Season 01": [("The.Bear.S01E01.1080p.mkv", false)]
+        ])
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubWebDAVProtocol.self]
+        let loader = WebDAVLibraryLoader(
+            client: WebDAVClient(session: URLSession(configuration: configuration))
+        )
+
+        let library = try await loader.load(root: URL(string: "https://nas.local:5006/")!, credentials: nil)
+        #expect(library.movies.count == 1)
+        #expect(library.series.first?.episodeCount == 1)
+    }
+}

@@ -8,12 +8,17 @@ import Foundation
 /// them, and stops walking rather than crawling a whole NAS.
 public actor WebDAVLibraryLoader {
     public struct Limits: Sendable {
-        /// How far below the address to walk. Three covers `TV/Show/Season/file`.
+        /// How far below the address to walk.
+        ///
+        /// A WebDAV root is the list of shared folders, so a film is already two levels
+        /// down before the library even starts: `/video/Media/<Title>/<file>`. A series
+        /// adds a season folder on top of that. Three stopped short of both.
         public var depth: Int
-        /// A ceiling on the listing requests one load may make.
+        /// A ceiling on the listing requests one load may make. High enough for a real
+        /// library, low enough that a wrong address cannot walk a whole NAS.
         public var folders: Int
 
-        public init(depth: Int = 3, folders: Int = 250) {
+        public init(depth: Int = 5, folders: Int = 800) {
             self.depth = depth
             self.folders = folders
         }
