@@ -479,3 +479,6 @@
 "common.cancel" = "Cancel";
 "library.scan.summary.episodes" = "TV episodes (not yet supported)";
 "webdav.error.certificate" = "The server's certificate does not match this address. Try the domain name on the certificate rather than the NAS's IP address.";
+"library.scan.which_series" = "Which series is this?";
+"library.scan.series_scope_format" = "%@ · applies to all %d episodes";
+"library.scan.summary.poster_added" = "Poster added";

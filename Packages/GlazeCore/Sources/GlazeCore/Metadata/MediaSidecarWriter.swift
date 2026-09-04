@@ -121,6 +121,101 @@ public struct MediaSidecarWriter: Sendable {
         return lines.joined(separator: "\n") + "\n"
     }
 
+    /// Kodi's `episodedetails`, which is what a media server reads beside an episode
+    /// file. The series' own description carries the plot and rating; what the episode
+    /// adds is which one it is.
+    func episodeNFO(
+        for match: MediaMetadataMatch,
+        showTitle: String,
+        season: Int?,
+        episode: Int?,
+        episodeTitle: String?
+    ) -> String {
+        var lines = ["<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>", "<episodedetails>"]
+
+        // An episode with no name of its own is titled by its number, which reads
+        // better in a list than the release string does.
+        let title = episodeTitle ?? Self.numberedTitle(season: season, episode: episode) ?? showTitle
+        lines.append("  <title>\(escape(title))</title>")
+        lines.append("  <showtitle>\(escape(showTitle))</showtitle>")
+        if let season {
+            lines.append("  <season>\(season)</season>")
+        }
+        if let episode {
+            lines.append("  <episode>\(episode)</episode>")
+        }
+        if let overview = match.overview {
+            lines.append("  <plot>\(escape(overview))</plot>")
+        }
+        if let year = match.year {
+            lines.append("  <year>\(year)</year>")
+        }
+        if let rating = match.rating, rating > 0 {
+            lines.append("  <rating>\(String(format: "%.1f", rating))</rating>")
+        }
+        for genre in match.genres {
+            lines.append("  <genre>\(escape(genre))</genre>")
+        }
+        if let tmdbID = match.externalIDs.tmdbID {
+            lines.append("  <uniqueid type=\"tmdb\">\(escape(tmdbID))</uniqueid>")
+        }
+
+        lines.append("</episodedetails>")
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    private static func numberedTitle(season: Int?, episode: Int?) -> String? {
+        guard let episode else { return nil }
+        guard let season else { return String(format: "E%02d", episode) }
+        return String(format: "S%02dE%02d", season, episode)
+    }
+
+    /// Writes an episode's own details beside it.
+    ///
+    /// - Parameter poster: the series poster, written only for the episode that is
+    ///   asked to carry it. One copy per show rather than one per episode: the shelf
+    ///   only needs to find a poster somewhere among a show's files.
+    @discardableResult
+    public func writeEpisode(
+        _ match: MediaMetadataMatch,
+        showTitle: String,
+        season: Int?,
+        episode: Int?,
+        episodeTitle: String?,
+        poster: Data?,
+        baseName: String,
+        to destination: some SidecarDestination
+    ) async throws -> [String] {
+        var written: [String] = []
+
+        let nfoName = "\(baseName).nfo"
+        let contents = episodeNFO(
+            for: match,
+            showTitle: showTitle,
+            season: season,
+            episode: episode,
+            episodeTitle: episodeTitle
+        )
+        do {
+            try await destination.write(Data(contents.utf8), named: nfoName)
+            written.append(nfoName)
+        } catch {
+            throw WriteError.writeFailed
+        }
+
+        if let poster {
+            let posterName = "\(baseName)-poster.jpg"
+            do {
+                try await destination.write(poster, named: posterName)
+                written.append(posterName)
+            } catch {
+                // As for films: a missing poster is a plainer shelf, not a failure.
+            }
+        }
+
+        return written
+    }
+
     /// Film titles carry ampersands and quotation marks often enough to matter, and an
     /// unescaped one makes the whole file unreadable rather than one field wrong.
     private func escape(_ text: String) -> String {

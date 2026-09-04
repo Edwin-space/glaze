@@ -209,3 +209,37 @@ struct WebDAVCompanionFinderTests {
         #expect(WebDAVCompanionFinder.find(for: mixed[0], among: mixed).poster?.name == "Film.2020-poster.jpg")
     }
 }
+
+/// A Mac writing to a share leaves `._Film.mkv` beside every file it touches. Those
+/// carry the video extension, and were being listed as films.
+@Suite struct WebDAVHiddenEntryTests {
+    private func entry(_ name: String, isDirectory: Bool = false) -> WebDAVEntry {
+        WebDAVEntry(
+            url: URL(string: "https://nas.local/\(name)")!,
+            name: name,
+            isDirectory: isDirectory
+        )
+    }
+
+    @Test func doesNotTreatAppleDoubleFilesAsFilms() {
+        #expect(!entry("._Fallout.S01E01.2160p.mkv").isVideo)
+        #expect(entry("Fallout.S01E01.2160p.mkv").isVideo)
+    }
+
+    @Test func skipsTheOtherThingsFilesystemsLeaveBehind() {
+        #expect(entry(".DS_Store").isHidden)
+        #expect(entry("Thumbs.db").isHidden)
+        #expect(entry("desktop.ini").isHidden)
+        #expect(!entry("Film.2019.mkv").isHidden)
+    }
+
+    /// A poster hanging off `._Film.mkv` belongs to nothing anyone can watch.
+    @Test func doesNotCountHiddenFilesAsCompanions() {
+        let video = entry("Film.2019.mkv")
+        let companions = WebDAVCompanionFinder.find(
+            for: video,
+            among: [video, entry("._Film.2019-poster.jpg"), entry("Film.2019-poster.jpg")]
+        )
+        #expect(companions.poster?.name == "Film.2019-poster.jpg")
+    }
+}

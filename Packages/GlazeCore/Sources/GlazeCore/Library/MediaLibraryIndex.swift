@@ -131,7 +131,7 @@ public enum MediaLibraryIndex {
     /// An apostrophe is dropped rather than turned into a separator: half the release
     /// groups write `Tom Clancy's Jack Ryan` and half write `Tom Clancys Jack Ryan`,
     /// and splitting on it made those two different shows on the shelf.
-    static func groupingKey(for title: String) -> String {
+    public static func groupingKey(for title: String) -> String {
         let folded = title
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
             .replacingOccurrences(of: "[\u{0027}\u{2018}\u{2019}\u{02BC}`]", with: "", options: .regularExpression)

@@ -37,10 +37,39 @@ public struct TMDBMetadataProvider: MetadataProviding {
         year: Int?,
         languageCode: String
     ) async throws -> [MediaMetadataMatch] {
-        let localised = try await searchOnce(title: title, year: year, languageCode: languageCode)
+        try await search(title: title, year: year, languageCode: languageCode, index: .movie)
+    }
+
+    public func searchSeries(
+        title: String,
+        year: Int?,
+        languageCode: String
+    ) async throws -> [MediaMetadataMatch] {
+        try await search(title: title, year: year, languageCode: languageCode, index: .series)
+    }
+
+    /// TMDB keeps films and series in separate indexes, with different field names for
+    /// the same ideas — a series has a `name` and a `first_air_date`.
+    enum Index {
+        case movie
+        case series
+
+        var path: String { self == .movie ? "search/movie" : "search/tv" }
+        var yearParameter: String { self == .movie ? "primary_release_year" : "first_air_date_year" }
+    }
+
+    private func search(
+        title: String,
+        year: Int?,
+        languageCode: String,
+        index: Index
+    ) async throws -> [MediaMetadataMatch] {
+        let localised = try await searchOnce(title: title, year: year, languageCode: languageCode, index: index)
         guard !Self.isEnglish(languageCode) else { return localised }
 
-        guard let english = try? await searchOnce(title: title, year: year, languageCode: "en-US") else {
+        guard let english = try? await searchOnce(
+            title: title, year: year, languageCode: "en-US", index: index
+        ) else {
             return localised
         }
 
@@ -68,12 +97,13 @@ public struct TMDBMetadataProvider: MetadataProviding {
     private func searchOnce(
         title: String,
         year: Int?,
-        languageCode: String
+        languageCode: String,
+        index: Index
     ) async throws -> [MediaMetadataMatch] {
         guard let apiKey, !apiKey.isEmpty else { throw MetadataProviderError.notConfigured }
 
         var components = URLComponents(
-            url: Self.apiBase.appendingPathComponent("search/movie"),
+            url: Self.apiBase.appendingPathComponent(index.path),
             resolvingAgainstBaseURL: false
         )!
         var items = [
@@ -84,7 +114,7 @@ public struct TMDBMetadataProvider: MetadataProviding {
         ]
         // A year narrows a search dramatically and the filename usually has one.
         if let year {
-            items.append(URLQueryItem(name: "primary_release_year", value: String(year)))
+            items.append(URLQueryItem(name: index.yearParameter, value: String(year)))
         }
         components.queryItems = items
 
@@ -118,12 +148,13 @@ public struct TMDBMetadataProvider: MetadataProviding {
             throw MetadataProviderError.network("unreadable response")
         }
 
-        return decoded.results.map { result in
-            MediaMetadataMatch(
+        return decoded.results.compactMap { result in
+            guard let title = result.title ?? result.name else { return nil }
+            return MediaMetadataMatch(
                 providerID: providerID,
-                title: result.title,
-                originalTitle: result.original_title,
-                year: result.release_date.flatMap(Self.year(from:)),
+                title: title,
+                originalTitle: result.original_title ?? result.original_name,
+                year: (result.release_date ?? result.first_air_date).flatMap(Self.year(from:)),
                 overview: result.overview?.nilIfBlank,
                 posterURL: result.poster_path.map { imageURL(posterWidth, $0) },
                 backdropURL: result.backdrop_path.map { imageURL(backdropWidth, $0) },
@@ -152,8 +183,12 @@ public struct TMDBMetadataProvider: MetadataProviding {
 
     private struct Result: Decodable {
         let id: Int
-        let title: String
+        /// A film has a `title`, a series has a `name`.
+        let title: String?
+        let name: String?
         let original_title: String?
+        let original_name: String?
+        let first_air_date: String?
         let overview: String?
         let release_date: String?
         let poster_path: String?

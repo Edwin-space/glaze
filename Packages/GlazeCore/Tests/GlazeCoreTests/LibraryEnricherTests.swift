@@ -197,36 +197,193 @@ private final class ProgressLog: @unchecked Sendable {
 }
 
 @Suite struct LibraryEnricherEpisodeTests {
-    /// `search/movie` answers `The.Bear.S01E01` with films. Offering those would invite
-    /// writing a film's details onto an episode.
-    @Test func doesNotOfferFilmsAsAnswersForAnEpisode() async {
+    private func episode(_ name: String, id: String) -> MediaLibraryItem {
+        MediaLibraryItem(
+            id: id,
+            sourceName: name,
+            parsed: MediaTitleParser.parse(name),
+            playbackURL: URL(string: "https://nas.local/\(id).mkv")!
+        )
+    }
+
+    /// A series is looked up in the series index, not the film one.
+    @Test func describesAnEpisodeFromTheSeriesIndex() async {
         let provider = StubEpisodeProvider()
         let destination = EpisodeRecordingDestination()
-        let enricher = LibraryEnricher(provider: provider) { _ in nil }
-
-        let episode = MediaLibraryItem(
-            id: "e1",
-            sourceName: "The.Bear.S01E01.1080p.WEB-DL.mkv",
-            parsed: MediaTitleParser.parse("The.Bear.S01E01.1080p.WEB-DL.mkv"),
-            playbackURL: URL(string: "https://nas.local/e1.mkv")!
-        )
+        let enricher = LibraryEnricher(provider: provider) { _ in Data("jpeg".utf8) }
 
         let outcomes = await enricher.enrich(
-            [episode], languageCode: "ko", destination: { _ in destination }
+            [episode("The.Bear.S01E01.The.Beef.1080p.WEB-DL.mkv", id: "e1")],
+            languageCode: "ko",
+            destination: { _ in destination }
         )
-        #expect(outcomes["e1"] == .unsupportedKind)
-        #expect(await destination.written.isEmpty)
+
+        #expect(outcomes["e1"] == .written(["The.Bear.S01E01.The.Beef.1080p.WEB-DL.nfo", "The.Bear.S01E01.The.Beef.1080p.WEB-DL-poster.jpg"]))
+        let nfo = await destination.contents(named: "The.Bear.S01E01.The.Beef.1080p.WEB-DL.nfo") ?? ""
+        #expect(nfo.contains("<episodedetails>"))
+        #expect(nfo.contains("<showtitle>더 베어</showtitle>"))
+        #expect(nfo.contains("<season>1</season>"))
+        #expect(nfo.contains("<episode>1</episode>"))
+        #expect(nfo.contains("<title>The Beef</title>"))
+    }
+
+    /// The poster is written once for a show, not once per episode.
+    @Test func writesOnePosterForAWholeShow() async {
+        let provider = StubEpisodeProvider()
+        let destination = EpisodeRecordingDestination()
+        let enricher = LibraryEnricher(provider: provider) { _ in Data("jpeg".utf8) }
+
+        _ = await enricher.enrich(
+            [
+                episode("The.Bear.S01E01.1080p.mkv", id: "e1"),
+                episode("The.Bear.S01E02.1080p.mkv", id: "e2"),
+                episode("The.Bear.S01E03.1080p.mkv", id: "e3")
+            ],
+            languageCode: "ko",
+            destination: { _ in destination }
+        )
+
+        let written = await destination.written
+        #expect(written.filter { $0.hasSuffix(".nfo") }.count == 3)
+        #expect(written.filter { $0.hasSuffix("-poster.jpg") }.count == 1)
+    }
+
+    /// One search for a show, however many episodes it has.
+    @Test func looksAShowUpOnceRatherThanOncePerEpisode() async {
+        let provider = StubEpisodeProvider()
+        let enricher = LibraryEnricher(provider: provider) { _ in nil }
+
+        _ = await enricher.enrich(
+            (1...5).map { episode("The.Bear.S01E0\($0).mkv", id: "e\($0)") },
+            languageCode: "ko",
+            destination: { _ in EpisodeRecordingDestination() }
+        )
+        #expect(await provider.seriesSearchCount == 1)
+    }
+
+    /// Answering once applies to every episode of the show.
+    @Test func appliesOneAnswerToEveryEpisode() async {
+        let destination = EpisodeRecordingDestination()
+        let enricher = LibraryEnricher(provider: StubEpisodeProvider()) { _ in Data("jpeg".utf8) }
+        let chosen = MediaMetadataMatch(providerID: "stub", title: "더 베어", year: 2022)
+
+        let outcomes = await enricher.applySeries(
+            chosen,
+            to: [episode("The.Bear.S01E01.mkv", id: "e1"), episode("The.Bear.S01E02.mkv", id: "e2")],
+            destination: { _ in destination }
+        )
+
+        #expect(outcomes.count == 2)
+        for outcome in outcomes.values {
+            guard case .written = outcome else {
+                Issue.record("expected both episodes written, got \(outcome)")
+                return
+            }
+        }
     }
 }
 
-private struct StubEpisodeProvider: MetadataProviding {
-    let providerID = "stub"
-    func search(title: String, year: Int?, languageCode: String) async throws -> [MediaMetadataMatch] {
-        [MediaMetadataMatch(providerID: "stub", title: "The Bear", year: 2022)]
+private actor StubEpisodeProvider: MetadataProviding {
+    nonisolated let providerID = "stub"
+    private(set) var seriesSearchCount = 0
+
+    /// The film index has never heard of it, which is the point.
+    nonisolated func search(title: String, year: Int?, languageCode: String) async throws -> [MediaMetadataMatch] {
+        []
+    }
+
+    func searchSeries(title: String, year: Int?, languageCode: String) async throws -> [MediaMetadataMatch] {
+        seriesSearchCount += 1
+        return [
+            MediaMetadataMatch(
+                providerID: "stub",
+                title: "더 베어",
+                originalTitle: "The Bear",
+                year: 2022,
+                overview: "시카고의 샌드위치 가게.",
+                posterURL: URL(string: "https://img/bear.jpg"),
+                voteCount: 5_000,
+                externalIDs: MediaExternalIDs(tmdbID: "136315")
+            )
+        ]
     }
 }
 
 private actor EpisodeRecordingDestination: SidecarDestination {
+    private(set) var written: [String] = []
+    private var bodies: [String: Data] = [:]
+
+    func write(_ data: Data, named name: String) async throws {
+        written.append(name)
+        bodies[name] = data
+    }
+
+    func contents(named name: String) -> String? {
+        bodies[name].flatMap { String(data: $0, encoding: .utf8) }
+    }
+}
+
+/// A library described by someone else — or by an earlier run that had no artwork —
+/// stays a wall of grey rectangles unless the poster can be filled in on its own.
+@Suite struct LibraryEnricherPosterOnlyTests {
+    private func described(_ name: String, id: String, poster: URL? = nil) -> MediaLibraryItem {
+        MediaLibraryItem(
+            id: id,
+            sourceName: name,
+            parsed: MediaTitleParser.parse(name),
+            metadata: MediaNFO(kind: .movie, title: "기생충", year: 2019),
+            posterURL: poster,
+            playbackURL: URL(string: "https://nas.local/\(id).mkv")!
+        )
+    }
+
+    @Test func addsTheMissingPosterWithoutRewritingTheDescription() async {
+        let destination = PosterDestination()
+        let enricher = LibraryEnricher(provider: PosterStubProvider()) { _ in Data("jpeg".utf8) }
+
+        let outcomes = await enricher.enrich(
+            [described("Parasite.2019.1080p.mkv", id: "m1")],
+            languageCode: "ko",
+            destination: { _ in destination }
+        )
+
+        #expect(outcomes["m1"] == .posterAdded("Parasite.2019.1080p-poster.jpg"))
+        let written = await destination.written
+        #expect(written == ["Parasite.2019.1080p-poster.jpg"])
+        #expect(!written.contains { $0.hasSuffix(".nfo") })
+    }
+
+    @Test func leavesAFilmThatAlreadyHasArtworkAlone() async {
+        let destination = PosterDestination()
+        let enricher = LibraryEnricher(provider: PosterStubProvider()) { _ in Data("jpeg".utf8) }
+
+        let outcomes = await enricher.enrich(
+            [described("Parasite.2019.mkv", id: "m1", poster: URL(string: "https://nas/p.jpg")!)],
+            languageCode: "ko",
+            destination: { _ in destination }
+        )
+
+        #expect(outcomes["m1"] == .alreadyDescribed)
+        #expect(await destination.written.isEmpty)
+    }
+}
+
+private struct PosterStubProvider: MetadataProviding {
+    let providerID = "stub"
+    func search(title: String, year: Int?, languageCode: String) async throws -> [MediaMetadataMatch] {
+        [MediaMetadataMatch(
+            providerID: "stub",
+            title: "기생충",
+            matchingTitles: ["Parasite"],
+            year: 2019,
+            posterURL: URL(string: "https://img/p.jpg"),
+            voteCount: 9_000,
+            externalIDs: MediaExternalIDs(tmdbID: "496243")
+        )]
+    }
+}
+
+private actor PosterDestination: SidecarDestination {
     private(set) var written: [String] = []
     func write(_ data: Data, named name: String) async throws { written.append(name) }
 }

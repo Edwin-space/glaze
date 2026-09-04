@@ -107,7 +107,7 @@ public enum MetadataMatchRanker {
 
         // The year is the strongest signal a filename carries after the title, and the
         // one that separates a remake from the film it remade.
-        var yearScore = 0.5
+        var yearScore: Double?
         switch (parsed.year, match.year) {
         case let (parsedYear?, matchYear?) where parsedYear == matchYear:
             yearScore = 1
@@ -120,6 +120,10 @@ public enum MetadataMatchRanker {
             yearScore = 0
             reasons.append(.yearMismatch)
         default:
+            // Absent, not zero. Half-credit dragged every series below the threshold —
+            // a show's release name never carries a year — so a name that matched
+            // perfectly still came back as a question.
+            yearScore = nil
             reasons.append(.yearUnknown)
         }
 
@@ -130,8 +134,17 @@ public enum MetadataMatchRanker {
             reasons.append(.wellKnown)
         }
 
-        let score = titleScore * 0.72 + yearScore * 0.25 + fame * 0.03
-        return RankedMetadataMatch(match: match, score: min(score, 1), reasons: reasons)
+        // Weighted over the signals that exist. An unknown year is dropped from both
+        // sides of the average rather than counted as a bad one.
+        let titleWeight = 0.72, yearWeight = 0.25, fameWeight = 0.03
+        var total = titleScore * titleWeight + fame * fameWeight
+        var weight = titleWeight + fameWeight
+        if let yearScore {
+            total += yearScore * yearWeight
+            weight += yearWeight
+        }
+
+        return RankedMetadataMatch(match: match, score: min(total / weight, 1), reasons: reasons)
     }
 
     /// How alike two titles are, 0 to 1.

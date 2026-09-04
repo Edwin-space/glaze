@@ -20,9 +20,16 @@ final class LibraryScanController {
     }
 
     struct Question: Identifiable, Equatable {
-        let item: MediaLibraryItem
+        /// Usually one film. For a series it is every episode of that show, so the
+        /// viewer answers once rather than twenty-four times.
+        let items: [MediaLibraryItem]
         let candidates: [RankedMetadataMatch]
+
+        var item: MediaLibraryItem { items[0] }
         var id: String { item.id }
+        var isSeries: Bool { item.isEpisode }
+        var subject: String { isSeries ? (item.showTitle ?? item.sourceName) : item.sourceName }
+        var episodeCount: Int { items.count }
     }
 
     struct Summary: Equatable {
@@ -32,7 +39,7 @@ final class LibraryScanController {
         var failed = 0
         var answered = 0
         var skipped = 0
-        var episodes = 0
+        var postersAdded = 0
     }
 
     private(set) var phase: Phase = .idle
@@ -123,7 +130,8 @@ final class LibraryScanController {
         }
     }
 
-    /// Writes the film the viewer picked, then moves to the next question.
+    /// Writes what the viewer picked — a film, or every episode of a show — then moves
+    /// to the next question.
     func choose(_ candidate: RankedMetadataMatch) {
         guard let question = questions.first, let connection else { return }
         let credentials = password.map { (username: connection.username, password: $0) }
@@ -136,19 +144,22 @@ final class LibraryScanController {
                 provider: TMDBMetadataProvider(apiKey: nil),
                 loadPoster: { url in try? await session.data(from: url).0 }
             )
-            let outcome = await enricher.apply(
-                candidate.match,
-                to: question.item,
-                destination: { item in
-                    WebDAVSidecarDestination(besideVideoAt: item.playbackURL, credentials: credentials)
-                }
-            )
+            let destination: LibraryEnricher.DestinationProvider = { item in
+                WebDAVSidecarDestination(besideVideoAt: item.playbackURL, credentials: credentials)
+            }
+
+            let outcomes: [String: LibraryEnricher.ItemOutcome] = if question.isSeries {
+                await enricher.applySeries(candidate.match, to: question.items, destination: destination)
+            } else {
+                [question.item.id: await enricher.apply(
+                    candidate.match, to: question.item, destination: destination
+                )]
+            }
+
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                if case .written = outcome {
-                    summary.described += 1
-                } else {
-                    summary.failed += 1
+                for outcome in outcomes.values {
+                    if case .written = outcome { summary.described += 1 } else { summary.failed += 1 }
                 }
             }
         }
@@ -156,9 +167,9 @@ final class LibraryScanController {
 
     /// Leaves a film undescribed. Better than a wrong title, and it can be asked again.
     func skipCurrentQuestion() {
-        guard !questions.isEmpty else { return }
+        guard let question = questions.first else { return }
         questions.removeFirst()
-        summary.skipped += 1
+        summary.skipped += question.items.count
         advanceIfDone()
     }
 
@@ -195,17 +206,34 @@ final class LibraryScanController {
 
     private func adopt(_ outcomes: [String: LibraryEnricher.ItemOutcome], films: [MediaLibraryItem]) {
         var pending: [Question] = []
+        // Episodes of one show are one question. Keyed on the show so twenty-four
+        // files do not become twenty-four identical questions.
+        var seriesQuestions: [String: Int] = [:]
+
         // Walked in library order rather than dictionary order, so the questions arrive
         // in the order the shelf shows them.
         for film in films {
             switch outcomes[film.id] {
             case .written: summary.described += 1
             case .alreadyDescribed: summary.alreadyDescribed += 1
+            case .posterAdded: summary.postersAdded += 1
             case .notFound: summary.notFound += 1
-            case .unsupportedKind: summary.episodes += 1
             case .failed: summary.failed += 1
             case .needsChoice(let candidates):
-                pending.append(Question(item: film, candidates: candidates))
+                if film.isEpisode, let showTitle = film.showTitle {
+                    let key = MediaLibraryIndex.groupingKey(for: showTitle)
+                    if let index = seriesQuestions[key] {
+                        pending[index] = Question(
+                            items: pending[index].items + [film],
+                            candidates: pending[index].candidates
+                        )
+                    } else {
+                        seriesQuestions[key] = pending.count
+                        pending.append(Question(items: [film], candidates: candidates))
+                    }
+                } else {
+                    pending.append(Question(items: [film], candidates: candidates))
+                }
             case nil: break
             }
         }

@@ -113,8 +113,17 @@ struct LibraryScanView: View {
     private func review(_ question: LibraryScanController.Question) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(L10n.string("library.scan.which_film"))
+                Text(L10n.string(question.isSeries ? "library.scan.which_series" : "library.scan.which_film"))
                     .font(.headline)
+                if question.isSeries {
+                    Text(String(
+                        format: L10n.string("library.scan.series_scope_format"),
+                        question.subject,
+                        question.episodeCount
+                    ))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                }
                 Text(question.item.sourceName)
                     .font(.system(.callout, design: .monospaced))
                     .foregroundStyle(.secondary)
@@ -149,10 +158,10 @@ struct LibraryScanView: View {
             Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 6) {
                 summaryRow("library.scan.summary.described", controller.summary.described)
                 summaryRow("library.scan.summary.already", controller.summary.alreadyDescribed)
+                summaryRow("library.scan.summary.poster_added", controller.summary.postersAdded)
                 summaryRow("library.scan.summary.answered", controller.summary.answered)
                 summaryRow("library.scan.summary.skipped", controller.summary.skipped)
                 summaryRow("library.scan.summary.not_found", controller.summary.notFound)
-                summaryRow("library.scan.summary.episodes", controller.summary.episodes)
                 summaryRow("library.scan.summary.failed", controller.summary.failed)
             }
             .font(.callout)

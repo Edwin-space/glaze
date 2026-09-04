@@ -33,9 +33,19 @@ public struct WebDAVEntry: Identifiable, Equatable, Sendable {
         self.lastModified = lastModified
     }
 
+    /// Housekeeping the filesystem left behind rather than something to watch.
+    ///
+    /// A Mac writing to a share leaves an AppleDouble `._Film.mkv` beside every file it
+    /// touches. It carries the video extension, so it was being listed as a film,
+    /// counted as an episode, and — worse — given the show's poster, which then hung
+    /// off a file nothing else refers to.
+    public var isHidden: Bool {
+        name.hasPrefix(".") || name == "Thumbs.db" || name == "desktop.ini"
+    }
+
     /// Whether this is a film worth listing.
     public var isVideo: Bool {
-        Self.videoExtensions.contains(url.pathExtension.lowercased())
+        !isHidden && Self.videoExtensions.contains(url.pathExtension.lowercased())
     }
 
     /// Matched on extension rather than the server's content type: NAS servers routinely

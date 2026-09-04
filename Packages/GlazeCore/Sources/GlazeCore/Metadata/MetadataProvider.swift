@@ -84,6 +84,23 @@ public protocol MetadataProviding: Sendable {
         year: Int?,
         languageCode: String
     ) async throws -> [MediaMetadataMatch]
+
+    /// Series are a different index at every provider, and asking the film index for
+    /// `The Bear` answers with films called that.
+    func searchSeries(
+        title: String,
+        year: Int?,
+        languageCode: String
+    ) async throws -> [MediaMetadataMatch]
+}
+
+public extension MetadataProviding {
+    /// A provider that only knows films is still a usable provider.
+    func searchSeries(
+        title: String,
+        year: Int?,
+        languageCode: String
+    ) async throws -> [MediaMetadataMatch] { [] }
 }
 
 public extension MediaMetadataMatch {

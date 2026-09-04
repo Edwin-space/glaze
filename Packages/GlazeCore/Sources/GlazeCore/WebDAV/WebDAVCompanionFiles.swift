@@ -33,7 +33,7 @@ public enum WebDAVCompanionFinder {
         let base = stem(of: video.name)
 
         let related = siblings.filter { entry in
-            guard !entry.isDirectory, entry.url != video.url else { return false }
+            guard !entry.isDirectory, !entry.isHidden, entry.url != video.url else { return false }
             let entryStem = stem(of: entry.name)
             // `film.ko.srt` and `film-poster.jpg` both belong to `film.mkv`; the
             // separator differs by convention — subtitles use a dot, artwork a hyphen.

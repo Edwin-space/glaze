@@ -11,15 +11,13 @@ public actor LibraryEnricher {
     public enum ItemOutcome: Equatable, Sendable {
         /// An `.nfo` is already there; a scan does not overwrite what someone curated.
         case alreadyDescribed
+        /// Described already, but with no artwork beside it. The poster is filled in
+        /// without touching the description someone else wrote.
+        case posterAdded(String)
         case written([String])
         /// Ranked best first, for the viewer to choose from.
         case needsChoice([RankedMetadataMatch])
         case notFound
-        /// An episode. The provider is being asked `search/movie`, so the candidates it
-        /// returns for `The.Bear.S01E01` are films — offering those as an answer would
-        /// invite writing a film's details onto an episode. Series lookup is a separate
-        /// endpoint and not built yet; saying so is better than asking a bad question.
-        case unsupportedKind
         case failed(String)
     }
 
@@ -34,6 +32,8 @@ public actor LibraryEnricher {
 
     private let provider: any MetadataProviding
     private let loadPoster: PosterLoader
+    /// Shows whose poster has already been written in this run.
+    private var postersWritten: Set<String> = []
 
     public init(provider: any MetadataProviding, loadPoster: @escaping PosterLoader) {
         self.provider = provider
@@ -50,24 +50,190 @@ public actor LibraryEnricher {
         onProgress: (@Sendable (Progress) -> Void)? = nil
     ) async -> [String: ItemOutcome] {
         var outcomes: [String: ItemOutcome] = [:]
+        // One lookup per show, not per episode. Twenty-four episodes of one series are
+        // one question and one search, which is both faster and a better question.
+        var seriesResults: [String: [RankedMetadataMatch]] = [:]
 
         for (index, item) in items.enumerated() {
             if Task.isCancelled { return outcomes }
             onProgress?(Progress(completed: index, total: items.count, title: item.displayTitle))
 
-            guard overwriteExisting || item.metadata == nil else {
-                outcomes[item.id] = .alreadyDescribed
+            if !overwriteExisting, item.metadata != nil {
+                // A poster is not part of the description, and a library described
+                // without one stays a wall of grey rectangles. Fill it in without
+                // rewriting anything anyone curated.
+                outcomes[item.id] = item.posterURL == nil
+                    ? await posterOnlyOutcome(
+                        for: item,
+                        languageCode: languageCode,
+                        alreadyCarried: postersWritten,
+                        destination: destination
+                    )
+                    : .alreadyDescribed
+                if case .posterAdded = outcomes[item.id], let key = posterKey(for: item) {
+                    postersWritten.insert(key)
+                }
                 continue
             }
-            guard !item.isEpisode else {
-                outcomes[item.id] = .unsupportedKind
+
+            if item.isEpisode, let showTitle = item.showTitle {
+                let key = MediaLibraryIndex.groupingKey(for: showTitle)
+                let ranked: [RankedMetadataMatch]
+                if let cached = seriesResults[key] {
+                    ranked = cached
+                } else {
+                    ranked = await rankedSeries(for: showTitle, languageCode: languageCode)
+                    seriesResults[key] = ranked
+                }
+                outcomes[item.id] = await episodeOutcome(
+                    for: item,
+                    showTitle: showTitle,
+                    ranked: ranked,
+                    carriesPoster: !postersWritten.contains(key),
+                    destination: destination
+                )
+                if case .written = outcomes[item.id] { postersWritten.insert(key) }
                 continue
             }
+
             outcomes[item.id] = await outcome(for: item, languageCode: languageCode, destination: destination)
         }
 
         onProgress?(Progress(completed: items.count, total: items.count, title: ""))
         return outcomes
+    }
+
+    /// Applies a series the viewer picked to every episode of that show.
+    public func applySeries(
+        _ match: MediaMetadataMatch,
+        to episodes: [MediaLibraryItem],
+        destination: @escaping DestinationProvider
+    ) async -> [String: ItemOutcome] {
+        var outcomes: [String: ItemOutcome] = [:]
+        var poster: Data?
+        if let posterURL = match.posterURL { poster = await loadPoster(posterURL) }
+
+        for (index, episode) in episodes.enumerated() {
+            outcomes[episode.id] = await writeEpisode(
+                match,
+                for: episode,
+                showTitle: match.title.isEmpty ? (episode.showTitle ?? "") : match.title,
+                // Only the first episode carries the show's poster.
+                poster: index == 0 ? poster : nil,
+                destination: destination
+            )
+        }
+        return outcomes
+    }
+
+    /// Looks the film up again purely to fetch artwork for something already described.
+    private func posterOnlyOutcome(
+        for item: MediaLibraryItem,
+        languageCode: String,
+        alreadyCarried: Set<String>,
+        destination: @escaping DestinationProvider
+    ) async -> ItemOutcome {
+        // One poster per show, as when describing it.
+        if let key = posterKey(for: item), item.isEpisode, alreadyCarried.contains(key) {
+            return .alreadyDescribed
+        }
+
+        let ranked: [RankedMetadataMatch]
+        if item.isEpisode, let showTitle = item.metadata?.showTitle ?? item.showTitle {
+            ranked = await rankedSeries(for: showTitle, languageCode: languageCode)
+        } else {
+            let title = item.metadata?.title ?? item.parsed.title
+            let parsed = ParsedMediaTitle(title: title, year: item.year)
+            guard let matches = try? await provider.search(
+                title: title, year: item.year, languageCode: languageCode
+            ) else { return .alreadyDescribed }
+            ranked = MetadataMatchRanker.rank(matches, against: parsed)
+        }
+
+        // Never asked about: the film is already described, and a question about
+        // artwork alone is not worth a viewer's attention.
+        guard MetadataMatchRanker.isUnambiguous(ranked),
+              let poster = await loadPosterIfAny(ranked[0].match)
+        else { return .alreadyDescribed }
+
+        let name = "\(Self.baseName(of: item.sourceName))-poster.jpg"
+        do {
+            try await destination(item).write(poster, named: name)
+            return .posterAdded(name)
+        } catch {
+            return .alreadyDescribed
+        }
+    }
+
+    private func posterKey(for item: MediaLibraryItem) -> String? {
+        guard item.isEpisode, let showTitle = item.metadata?.showTitle ?? item.showTitle else {
+            return nil
+        }
+        return MediaLibraryIndex.groupingKey(for: showTitle)
+    }
+
+    private func rankedSeries(
+        for showTitle: String,
+        languageCode: String
+    ) async -> [RankedMetadataMatch] {
+        let parsed = ParsedMediaTitle(title: showTitle)
+        guard let matches = try? await provider.searchSeries(
+            title: showTitle,
+            year: nil,
+            languageCode: languageCode
+        ) else { return [] }
+        return MetadataMatchRanker.rank(matches, against: parsed)
+    }
+
+    private func episodeOutcome(
+        for item: MediaLibraryItem,
+        showTitle: String,
+        ranked: [RankedMetadataMatch],
+        carriesPoster: Bool,
+        destination: @escaping DestinationProvider
+    ) async -> ItemOutcome {
+        guard let best = ranked.first else { return .notFound }
+        guard MetadataMatchRanker.isUnambiguous(ranked) else {
+            return .needsChoice(Array(ranked.prefix(6)))
+        }
+        return await writeEpisode(
+            best.match,
+            for: item,
+            // The looked-up name, not the one the release group typed. Writing 더 베어
+            // rather than The.Bear is the reason for looking it up at all.
+            showTitle: best.match.title.isEmpty ? showTitle : best.match.title,
+            poster: carriesPoster ? await loadPosterIfAny(best.match) : nil,
+            destination: destination
+        )
+    }
+
+    private func loadPosterIfAny(_ match: MediaMetadataMatch) async -> Data? {
+        guard let posterURL = match.posterURL else { return nil }
+        return await loadPoster(posterURL)
+    }
+
+    private func writeEpisode(
+        _ match: MediaMetadataMatch,
+        for item: MediaLibraryItem,
+        showTitle: String,
+        poster: Data?,
+        destination: @escaping DestinationProvider
+    ) async -> ItemOutcome {
+        do {
+            let written = try await MediaSidecarWriter().writeEpisode(
+                match,
+                showTitle: showTitle,
+                season: item.seasonNumber,
+                episode: item.episodeNumber,
+                episodeTitle: item.parsed.episodeTitle,
+                poster: poster,
+                baseName: Self.baseName(of: item.sourceName),
+                to: destination(item)
+            )
+            return .written(written)
+        } catch {
+            return .failed(String(describing: error))
+        }
     }
 
     /// Writes the film the viewer picked from a `needsChoice` list.

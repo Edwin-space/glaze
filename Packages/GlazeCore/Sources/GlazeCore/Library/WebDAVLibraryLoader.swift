@@ -64,7 +64,11 @@ public actor WebDAVLibraryLoader {
             // A PROPFIND answers with the folder itself as well as its children.
             let children = entries.filter { $0.url != url }
             if depth < limits.depth {
-                queue.append(contentsOf: children.filter(\.isDirectory).map { ($0.url, depth + 1) })
+                queue.append(
+                    contentsOf: children
+                        .filter { $0.isDirectory && !$0.isHidden }
+                        .map { ($0.url, depth + 1) }
+                )
             }
 
             for video in children where !video.isDirectory && video.isVideo {
