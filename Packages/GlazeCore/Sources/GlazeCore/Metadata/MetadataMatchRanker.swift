@@ -57,12 +57,33 @@ public enum MetadataMatchRanker {
             }
     }
 
-    /// True when the top candidate is far enough ahead to be taken without asking:
-    /// confident in itself, and not in a tie with the runner-up.
+    /// Not in doubt on its own terms: the name matches exactly and so does the year.
+    static let certainThreshold = 0.95
+
+    /// True when the top candidate can be taken without asking.
+    ///
+    /// Two ways to earn that. Either it is certain in itself — an exact title with an
+    /// exact year is not really a question, even when a similarly named film sits close
+    /// behind it — or it is confident and clearly ahead of the runner-up. Everything
+    /// else is put to the viewer.
     public static func isUnambiguous(_ ranked: [RankedMetadataMatch]) -> Bool {
         guard let best = ranked.first, best.score >= confidentThreshold else { return false }
         guard ranked.count > 1 else { return true }
+
+        // The shortcut does not apply when the runner-up is exact on both counts too:
+        // two films sharing a name and a year is precisely what only a person can tell
+        // apart.
+        if best.score >= certainThreshold,
+           isCertain(best),
+           !isCertain(ranked[1]) {
+            return true
+        }
+
         return best.score - ranked[1].score >= 0.12
+    }
+
+    private static func isCertain(_ candidate: RankedMetadataMatch) -> Bool {
+        candidate.reasons.contains(.titleExact) && candidate.reasons.contains(.yearExact)
     }
 
     private static func score(
@@ -71,17 +92,16 @@ public enum MetadataMatchRanker {
     ) -> RankedMetadataMatch {
         var reasons: [MetadataMatchReason] = []
 
-        let titleScore = max(
-            similarity(parsed.title, match.title),
-            match.originalTitle.map { similarity(parsed.title, $0) } ?? 0
-        )
+        // Every name the film goes by is a candidate for what the release group typed.
+        let names = [match.title] + [match.originalTitle].compactMap { $0 } + match.matchingTitles
+        let titleScore = names.map { similarity(parsed.title, $0) }.max() ?? 0
         if titleScore >= 0.995 {
             reasons.append(.titleExact)
         } else if titleScore >= 0.7 {
             reasons.append(.titleClose)
         }
-        if let original = match.originalTitle,
-           similarity(parsed.title, original) > similarity(parsed.title, match.title) {
+        let localisedScore = similarity(parsed.title, match.title)
+        if titleScore > localisedScore, titleScore >= 0.7 {
             reasons.append(.originalTitleMatch)
         }
 

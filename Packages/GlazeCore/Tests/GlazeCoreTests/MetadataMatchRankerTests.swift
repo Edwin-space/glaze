@@ -120,3 +120,69 @@ import Testing
         #expect(!MetadataMatchRanker.isUnambiguous([]))
     }
 }
+
+/// Checked against what TMDB actually answers, which is where these rules came from.
+@Suite struct RankerAgainstRealAnswersTests {
+    private func match(
+        _ title: String,
+        year: Int?,
+        original: String? = nil,
+        matching: [String] = [],
+        votes: Int = 100
+    ) -> MediaMetadataMatch {
+        MediaMetadataMatch(
+            providerID: "tmdb",
+            title: title,
+            originalTitle: original,
+            matchingTitles: matching,
+            year: year,
+            voteCount: votes,
+            externalIDs: MediaExternalIDs(tmdbID: "\(title)-\(year ?? 0)")
+        )
+    }
+
+    /// Asking TMDB in Korean returns 기생충, whose original title is also Korean. Without
+    /// the international title to match on, the right film ranked below a wrong one.
+    @Test func findsAKoreanFilmFromItsInternationalName() {
+        let parsed = MediaTitleParser.parse("Parasite.2019.1080p.BluRay.x264")
+        let ranked = MetadataMatchRanker.rank(
+            [
+                match("Parasites", year: 2019),
+                match("기생충", year: 2019, original: "기생충", matching: ["Parasite"], votes: 18_000)
+            ],
+            against: parsed
+        )
+        #expect(ranked.first?.match.title == "기생충")
+        #expect(ranked.first?.reasons.contains(.titleExact) == true)
+        // Certain on its own terms, so it is written without asking.
+        #expect(MetadataMatchRanker.isUnambiguous(ranked))
+    }
+
+    /// A near-namesake sitting close behind must not turn a certain match into a question.
+    @Test func doesNotAskAboutACertainMatchJustBecauseANamesakeIsClose() {
+        let parsed = MediaTitleParser.parse("Parasite.2019.1080p")
+        let ranked = MetadataMatchRanker.rank(
+            [
+                match("기생충", year: 2019, matching: ["Parasite"], votes: 18_000),
+                match("封印映像44 寄生虫", year: 2019, matching: ["Parasite 44"])
+            ],
+            against: parsed
+        )
+        #expect(MetadataMatchRanker.isUnambiguous(ranked))
+    }
+
+    /// Six films called Nosferatu and no year in the filename stays a question.
+    @Test func stillAsksWhenTheYearIsMissingAndTheNameIsShared() {
+        let parsed = MediaTitleParser.parse("Nosferatu.1080p.WEB-DL.x265-GROUP")
+        let ranked = MetadataMatchRanker.rank(
+            [
+                match("노스페라투", year: 2024, original: "Nosferatu", votes: 4_000),
+                match("노스페라투", year: 1922, original: "Nosferatu", votes: 2_000),
+                match("Nosferatu", year: 1991)
+            ],
+            against: parsed
+        )
+        #expect(!MetadataMatchRanker.isUnambiguous(ranked))
+        #expect(ranked.first?.reasons.contains(.yearUnknown) == true)
+    }
+}

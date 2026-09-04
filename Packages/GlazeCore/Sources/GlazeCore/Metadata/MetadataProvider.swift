@@ -13,6 +13,12 @@ public struct MediaMetadataMatch: Equatable, Sendable, Codable {
     /// What the film is called where it was made. Kept because it is often the name
     /// people recognise, and because the release filename is usually built from it.
     public let originalTitle: String?
+    /// Other names this film goes by, used only for matching a filename against it.
+    ///
+    /// A Korean film's original title is Korean and its localised title is Korean, so
+    /// neither is the name a release group put in the filename. Without the
+    /// international title here, `Parasite.2019.mkv` does not match 기생충 at all.
+    public let matchingTitles: [String]
     public let year: Int?
     public let overview: String?
     /// Fetched separately — the provider gives a path, not a file.
@@ -31,6 +37,7 @@ public struct MediaMetadataMatch: Equatable, Sendable, Codable {
         providerID: String,
         title: String,
         originalTitle: String? = nil,
+        matchingTitles: [String] = [],
         year: Int? = nil,
         overview: String? = nil,
         posterURL: URL? = nil,
@@ -44,6 +51,7 @@ public struct MediaMetadataMatch: Equatable, Sendable, Codable {
         self.providerID = providerID
         self.title = title
         self.originalTitle = originalTitle
+        self.matchingTitles = matchingTitles
         self.year = year
         self.overview = overview
         self.posterURL = posterURL
@@ -76,4 +84,26 @@ public protocol MetadataProviding: Sendable {
         year: Int?,
         languageCode: String
     ) async throws -> [MediaMetadataMatch]
+}
+
+public extension MediaMetadataMatch {
+    /// Adds a name this film also goes by, for matching a filename against.
+    func addingMatchingTitle(_ title: String) -> MediaMetadataMatch {
+        guard !title.isEmpty, title != self.title, !matchingTitles.contains(title) else { return self }
+        return MediaMetadataMatch(
+            providerID: providerID,
+            title: self.title,
+            originalTitle: originalTitle,
+            matchingTitles: matchingTitles + [title],
+            year: year,
+            overview: overview,
+            posterURL: posterURL,
+            backdropURL: backdropURL,
+            rating: rating,
+            genres: genres,
+            popularity: popularity,
+            voteCount: voteCount,
+            externalIDs: externalIDs
+        )
+    }
 }

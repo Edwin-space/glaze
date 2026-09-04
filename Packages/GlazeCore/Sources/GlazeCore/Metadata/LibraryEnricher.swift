@@ -15,6 +15,11 @@ public actor LibraryEnricher {
         /// Ranked best first, for the viewer to choose from.
         case needsChoice([RankedMetadataMatch])
         case notFound
+        /// An episode. The provider is being asked `search/movie`, so the candidates it
+        /// returns for `The.Bear.S01E01` are films — offering those as an answer would
+        /// invite writing a film's details onto an episode. Series lookup is a separate
+        /// endpoint and not built yet; saying so is better than asking a bad question.
+        case unsupportedKind
         case failed(String)
     }
 
@@ -52,6 +57,10 @@ public actor LibraryEnricher {
 
             guard overwriteExisting || item.metadata == nil else {
                 outcomes[item.id] = .alreadyDescribed
+                continue
+            }
+            guard !item.isEpisode else {
+                outcomes[item.id] = .unsupportedKind
                 continue
             }
             outcomes[item.id] = await outcome(for: item, languageCode: languageCode, destination: destination)

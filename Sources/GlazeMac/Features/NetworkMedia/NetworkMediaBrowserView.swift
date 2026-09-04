@@ -47,6 +47,7 @@ struct NetworkMediaBrowserView: View {
     @State private var webDAVFavorites = WebDAVFavoriteStore()
     @State private var webDAVModel = WebDAVBrowserModel()
     @State private var selectedWebDAV: WebDAVConnection?
+    @State private var scanTarget: WebDAVConnection?
     @State private var gallerySelectionID: String?
 
     let onOpen: (NetworkMediaResource, MediaLibrarySource) -> Void
@@ -74,6 +75,24 @@ struct NetworkMediaBrowserView: View {
             ToolbarItem(placement: .automatic) {
                 GlazeHelpButton(titleKey: "network.browser.title", bodyKey: "help.network.browser")
             }
+            // Offered only for a NAS: describing a library means writing beside each
+            // film, and DLNA cannot be written to.
+            if let selectedWebDAV {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        scanTarget = selectedWebDAV
+                    } label: {
+                        Label(L10n.string("library.scan.title"), systemImage: "wand.and.sparkles")
+                    }
+                }
+            }
+        }
+        .sheet(item: $scanTarget) { connection in
+            LibraryScanView(
+                connection: connection,
+                password: webDAVConnections.password(for: connection),
+                preferences: .shared
+            )
         }
         .scrollContentBackground(.hidden)
         .toolbarBackground(.hidden, for: .windowToolbar)

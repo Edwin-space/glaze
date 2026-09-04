@@ -444,3 +444,37 @@
 "tv.detail.subtitles_found_format" = "자막 %d개가 영상 옆에 있습니다";
 "tv.detail.timecode_hours_format" = "%d시간 %d분";
 "tv.detail.timecode_minutes_format" = "%d분";
+
+/* 라이브러리 작품 정보 채우기 */
+"library.scan.title" = "작품 정보 채우기";
+"library.scan.subtitle_format" = "%@의 영상을 훑어 포스터와 줄거리를 영상 옆에 씁니다.";
+"library.scan.intro" = "라이브러리 전체를 한 번에 정리합니다";
+"library.scan.intro.detail" = "폴더를 훑어 각 영상을 TMDB에서 찾고, 확실한 것은 바로 쓰고 애매한 것만 물어봅니다. 이미 작품 정보가 있는 영상은 건드리지 않습니다.";
+"library.scan.start" = "시작";
+"library.scan.again" = "다시 훑기";
+"library.scan.reading" = "폴더를 읽는 중입니다";
+"library.scan.reading.detail" = "NAS의 하위 폴더까지 찾아봅니다.";
+"library.scan.folders_format" = "폴더 %d개를 읽었습니다.";
+"library.scan.describing" = "작품 정보를 찾는 중입니다";
+"library.scan.which_film" = "이 파일은 어떤 작품인가요?";
+"library.scan.skip" = "건너뛰기";
+"library.scan.remaining_format" = "%d개 남음";
+"library.scan.done" = "정리를 마쳤습니다";
+"library.scan.summary.described" = "새로 채움";
+"library.scan.summary.already" = "이미 있었음";
+"library.scan.summary.answered" = "직접 고름";
+"library.scan.summary.skipped" = "건너뜀";
+"library.scan.summary.not_found" = "찾지 못함";
+"library.scan.summary.failed" = "실패";
+"library.scan.reason.titleExact" = "제목 일치";
+"library.scan.reason.titleClose" = "제목 비슷함";
+"library.scan.reason.originalTitleMatch" = "원제 일치";
+"library.scan.reason.yearExact" = "연도 일치";
+"library.scan.reason.yearNear" = "연도 1년 차이";
+"library.scan.reason.yearMismatch" = "연도 다름";
+"library.scan.reason.yearUnknown" = "파일에 연도 없음";
+"library.scan.reason.wellKnown" = "널리 알려짐";
+"metadata.error.no_api_key" = "설정 > 작품 정보에서 TMDB API 키를 먼저 입력하세요.";
+"common.close" = "닫기";
+"common.cancel" = "취소";
+"library.scan.summary.episodes" = "TV 에피소드(아직 미지원)";

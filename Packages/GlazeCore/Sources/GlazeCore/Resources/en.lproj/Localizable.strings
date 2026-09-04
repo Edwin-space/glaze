@@ -444,3 +444,37 @@
 "tv.detail.subtitles_found_format" = "%d subtitles sit beside this film";
 "tv.detail.timecode_hours_format" = "%dh %dm";
 "tv.detail.timecode_minutes_format" = "%dm";
+
+/* Library metadata scan */
+"library.scan.title" = "Fill in film details";
+"library.scan.subtitle_format" = "Reads through %@ and writes posters and synopses beside each film.";
+"library.scan.intro" = "Describe the whole library at once";
+"library.scan.intro.detail" = "Walks the folders, looks each film up on TMDB, writes what it is sure of and asks about the rest. Films that already have details are left alone.";
+"library.scan.start" = "Start";
+"library.scan.again" = "Scan again";
+"library.scan.reading" = "Reading folders";
+"library.scan.reading.detail" = "Looking through the NAS, subfolders included.";
+"library.scan.folders_format" = "Read %d folders.";
+"library.scan.describing" = "Looking films up";
+"library.scan.which_film" = "Which film is this?";
+"library.scan.skip" = "Skip";
+"library.scan.remaining_format" = "%d left";
+"library.scan.done" = "Finished";
+"library.scan.summary.described" = "Newly described";
+"library.scan.summary.already" = "Already had details";
+"library.scan.summary.answered" = "You chose";
+"library.scan.summary.skipped" = "Skipped";
+"library.scan.summary.not_found" = "Not found";
+"library.scan.summary.failed" = "Failed";
+"library.scan.reason.titleExact" = "Title matches";
+"library.scan.reason.titleClose" = "Title is close";
+"library.scan.reason.originalTitleMatch" = "Original title matches";
+"library.scan.reason.yearExact" = "Year matches";
+"library.scan.reason.yearNear" = "Year off by one";
+"library.scan.reason.yearMismatch" = "Year differs";
+"library.scan.reason.yearUnknown" = "Filename has no year";
+"library.scan.reason.wellKnown" = "Widely known";
+"metadata.error.no_api_key" = "Enter a TMDB API key first, in Settings › Film details.";
+"common.close" = "Close";
+"common.cancel" = "Cancel";
+"library.scan.summary.episodes" = "TV episodes (not yet supported)";

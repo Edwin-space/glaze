@@ -25,7 +25,47 @@ public struct TMDBMetadataProvider: MetadataProviding {
         self.session = session
     }
 
+    /// Searched twice when the viewer's language is not English.
+    ///
+    /// TMDB answers in the language it is asked in, and a release filename is written
+    /// in the international one. Asking only in Korean means `Parasite.2019.mkv` is
+    /// compared against `기생충` and matches nothing — the film's own original title is
+    /// Korean too, so there is no English anywhere in the answer. The English pass
+    /// supplies the name to match on; the localised pass supplies what to show.
     public func search(
+        title: String,
+        year: Int?,
+        languageCode: String
+    ) async throws -> [MediaMetadataMatch] {
+        let localised = try await searchOnce(title: title, year: year, languageCode: languageCode)
+        guard !Self.isEnglish(languageCode) else { return localised }
+
+        guard let english = try? await searchOnce(title: title, year: year, languageCode: "en-US") else {
+            return localised
+        }
+
+        var englishTitles: [String: String] = [:]
+        for match in english {
+            if let id = match.externalIDs.tmdbID { englishTitles[id] = match.title }
+        }
+
+        // Anything only the English pass found still belongs in the list.
+        var merged = localised.map { match -> MediaMetadataMatch in
+            guard let id = match.externalIDs.tmdbID, let englishTitle = englishTitles[id] else {
+                return match
+            }
+            return match.addingMatchingTitle(englishTitle)
+        }
+        let known = Set(localised.compactMap { $0.externalIDs.tmdbID })
+        merged.append(contentsOf: english.filter { !known.contains($0.externalIDs.tmdbID ?? "") })
+        return merged
+    }
+
+    private static func isEnglish(_ languageCode: String) -> Bool {
+        languageCode.lowercased().hasPrefix("en")
+    }
+
+    private func searchOnce(
         title: String,
         year: Int?,
         languageCode: String

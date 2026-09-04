@@ -195,3 +195,38 @@ private final class ProgressLog: @unchecked Sendable {
         return storage
     }
 }
+
+@Suite struct LibraryEnricherEpisodeTests {
+    /// `search/movie` answers `The.Bear.S01E01` with films. Offering those would invite
+    /// writing a film's details onto an episode.
+    @Test func doesNotOfferFilmsAsAnswersForAnEpisode() async {
+        let provider = StubEpisodeProvider()
+        let destination = EpisodeRecordingDestination()
+        let enricher = LibraryEnricher(provider: provider) { _ in nil }
+
+        let episode = MediaLibraryItem(
+            id: "e1",
+            sourceName: "The.Bear.S01E01.1080p.WEB-DL.mkv",
+            parsed: MediaTitleParser.parse("The.Bear.S01E01.1080p.WEB-DL.mkv"),
+            playbackURL: URL(string: "https://nas.local/e1.mkv")!
+        )
+
+        let outcomes = await enricher.enrich(
+            [episode], languageCode: "ko", destination: { _ in destination }
+        )
+        #expect(outcomes["e1"] == .unsupportedKind)
+        #expect(await destination.written.isEmpty)
+    }
+}
+
+private struct StubEpisodeProvider: MetadataProviding {
+    let providerID = "stub"
+    func search(title: String, year: Int?, languageCode: String) async throws -> [MediaMetadataMatch] {
+        [MediaMetadataMatch(providerID: "stub", title: "The Bear", year: 2022)]
+    }
+}
+
+private actor EpisodeRecordingDestination: SidecarDestination {
+    private(set) var written: [String] = []
+    func write(_ data: Data, named name: String) async throws { written.append(name) }
+}
