@@ -153,3 +153,27 @@ struct DIDLResourceDetailTests {
         )
     }
 }
+
+/// Plenty of releases carry no year. Without a cut at the release metadata the whole
+/// filename became the "title", and no metadata service finds anything for that.
+@Suite struct TitleWithoutYearTests {
+    @Test func cutsAtTheReleaseMetadataWhenThereIsNoYear() {
+        #expect(MediaTitleParser.parse("Nosferatu.1080p.WEB-DL.x265-GROUP").title == "Nosferatu")
+        #expect(MediaTitleParser.parse("Nosferatu.1080p.WEB-DL.x265-GROUP").year == nil)
+        #expect(MediaTitleParser.parse("The Substance 2160p BluRay REMUX").title == "The Substance")
+        #expect(MediaTitleParser.parse("Wicked.UHD.HDR.DV.Atmos").title == "Wicked")
+    }
+
+    /// A year still wins when there is one — the metadata cut is the fallback.
+    @Test func stillPrefersTheYearWhenTheReleaseHasOne() {
+        let parsed = MediaTitleParser.parse("Dune.Part.Two.2024.2160p.BluRay.x265")
+        #expect(parsed.title == "Dune Part Two")
+        #expect(parsed.year == 2024)
+    }
+
+    /// A title that is only a name has nothing to cut at, and must survive whole.
+    @Test func leavesAPlainNameAlone() {
+        #expect(MediaTitleParser.parse("Parasite").title == "Parasite")
+        #expect(MediaTitleParser.parse("기생충").title == "기생충")
+    }
+}

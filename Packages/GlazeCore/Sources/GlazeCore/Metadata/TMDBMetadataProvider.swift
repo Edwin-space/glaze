@@ -89,6 +89,8 @@ public struct TMDBMetadataProvider: MetadataProviding {
                 backdropURL: result.backdrop_path.map { imageURL(backdropWidth, $0) },
                 rating: result.vote_average,
                 genres: [],
+                popularity: result.popularity,
+                voteCount: result.vote_count,
                 externalIDs: MediaExternalIDs(tmdbID: String(result.id))
             )
         }
@@ -117,6 +119,8 @@ public struct TMDBMetadataProvider: MetadataProviding {
         let poster_path: String?
         let backdrop_path: String?
         let vote_average: Double?
+        let popularity: Double?
+        let vote_count: Int?
     }
 }
 

@@ -53,6 +53,42 @@ public struct MediaSidecarWriter: Sendable {
         return written
     }
 
+    /// Writes to wherever the film actually lives.
+    ///
+    /// - Parameter baseName: the film's filename without its extension; the sidecars
+    ///   take the same stem, which is the whole convention.
+    /// - Returns: the filenames written.
+    @discardableResult
+    public func write(
+        _ match: MediaMetadataMatch,
+        poster: Data?,
+        baseName: String,
+        to destination: some SidecarDestination
+    ) async throws -> [String] {
+        var written: [String] = []
+
+        let nfoName = "\(baseName).nfo"
+        do {
+            try await destination.write(Data(nfo(for: match).utf8), named: nfoName)
+            written.append(nfoName)
+        } catch {
+            throw WriteError.writeFailed
+        }
+
+        if let poster {
+            let posterName = "\(baseName)-poster.jpg"
+            do {
+                try await destination.write(poster, named: posterName)
+                written.append(posterName)
+            } catch {
+                // A missing poster is a worse-looking shelf, not a failed match; the
+                // .nfo is already written and worth keeping.
+            }
+        }
+
+        return written
+    }
+
     /// Kodi's `movie.nfo`. Only the fields a provider actually gives us are written —
     /// an empty `<plot/>` is worse than no plot, because scrapers treat it as known.
     func nfo(for match: MediaMetadataMatch) -> String {

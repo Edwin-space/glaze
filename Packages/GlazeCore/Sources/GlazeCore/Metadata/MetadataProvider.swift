@@ -21,6 +21,10 @@ public struct MediaMetadataMatch: Equatable, Sendable, Codable {
     /// Out of 10, as every provider reports it.
     public let rating: Double?
     public let genres: [String]
+    /// How widely known the film is. Only ever a tiebreaker: when a filename matches
+    /// two films equally well, the one everybody means is the better guess.
+    public let popularity: Double?
+    public let voteCount: Int?
     public let externalIDs: MediaExternalIDs
 
     public init(
@@ -33,6 +37,8 @@ public struct MediaMetadataMatch: Equatable, Sendable, Codable {
         backdropURL: URL? = nil,
         rating: Double? = nil,
         genres: [String] = [],
+        popularity: Double? = nil,
+        voteCount: Int? = nil,
         externalIDs: MediaExternalIDs = MediaExternalIDs()
     ) {
         self.providerID = providerID
@@ -44,6 +50,8 @@ public struct MediaMetadataMatch: Equatable, Sendable, Codable {
         self.backdropURL = backdropURL
         self.rating = rating
         self.genres = genres
+        self.popularity = popularity
+        self.voteCount = voteCount
         self.externalIDs = externalIDs
     }
 }

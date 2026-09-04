@@ -99,6 +99,44 @@ public struct WebDAVClient: Sendable {
         return WebDAVPropfindParser.parse(data, baseURL: url)
     }
 
+    /// Writes a small file to the share.
+    ///
+    /// This is how a poster and an `.nfo` reach a NAS. Before it, metadata could only
+    /// be written beside a film on a local disk, so the films that most needed it —
+    /// the ones on the NAS — were the ones that could not have it.
+    public func upload(
+        _ data: Data,
+        to url: URL,
+        credentials: (username: String, password: String)?
+    ) async throws {
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.httpBody = data
+        if let credentials {
+            let encoded = Data("\(credentials.username):\(credentials.password)".utf8).base64EncodedString()
+            request.setValue("Basic \(encoded)", forHTTPHeaderField: "Authorization")
+        }
+
+        let response: URLResponse
+        do {
+            (_, response) = try await session.data(for: request)
+        } catch {
+            throw WebDAVError.network(error.localizedDescription)
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw WebDAVError.network("no response")
+        }
+        switch http.statusCode {
+        // 200 replaced, 201 created, 204 replaced with no body — all success.
+        case 200, 201, 204: return
+        case 401, 403: throw WebDAVError.unauthorized
+        case 404, 409: throw WebDAVError.notFound
+        case 405, 501: throw WebDAVError.notWebDAV
+        default: throw WebDAVError.network("HTTP \(http.statusCode)")
+        }
+    }
+
     /// Fetches a small file — a subtitle, an `.nfo`, a poster.
     ///
     /// - Parameter maximumBytes: a guard against a mistaken path pointing at a film.

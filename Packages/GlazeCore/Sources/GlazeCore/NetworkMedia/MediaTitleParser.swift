@@ -108,9 +108,13 @@ public enum MediaTitleParser {
         }
 
         let remainder = text[marker.upperBound...]
-        let stopPattern = #"(?i)[\s._\-]((?:19|20)\d{2}|2160p|1080p|720p|480p|WEB[\s._-]?DL|WEBRip|BluRay|BDRip|HDTV|DVDRip|REMUX|AMZN|NF|DSNP|HMAX|ATVP|x26[45]|H[\s._-]?26[45]|HEVC|DDP?[0-9]|AAC|Atmos|HDR|DV)\b"#
-        let end = remainder.range(of: stopPattern, options: .regularExpression)?.lowerBound
-            ?? remainder.endIndex
+        let yearOrMetadata = #"(?i)[\s._\-](19|20)\d{2}\b"#
+        let end = min(
+            remainder.range(of: releaseMetadataPattern, options: .regularExpression)?.lowerBound
+                ?? remainder.endIndex,
+            remainder.range(of: yearOrMetadata, options: .regularExpression)?.lowerBound
+                ?? remainder.endIndex
+        )
 
         let name = separatorsToSpaces(String(remainder[remainder.startIndex..<end]))
             .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
@@ -119,8 +123,12 @@ public enum MediaTitleParser {
         return name.isEmpty ? nil : name
     }
 
-    /// Cuts at whichever marker comes first — the year, or the season for a series that
-    /// does not carry one.
+    /// Cuts at whichever marker comes first — the year, the season, or failing both,
+    /// the first piece of release metadata.
+    ///
+    /// That last case is not a nicety. Plenty of releases carry no year at all
+    /// (`Nosferatu.1080p.WEB-DL.x265-GROUP`), and without a cut the "title" became the
+    /// whole filename, which no metadata service can find anything for.
     private static func truncate(_ text: String, atYear year: Int?, season: Int?) -> String {
         var cutIndex: String.Index?
 
@@ -133,9 +141,18 @@ public enum MediaTitleParser {
             cutIndex = min(cutIndex ?? range.lowerBound, range.lowerBound)
         }
 
+        if cutIndex == nil,
+           let range = text.range(of: releaseMetadataPattern, options: .regularExpression) {
+            cutIndex = range.lowerBound
+        }
+
         guard let cutIndex else { return text }
         return String(text[text.startIndex..<cutIndex])
     }
+
+    /// Where a release name stops describing the film and starts describing the file.
+    static let releaseMetadataPattern =
+        #"(?i)[\s._\-](2160p|1080p|720p|480p|4K|UHD|WEB[\s._-]?DL|WEBRip|BluRay|BDRip|BRRip|HDTV|DVDRip|REMUX|HDR10\+?|HDR|Dolby[\s._-]?Vision|AMZN|NF|DSNP|HMAX|ATVP|x26[45]|H[\s._-]?26[45]|HEVC|AVC|DDP?[0-9]|DTS|AAC|AC3|Atmos|TrueHD|MULTi|KORSUB|IMAX)\b"#
 
     /// Dots and underscores stand in for spaces in release names, but a dot between
     /// single letters is an abbreviation and stays.
