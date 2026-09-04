@@ -3,129 +3,195 @@ import SwiftUI
 
 /// What you get after choosing a film, before it starts.
 ///
-/// Plex puts a screen here and it earns its place: a NAS folder is full of names that
-/// differ by one word, and starting the wrong three-hour film is a worse outcome than
-/// one extra click. It is also the only place with room to say what the file actually
-/// is — the codec and container that decide whether it will play at all.
+/// A NAS folder is full of names that differ by one word, and starting the wrong
+/// three-hour film is a worse outcome than one extra click. Now that the Mac's poster
+/// and plot travel with the film, this is also where they are read.
 struct TVDetailView: View {
-    let item: PlayableItem
-    let resumeTime: TimeInterval?
-    let onPlay: (TimeInterval) -> Void
+    let item: MediaLibraryItem
+    let resource: NetworkMediaResource?
+    @Bindable var preferences: TVUserPreferences
 
+    @Environment(TVArtworkLoader.self) private var artwork
     @Environment(\.dismiss) private var dismiss
+    @State private var positions = PlaybackPositionStore()
+    @State private var startAt: TimeInterval?
+    @State private var isPlaying = false
 
     var body: some View {
-        ZStack {
-            TVTheme.signature(for: item.title).ignoresSafeArea()
-            LinearGradient(
-                colors: [.black.opacity(0.35), TVTheme.ground],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+        ZStack(alignment: .topLeading) {
+            backdrop
 
-            HStack(alignment: .top, spacing: 80) {
+            HStack(alignment: .top, spacing: 60) {
+                TVPosterCard(
+                    title: item.displayTitle,
+                    subtitle: nil,
+                    posterURL: item.posterURL,
+                    width: 340
+                )
+                .allowsHitTesting(false)
+
                 details
+
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 90)
-            .padding(.vertical, 70)
+            .padding(.vertical, 80)
         }
         .onExitCommand { dismiss() }
+        .fullScreenCover(isPresented: $isPlaying) {
+            if let resource {
+                TVPlayerView(
+                    resource: resource,
+                    title: item.displayTitle,
+                    startAt: startAt ?? 0,
+                    preferredSubtitleLanguageCode: preferences.defaultSubtitleLanguageCode,
+                    automaticallySelectSubtitles: preferences.automaticallySelectSubtitles,
+                    preferredSubtitleScale: preferences.subtitleScale
+                )
+            }
+        }
+    }
+
+    private var backdrop: some View {
+        ZStack {
+            if let image = artwork.image(for: item.posterURL) {
+                image.resizable().aspectRatio(contentMode: .fill).blur(radius: 70).opacity(0.45)
+            } else {
+                TVTheme.signature(for: item.displayTitle)
+            }
+            LinearGradient(
+                colors: [TVTheme.ground.opacity(0.4), TVTheme.ground],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .ignoresSafeArea()
+        .onAppear { artwork.loadIfNeeded(item.posterURL) }
     }
 
     private var details: some View {
-        VStack(alignment: .leading, spacing: 26) {
-            Spacer(minLength: 0)
-
-            Text(item.parsed.title)
-                .font(.system(size: 68, weight: .bold))
-                .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 24) {
+            Text(item.displayTitle)
+                .font(.system(size: 64, weight: .bold))
                 .lineLimit(3)
-                .frame(maxWidth: 1100, alignment: .leading)
+                .frame(maxWidth: 1000, alignment: .leading)
+
+            if let original = item.metadata?.originalTitle, original != item.displayTitle {
+                Text(original)
+                    .font(.system(size: 27))
+                    .foregroundStyle(TVTheme.dim)
+            }
 
             HStack(spacing: 12) {
-                if let year = item.parsed.year {
+                if let year = item.year {
                     Text(String(year))
-                        .font(.system(size: 26, weight: .medium))
-                        .foregroundStyle(TVTheme.dim)
+                        .font(.system(size: 25, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
                 }
-                if let episode = episodeLabel {
-                    TVChip(text: episode)
+                if let rating = item.rating, rating > 0 {
+                    Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(TVTheme.amber)
                 }
                 if let runtime = runtimeLabel {
                     TVChip(text: runtime)
+                }
+                if let episode = item.episodeLabel {
+                    TVChip(text: episode)
+                }
+                ForEach(item.genres.prefix(3), id: \.self) { genre in
+                    TVChip(text: genre)
                 }
                 ForEach(item.parsed.badges, id: \.self) { badge in
                     TVChip(text: badge, emphasized: badge == "4K")
                 }
             }
 
-            HStack(spacing: 24) {
-                Button {
-                    onPlay(0)
-                } label: {
-                    Label(
-                        L10n.string(resumeTime == nil ? "tv.detail.play" : "tv.detail.play_from_start"),
-                        systemImage: "play.fill"
-                    )
-                }
-
-                if let resumeTime {
-                    Button {
-                        onPlay(resumeTime)
-                    } label: {
-                        Label(
-                            String(format: L10n.string("tv.detail.resume_format"), timecode(resumeTime)),
-                            systemImage: "arrow.trianglehead.clockwise"
-                        )
-                    }
-                }
+            if let plot = item.plot, !plot.isEmpty {
+                Text(plot)
+                    .font(.system(size: 25))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .lineLimit(6)
+                    .frame(maxWidth: 1000, alignment: .leading)
             }
-            .padding(.top, 10)
 
-            fileFacts
-                .padding(.top, 18)
+            actions
+            subtitleNote
+            fileFacts.padding(.top, 12)
 
             Spacer(minLength: 0)
         }
     }
 
-    /// The original name and the technical detail, small and out of the way. Someone
-    /// looking for it is looking for a reason a film will not play.
+    private var actions: some View {
+        HStack(spacing: 24) {
+            Button {
+                startAt = nil
+                isPlaying = true
+            } label: {
+                Label(
+                    L10n.string(resumeTime == nil ? "tv.detail.play" : "tv.detail.play_from_start"),
+                    systemImage: "play.fill"
+                )
+            }
+
+            if let resumeTime {
+                Button {
+                    startAt = resumeTime
+                    isPlaying = true
+                } label: {
+                    Label(
+                        String(format: L10n.string("tv.detail.resume_format"), timecode(resumeTime)),
+                        systemImage: "arrow.trianglehead.clockwise"
+                    )
+                }
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    /// The subtitle the Mac put beside the film is the reason this product exists; if
+    /// one travelled with it, say so before the viewer starts guessing.
+    @ViewBuilder
+    private var subtitleNote: some View {
+        if !item.subtitleURLs.isEmpty {
+            Label(
+                String(format: L10n.string("tv.detail.subtitles_found_format"), item.subtitleURLs.count),
+                systemImage: "captions.bubble"
+            )
+            .font(.system(size: 22))
+            .foregroundStyle(TVTheme.amber)
+        }
+    }
+
     private var fileFacts: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(item.title)
-                .lineLimit(2)
+            Text(item.sourceName).lineLimit(2)
             HStack(spacing: 18) {
-                if let resolution = item.resource.resolution { Text(resolution) }
-                if let container = containerLabel { Text(container) }
+                if let resolution = resource?.resolution { Text(resolution) }
                 if let size = sizeLabel { Text(size) }
             }
         }
-        .font(.system(size: 21))
+        .font(.system(size: 20))
         .foregroundStyle(.white.opacity(0.4))
-        .frame(maxWidth: 1100, alignment: .leading)
+        .frame(maxWidth: 1000, alignment: .leading)
     }
 
-    private var episodeLabel: String? {
-        guard let season = item.parsed.season else { return nil }
-        guard let episode = item.parsed.episode else { return String(format: "S%02d", season) }
-        return String(format: "S%02dE%02d", season, episode)
+    private var resumeTime: TimeInterval? {
+        guard let resource else { return nil }
+        return positions.position(for: .network(resource))
     }
 
     private var runtimeLabel: String? {
-        guard let duration = item.resource.duration, duration > 0 else { return nil }
-        let minutes = Int(duration / 60)
-        return String(format: L10n.string("tv.detail.minutes_format"), minutes)
-    }
-
-    private var containerLabel: String? {
-        item.resource.mimeType?.split(separator: "/").last.map { $0.replacingOccurrences(of: "x-", with: "").uppercased() }
+        if let minutes = item.metadata?.runtimeMinutes, minutes > 0 {
+            return String(format: L10n.string("tv.detail.minutes_format"), minutes)
+        }
+        guard let duration = item.duration ?? resource?.duration, duration > 0 else { return nil }
+        return String(format: L10n.string("tv.detail.minutes_format"), Int(duration / 60))
     }
 
     private var sizeLabel: String? {
-        guard let bytes = item.resource.byteCount else { return nil }
+        guard let bytes = item.byteCount ?? resource?.byteCount else { return nil }
         return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
@@ -133,6 +199,8 @@ struct TVDetailView: View {
         let total = Int(seconds)
         let hours = total / 3600
         let minutes = (total % 3600) / 60
-        return hours > 0 ? "\(hours)시간 \(minutes)분" : "\(minutes)분"
+        return hours > 0
+            ? String(format: L10n.string("tv.detail.timecode_hours_format"), hours, minutes)
+            : String(format: L10n.string("tv.detail.timecode_minutes_format"), minutes)
     }
 }

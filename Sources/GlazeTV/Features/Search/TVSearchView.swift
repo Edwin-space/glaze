@@ -1,62 +1,103 @@
 import GlazeCore
 import SwiftUI
 
+/// Search over the whole library — films, shows, and the episodes inside them.
+///
+/// tvOS's own search tab brings the keyboard and the layout with it, so this only has
+/// to answer the question. The hand-built text field this replaced sat in the sidebar
+/// and trapped the focus engine: arrows moved the caret, so focus went in and could not
+/// come back out.
 struct TVSearchView: View {
-    let model: NetworkMediaBrowserModel
+    let library: TVLibraryModel
+    let onSelect: (TVLibrarySelection) -> Void
 
     @State private var query = ""
 
+    private let columns = Array(repeating: GridItem(.fixed(220), spacing: 40), count: 7)
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 30) {
-            Text(L10n.string("tv.navigation.search"))
-                .font(.system(size: 58, weight: .bold))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 30) {
+                if trimmedQuery.isEmpty {
+                    message(
+                        symbol: "magnifyingglass",
+                        title: L10n.string("tv.search.start"),
+                        detail: L10n.string("tv.search.start.detail")
+                    )
+                } else if matchedSeries.isEmpty, matchedMovies.isEmpty {
+                    message(
+                        symbol: "film.stack",
+                        title: L10n.string("tv.search.empty"),
+                        detail: L10n.string("tv.search.empty.detail")
+                    )
+                } else {
+                    Text(
+                        String(
+                            format: L10n.string("tv.search.results_format"),
+                            matchedSeries.count + matchedMovies.count
+                        )
+                    )
+                    .font(.system(size: 32, weight: .semibold))
 
-            TextField(L10n.string("tv.search.placeholder"), text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 34))
-                .padding(.horizontal, 28)
-                .frame(height: 76)
-                .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 48) {
+                        ForEach(matchedSeries) { show in
+                            Button { onSelect(.series(show)) } label: {
+                                TVPosterCard(
+                                    title: show.title,
+                                    subtitle: String(
+                                        format: L10n.string("tv.library.episode_count_format"),
+                                        show.episodeCount
+                                    ),
+                                    posterURL: show.posterURL
+                                )
+                            }
+                            .buttonStyle(.borderless)
+                        }
 
-            if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                searchEmpty(
-                    symbol: "magnifyingglass",
-                    title: L10n.string("tv.search.start"),
-                    detail: L10n.string("tv.search.start.detail")
-                )
-            } else if results.isEmpty {
-                searchEmpty(
-                    symbol: "film.stack",
-                    title: L10n.string("tv.search.empty"),
-                    detail: L10n.string("tv.search.empty.detail")
-                )
-            } else {
-                TVShelf(title: String(format: L10n.string("tv.search.results_format"), results.count)) {
-                    ForEach(results) { item in
-                        TVMediaCard(item: item, progress: nil)
+                        ForEach(matchedMovies) { movie in
+                            Button { onSelect(.movie(movie)) } label: {
+                                TVPosterCard(
+                                    title: movie.displayTitle,
+                                    subtitle: movie.year.map(String.init),
+                                    posterURL: movie.posterURL
+                                )
+                            }
+                            .buttonStyle(.borderless)
+                        }
                     }
                 }
-                .padding(.horizontal, -60)
             }
-
-            Spacer()
+            .padding(.horizontal, 76)
+            .padding(.top, 40)
+            .padding(.bottom, 90)
         }
-        .padding(.horizontal, 84)
-        .padding(.top, 70)
-        .background(TVTheme.ground)
+        .searchable(text: $query, prompt: L10n.string("tv.search.placeholder"))
     }
 
-    private var results: [PlayableItem] {
-        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !needle.isEmpty else { return [] }
-        return model.homeNodes.compactMap { node in
-            guard case .video(let resource) = node.kind,
-                  node.title.localizedCaseInsensitiveContains(needle) else { return nil }
-            return PlayableItem(resource: resource, title: node.title)
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// A show matches on its own name; a film on its title, its original title and the
+    /// filename, because people search for what they remember, which is often neither
+    /// of the first two.
+    private var matchedSeries: [MediaLibrarySeries] {
+        guard !trimmedQuery.isEmpty else { return [] }
+        return library.library.series.filter {
+            $0.title.localizedCaseInsensitiveContains(trimmedQuery)
         }
     }
 
-    private func searchEmpty(symbol: String, title: String, detail: String) -> some View {
+    private var matchedMovies: [MediaLibraryItem] {
+        guard !trimmedQuery.isEmpty else { return [] }
+        return library.library.movies.filter { movie in
+            movie.displayTitle.localizedCaseInsensitiveContains(trimmedQuery)
+                || movie.sourceName.localizedCaseInsensitiveContains(trimmedQuery)
+                || (movie.metadata?.originalTitle?.localizedCaseInsensitiveContains(trimmedQuery) ?? false)
+        }
+    }
+
+    private func message(symbol: String, title: String, detail: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: symbol)
                 .font(.system(size: 62))
@@ -67,6 +108,7 @@ struct TVSearchView: View {
                 .foregroundStyle(TVTheme.dim)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 120)
     }
 }

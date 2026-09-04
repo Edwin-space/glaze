@@ -16,14 +16,26 @@ public struct ParsedMediaTitle: Equatable, Sendable {
     /// Set for series episodes, e.g. `S01E01`.
     public let season: Int?
     public let episode: Int?
+    /// The episode's own name, when the release carried one:
+    /// `Fallout.S01E01.The.End.2160p…` is called "The End". An episode list that fell
+    /// back to the whole release string was unreadable across a room.
+    public let episodeTitle: String?
     /// Short marks worth showing next to the title — resolution, dynamic range, audio.
     public let badges: [String]
 
-    public init(title: String, year: Int? = nil, season: Int? = nil, episode: Int? = nil, badges: [String] = []) {
+    public init(
+        title: String,
+        year: Int? = nil,
+        season: Int? = nil,
+        episode: Int? = nil,
+        episodeTitle: String? = nil,
+        badges: [String] = []
+    ) {
         self.title = title
         self.year = year
         self.season = season
         self.episode = episode
+        self.episodeTitle = episodeTitle
         self.badges = badges
     }
 }
@@ -52,6 +64,7 @@ public enum MediaTitleParser {
             year: year,
             season: season,
             episode: episode,
+            episodeTitle: season == nil ? nil : episodeTitle(in: cleaned),
             badges: badges
         )
     }
@@ -80,6 +93,30 @@ public enum MediaTitleParser {
             .split(whereSeparator: { !$0.isNumber })
             .compactMap { Int($0) }
         return (numbers.first, numbers.count > 1 ? numbers[1] : nil)
+    }
+
+    /// What sits between `S01E01` and the first piece of release metadata.
+    ///
+    /// The metadata always starts with a resolution, a source or a year, so the name
+    /// runs from the episode marker up to whichever of those appears first. A release
+    /// that names no episode leaves nothing between the two, which is the same answer
+    /// as not knowing.
+    private static func episodeTitle(in text: String) -> String? {
+        let markerPattern = #"[Ss]\d{1,2}[Ee]\d{1,3}"#
+        guard let marker = text.range(of: markerPattern, options: .regularExpression) else {
+            return nil
+        }
+
+        let remainder = text[marker.upperBound...]
+        let stopPattern = #"(?i)[\s._\-]((?:19|20)\d{2}|2160p|1080p|720p|480p|WEB[\s._-]?DL|WEBRip|BluRay|BDRip|HDTV|DVDRip|REMUX|AMZN|NF|DSNP|HMAX|ATVP|x26[45]|H[\s._-]?26[45]|HEVC|DDP?[0-9]|AAC|Atmos|HDR|DV)\b"#
+        let end = remainder.range(of: stopPattern, options: .regularExpression)?.lowerBound
+            ?? remainder.endIndex
+
+        let name = separatorsToSpaces(String(remainder[remainder.startIndex..<end]))
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: " -–—,._"))
+
+        return name.isEmpty ? nil : name
     }
 
     /// Cuts at whichever marker comes first — the year, or the season for a series that

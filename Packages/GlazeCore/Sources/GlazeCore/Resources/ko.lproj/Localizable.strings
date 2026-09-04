@@ -424,3 +424,23 @@
 "tv.search.empty.detail" = "다른 제목을 입력하거나 미디어 소스를 확인하세요.";
 "tv.search.results_format" = "검색 결과 %d개";
 "tv.player.subtitle.selected_format" = "%@ 자막 자동 선택됨";
+
+/* Apple TV — 라이브러리 */
+"tv.navigation.movies" = "영화";
+"tv.navigation.series" = "TV 프로그램";
+"tv.home.movies" = "영화";
+"tv.home.series" = "TV 프로그램";
+"tv.home.library.scanning_format" = "폴더 %d개를 읽었습니다.";
+"tv.library.count_format" = "%d편";
+"tv.library.episode_count_format" = "%d개 에피소드";
+"tv.library.season_count_format" = "시즌 %d개";
+"tv.library.season_format" = "시즌 %d";
+"tv.library.specials" = "스페셜";
+"tv.library.other_episodes" = "기타 에피소드";
+"tv.library.play_episode_format" = "%@ 재생";
+"tv.library.runtime_format" = "%d분";
+"tv.library.empty" = "여기에 표시할 영상이 아직 없습니다.";
+"tv.detail.resume" = "이어보기";
+"tv.detail.subtitles_found_format" = "자막 %d개가 영상 옆에 있습니다";
+"tv.detail.timecode_hours_format" = "%d시간 %d분";
+"tv.detail.timecode_minutes_format" = "%d분";

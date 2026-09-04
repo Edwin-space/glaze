@@ -8,8 +8,8 @@ import Testing
         nfo: MediaNFO? = nil,
         poster: String? = nil,
         added: Date? = nil
-    ) -> LibraryItem {
-        LibraryItem(
+    ) -> MediaLibraryItem {
+        MediaLibraryItem(
             id: name,
             sourceName: name,
             parsed: MediaTitleParser.parse(name),
@@ -45,6 +45,18 @@ import Testing
             item("The.Bear.S01E01.mkv"),
             item("the bear - s01e02.mkv"),
             item("The Bear S01E03.mkv")
+        ])
+        #expect(library.series.count == 1)
+        #expect(library.series[0].episodeCount == 3)
+    }
+
+    /// Seen on a real NAS: the same show shelved twice because one release group
+    /// wrote the apostrophe and the other did not.
+    @Test func treatsAnApostropheAsSpellingRatherThanAsADifferentShow() {
+        let library = MediaLibraryIndex.build(from: [
+            item("Tom.Clancys.Jack.Ryan.S01E01.mkv"),
+            item("Tom.Clancy's.Jack.Ryan.S01E02.mkv"),
+            item("Tom Clancy\u{2019}s Jack Ryan S01E03.mkv")
         ])
         #expect(library.series.count == 1)
         #expect(library.series[0].episodeCount == 3)
@@ -96,7 +108,19 @@ import Testing
             item("New.2026.mkv", added: now),
             item("Undated.2020.mkv")
         ])
-        #expect(library.recentlyAdded.map(\.sourceName) == ["New.2026.mkv", "Old.2001.mkv"])
+        #expect(library.recentlyAdded.map(\.title) == ["New", "Old"])
+    }
+
+    /// Four episodes copied over on the same evening are one thing that happened.
+    @Test func namesAShowOnceInRecentlyAddedRatherThanOncePerEpisode() {
+        let now = Date()
+        let library = MediaLibraryIndex.build(from: [
+            item("Show.S01E01.mkv", added: now.addingTimeInterval(-300)),
+            item("Show.S01E02.mkv", added: now.addingTimeInterval(-200)),
+            item("Show.S01E03.mkv", added: now.addingTimeInterval(-100)),
+            item("Film.2020.mkv", added: now.addingTimeInterval(-86_400))
+        ])
+        #expect(library.recentlyAdded.map(\.title) == ["Show", "Film"])
     }
 
     @Test func buildsGenreShelvesFromNFOsAndOrdersThemByHowFullTheyAre() {

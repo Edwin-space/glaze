@@ -424,3 +424,23 @@
 "tv.search.empty.detail" = "Try another title or check your media source.";
 "tv.search.results_format" = "%d results";
 "tv.player.subtitle.selected_format" = "%@ subtitles selected automatically";
+
+/* Apple TV — library */
+"tv.navigation.movies" = "Movies";
+"tv.navigation.series" = "TV Shows";
+"tv.home.movies" = "Movies";
+"tv.home.series" = "TV Shows";
+"tv.home.library.scanning_format" = "Read %d folders so far.";
+"tv.library.count_format" = "%d titles";
+"tv.library.episode_count_format" = "%d episodes";
+"tv.library.season_count_format" = "%d seasons";
+"tv.library.season_format" = "Season %d";
+"tv.library.specials" = "Specials";
+"tv.library.other_episodes" = "Other episodes";
+"tv.library.play_episode_format" = "Play %@";
+"tv.library.runtime_format" = "%d min";
+"tv.library.empty" = "Nothing to show here yet.";
+"tv.detail.resume" = "Resume";
+"tv.detail.subtitles_found_format" = "%d subtitles sit beside this film";
+"tv.detail.timecode_hours_format" = "%dh %dm";
+"tv.detail.timecode_minutes_format" = "%dm";

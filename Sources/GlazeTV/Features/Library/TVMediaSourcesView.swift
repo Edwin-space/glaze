@@ -4,11 +4,14 @@ import SwiftUI
 /// Connection management lives here instead of competing with films on Home.
 struct TVMediaSourcesView: View {
     let model: NetworkMediaBrowserModel
+    let library: TVLibraryModel
     @Bindable var preferences: TVUserPreferences
+    /// Choosing a NAS here makes it the library, rather than opening a file browser
+    /// beside the one the rest of the app reads.
+    let onUseWebDAV: (WebDAVConnection) -> Void
 
     @State private var webdav = TVWebDAVConnections()
     @State private var isAddingWebDAV = false
-    @State private var openWebDAV: WebDAVConnection?
 
     var body: some View {
         ScrollView {
@@ -26,10 +29,8 @@ struct TVMediaSourcesView: View {
         .fullScreenCover(isPresented: $isAddingWebDAV) {
             TVWebDAVSetupView { connection, password in
                 webdav.save(connection, password: password)
+                onUseWebDAV(connection)
             }
-        }
-        .fullScreenCover(item: $openWebDAV) { connection in
-            TVWebDAVLibraryView(connection: connection, preferences: preferences)
         }
     }
 
@@ -132,7 +133,7 @@ struct TVMediaSourcesView: View {
             } else {
                 VStack(spacing: 14) {
                     ForEach(webdav.connections) { connection in
-                        Button { openWebDAV = connection } label: {
+                        Button { onUseWebDAV(connection) } label: {
                             HStack(spacing: 22) {
                                 Image(systemName: "folder.badge.person.crop")
                                     .font(.system(size: 38))
@@ -146,8 +147,14 @@ struct TVMediaSourcesView: View {
                                         .lineLimit(1)
                                 }
                                 Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundStyle(TVTheme.dim)
+                                if case .webDAV(let active) = library.source, active == connection.name {
+                                    Label(L10n.string("tv.settings.default"), systemImage: "checkmark.circle.fill")
+                                        .font(.system(size: 21, weight: .medium))
+                                        .foregroundStyle(TVTheme.amber)
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundStyle(TVTheme.dim)
+                                }
                             }
                             .padding(26)
                             .frame(maxWidth: .infinity, alignment: .leading)

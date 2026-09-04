@@ -4,186 +4,166 @@ import SwiftUI
 struct TVRootView: View {
     @State private var preferences = TVUserPreferences()
     @State private var media = NetworkMediaBrowserModel()
+    @State private var library = TVLibraryModel()
+    @State private var artwork = TVArtworkLoader()
+    @State private var connections = TVWebDAVConnections()
 
     var body: some View {
         Group {
             if preferences.onboardingCompleted {
-                TVAppShell(media: media, preferences: preferences)
+                TVAppShell(
+                    media: media,
+                    library: library,
+                    connections: connections,
+                    preferences: preferences
+                )
             } else {
                 TVOnboardingView(model: media, preferences: preferences)
             }
         }
+        .environment(artwork)
         .animation(.easeInOut(duration: 0.3), value: preferences.onboardingCompleted)
     }
 }
 
+/// The Apple TV app's shape: a tab bar across the top that the focus engine reaches by
+/// moving up, and nothing overlaying the content while you browse.
+///
+/// This replaced a slide-over sidebar. The sidebar covered a fifth of the screen
+/// whenever it was open, and its search field swallowed the arrow keys — focus went in
+/// and did not come out. A tab bar is also simply what a viewer expects here.
 private struct TVAppShell: View {
     let media: NetworkMediaBrowserModel
+    let library: TVLibraryModel
+    let connections: TVWebDAVConnections
     @Bindable var preferences: TVUserPreferences
 
-    @State private var destination: TVDestination = .home
-    @State private var isSidebarVisible = true
+    @Environment(TVArtworkLoader.self) private var artwork
+    @State private var selection: TVTab = .home
+    @State private var route: TVLibrarySelection?
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            TVTheme.ground.ignoresSafeArea()
-            destinationView
+        TabView(selection: $selection) {
+            Tab(L10n.string("tv.navigation.home"), systemImage: "house.fill", value: TVTab.home) {
+                TVHomeView(
+                    library: library,
+                    preferences: preferences,
+                    onOpenSources: { selection = .sources },
+                    onSelect: { route = $0 }
+                )
+            }
 
-            if isSidebarVisible {
-                Color.black.opacity(0.22)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
+            Tab(L10n.string("tv.navigation.movies"), systemImage: "film.fill", value: TVTab.movies) {
+                TVCollectionView(
+                    title: L10n.string("tv.navigation.movies"),
+                    movies: library.library.movies,
+                    series: [],
+                    onSelect: { route = $0 }
+                )
+            }
 
-                TVSidebar(selection: $destination) {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        isSidebarVisible = false
+            Tab(L10n.string("tv.navigation.series"), systemImage: "tv.fill", value: TVTab.series) {
+                TVCollectionView(
+                    title: L10n.string("tv.navigation.series"),
+                    movies: [],
+                    series: library.library.series,
+                    onSelect: { route = $0 }
+                )
+            }
+
+            Tab(L10n.string("tv.navigation.sources"), systemImage: "externaldrive.fill", value: TVTab.sources) {
+                TVMediaSourcesView(
+                    model: media,
+                    library: library,
+                    preferences: preferences,
+                    onUseWebDAV: { connection in
+                        artwork.use(
+                            username: connection.username,
+                            password: connections.password(for: connection)
+                        )
+                        library.load(connection, password: connections.password(for: connection))
+                        selection = .home
                     }
-                }
-                .transition(.move(edge: .leading).combined(with: .opacity))
+                )
+            }
+
+            Tab(L10n.string("settings.title"), systemImage: "gearshape.fill", value: TVTab.settings) {
+                TVSettingsView(preferences: preferences)
+            }
+
+            Tab(value: TVTab.search, role: .search) {
+                TVSearchView(library: library, onSelect: { route = $0 })
             }
         }
+        .background(TVTheme.ground.ignoresSafeArea())
         .task(id: preferences.preferredServerID) {
-            guard let preferredID = preferences.preferredServerID else {
-                await media.discoverIfNeeded()
-                return
-            }
-            await media.restorePreferredServer(id: preferredID)
+            await loadPreferredSource()
         }
-        .onExitCommand {
-            if isSidebarVisible {
-                isSidebarVisible = false
-            } else if media.canNavigateBack, destination == .library {
-                media.navigateBack()
-            } else {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    isSidebarVisible = true
-                }
+        .onChange(of: media.homeNodes.count) { _, _ in
+            adoptDLNAIfNeeded()
+        }
+        .fullScreenCover(item: $route) { selection in
+            switch selection {
+            case .movie(let item):
+                TVDetailView(
+                    item: item,
+                    resource: library.resource(for: item),
+                    preferences: preferences
+                )
+            case .series(let show):
+                TVSeriesView(
+                    series: show,
+                    library: library,
+                    preferences: preferences
+                )
             }
         }
-        .onChange(of: destination) { _, _ in
-            withAnimation(.easeOut(duration: 0.2)) {
-                isSidebarVisible = false
-            }
-        }
-        .animation(.easeOut(duration: 0.2), value: isSidebarVisible)
     }
 
-    @ViewBuilder
-    private var destinationView: some View {
-        switch destination {
-        case .search:
-            TVSearchView(model: media)
-        case .home:
-            TVHomeView(model: media, preferences: preferences) {
-                destination = .sources
-                isSidebarVisible = true
-            }
-        case .library:
-            TVLibraryView(model: media, preferences: preferences)
-        case .sources:
-            TVMediaSourcesView(model: media, preferences: preferences)
-        case .settings:
-            TVSettingsView(preferences: preferences)
+    /// A NAS the viewer typed in wins over a DLNA server that merely answered a
+    /// broadcast: it is the one that can carry posters and subtitles.
+    private func loadPreferredSource() async {
+        artwork.use(
+            username: connections.connections.first?.username ?? "",
+            password: connections.connections.first.flatMap { connections.password(for: $0) }
+        )
+
+        if let connection = connections.connections.first {
+            library.load(connection, password: connections.password(for: connection))
+            return
         }
+
+        if let preferredID = preferences.preferredServerID {
+            _ = await media.restorePreferredServer(id: preferredID)
+        } else {
+            await media.discoverIfNeeded()
+        }
+        adoptDLNAIfNeeded()
+    }
+
+    private func adoptDLNAIfNeeded() {
+        guard connections.connections.isEmpty, !media.homeNodes.isEmpty else { return }
+        library.adopt(
+            dlnaNodes: media.homeNodes,
+            serverName: media.selectedServer?.friendlyName ?? ""
+        )
     }
 }
 
-private enum TVDestination: String, CaseIterable, Identifiable {
-    case search
+private enum TVTab: Hashable {
     case home
-    case library
+    case movies
+    case series
     case sources
     case settings
-
-    var id: String { rawValue }
-
-    var titleKey: String {
-        switch self {
-        case .search: "tv.navigation.search"
-        case .home: "tv.navigation.home"
-        case .library: "tv.navigation.library"
-        case .sources: "tv.navigation.sources"
-        case .settings: "settings.title"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .search: "magnifyingglass"
-        case .home: "house.fill"
-        case .library: "rectangle.stack.fill"
-        case .sources: "externaldrive.connected.to.line.below.fill"
-        case .settings: "gearshape.fill"
-        }
-    }
+    case search
 }
 
-private struct TVSidebar: View {
-    @Binding var selection: TVDestination
-    let onSelect: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            HStack(spacing: 16) {
-                Image(systemName: "play.tv.fill")
-                    .foregroundStyle(TVTheme.amber)
-                Text("Glaze")
-                    .font(.system(size: 34, weight: .bold))
-            }
-            .padding(.horizontal, 28)
-            .padding(.bottom, 20)
-
-            VStack(spacing: 14) {
-                ForEach(TVDestination.allCases) { destination in
-                    Button {
-                        selection = destination
-                        onSelect()
-                    } label: {
-                        TVSidebarLabel(destination: destination, isSelected: selection == destination)
-                    }
-                    .buttonStyle(.plain)
-                    .focusEffectDisabled()
-                }
-            }
-            .focusSection()
-
-            Spacer()
-
-            Text(L10n.string("tv.navigation.hint"))
-                .font(.system(size: 19))
-                .foregroundStyle(TVTheme.dim)
-                .padding(.horizontal, 28)
+extension TVLibrarySelection: Identifiable {
+    var id: String {
+        switch self {
+        case .movie(let item): "movie:\(item.id)"
+        case .series(let show): "series:\(show.id)"
         }
-        .padding(.vertical, 52)
-        .padding(.horizontal, 28)
-        .frame(width: 440)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .trailing) {
-            Rectangle().fill(.white.opacity(0.12)).frame(width: 1)
-        }
-        .ignoresSafeArea()
-    }
-}
-
-private struct TVSidebarLabel: View {
-    let destination: TVDestination
-    let isSelected: Bool
-
-    @Environment(\.isFocused) private var isFocused
-
-    var body: some View {
-        Label(L10n.string(destination.titleKey), systemImage: destination.symbol)
-            .font(.system(size: 27, weight: .semibold))
-            .foregroundStyle(isFocused ? .black : (isSelected ? TVTheme.amber : .white))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .frame(height: 58)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isFocused ? .white : (isSelected ? TVTheme.amber.opacity(0.14) : .clear))
-            )
-            .scaleEffect(isFocused ? 1.035 : 1)
-            .shadow(color: .black.opacity(isFocused ? 0.35 : 0), radius: 18, y: 10)
-            .animation(.easeOut(duration: 0.16), value: isFocused)
     }
 }

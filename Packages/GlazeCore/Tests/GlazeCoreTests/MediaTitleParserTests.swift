@@ -114,3 +114,42 @@ struct DIDLResourceDetailTests {
         #expect(resource.duration == 6985)
     }
 }
+
+/// An episode list showing the whole release string is unreadable across a room.
+@Suite struct EpisodeTitleParsingTests {
+    @Test func readsTheEpisodeNameOutOfARelease() {
+        let parsed = MediaTitleParser.parse("Fallout.S01E01.The.End.2160p.AMZN.WEB-DL.DDP5.1.HDR.H.265-NTb")
+        #expect(parsed.title == "Fallout")
+        #expect(parsed.season == 1)
+        #expect(parsed.episode == 1)
+        #expect(parsed.episodeTitle == "The End")
+    }
+
+    @Test func handlesSpacedAndHyphenatedReleases() {
+        #expect(
+            MediaTitleParser.parse("The Bear - S02E07 - Forks - 1080p WEB-DL").episodeTitle == "Forks"
+        )
+        #expect(
+            MediaTitleParser.parse("Show.S01E03.A.Long.Way.Down.1080p.BluRay.x264").episodeTitle
+                == "A Long Way Down"
+        )
+    }
+
+    /// Most releases name no episode; saying so is better than inventing one.
+    @Test func returnsNothingWhenTheReleaseNamesNoEpisode() {
+        #expect(MediaTitleParser.parse("Show.S01E03.1080p.WEB-DL.x265").episodeTitle == nil)
+        #expect(MediaTitleParser.parse("Show.S01E03").episodeTitle == nil)
+    }
+
+    @Test func leavesFilmsAlone() {
+        #expect(MediaTitleParser.parse("Parasite.2019.1080p.BluRay.mkv").episodeTitle == nil)
+    }
+
+    /// A year inside an episode name is where the metadata starts, not part of it.
+    @Test func stopsAtTheFirstPieceOfReleaseMetadata() {
+        #expect(
+            MediaTitleParser.parse("Show.S01E05.The.Reunion.2024.2160p.NF.WEB-DL").episodeTitle
+                == "The Reunion"
+        )
+    }
+}

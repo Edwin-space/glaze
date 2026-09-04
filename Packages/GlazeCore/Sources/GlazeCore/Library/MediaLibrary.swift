@@ -2,9 +2,13 @@ import Foundation
 
 /// One playable thing, with everything the shelves need already resolved.
 ///
+/// Named `MediaLibraryItem` rather than `MediaLibraryItem` because SwiftUI pulls in
+/// `DeveloperToolsSupport`, which declares a `MediaLibraryItem` of its own; the plain name
+/// is ambiguous in every view file.
+///
 /// Built once when a folder is read, because a television redraws a shelf on every
 /// focus change and re-parsing a release name forty times per movement is visible.
-public struct LibraryItem: Identifiable, Equatable, Sendable {
+public struct MediaLibraryItem: Identifiable, Equatable, Sendable {
     public let id: String
     /// What the server called it — the filename, kept for the info panel.
     public let sourceName: String
@@ -72,6 +76,14 @@ public struct LibraryItem: Identifiable, Equatable, Sendable {
         return parsed.title.isEmpty ? nil : parsed.title
     }
 
+    /// What to call the episode in a list. The scraped title first, then whatever the
+    /// release name called it, and only then the filename.
+    public var episodeDisplayTitle: String {
+        if let title = metadata?.title, !title.isEmpty { return title }
+        if let title = parsed.episodeTitle, !title.isEmpty { return title }
+        return sourceName
+    }
+
     /// A label for the episode itself, e.g. `S01E03`.
     public var episodeLabel: String? {
         guard let season = seasonNumber else {
@@ -82,37 +94,37 @@ public struct LibraryItem: Identifiable, Equatable, Sendable {
     }
 }
 
-public struct LibrarySeason: Identifiable, Equatable, Sendable {
+public struct MediaLibrarySeason: Identifiable, Equatable, Sendable {
     /// Season zero is where specials live, so the number cannot stand in for "unknown";
     /// an episode with no season at all gets -1.
     public let id: Int
     public var number: Int { id }
-    public let episodes: [LibraryItem]
+    public let episodes: [MediaLibraryItem]
 
-    public init(id: Int, episodes: [LibraryItem]) {
+    public init(id: Int, episodes: [MediaLibraryItem]) {
         self.id = id
         self.episodes = episodes
     }
 }
 
-public struct LibrarySeries: Identifiable, Equatable, Sendable {
+public struct MediaLibrarySeries: Identifiable, Equatable, Sendable {
     public let id: String
     public let title: String
     public let posterURL: URL?
-    public let seasons: [LibrarySeason]
+    public let seasons: [MediaLibrarySeason]
     public let genres: [String]
     public let plot: String?
     public let year: Int?
     public let dateAdded: Date?
 
     public var episodeCount: Int { seasons.reduce(0) { $0 + $1.episodes.count } }
-    public var allEpisodes: [LibraryItem] { seasons.flatMap(\.episodes) }
+    public var allEpisodes: [MediaLibraryItem] { seasons.flatMap(\.episodes) }
 
     public init(
         id: String,
         title: String,
         posterURL: URL?,
-        seasons: [LibrarySeason],
+        seasons: [MediaLibrarySeason],
         genres: [String] = [],
         plot: String? = nil,
         year: Int? = nil,
@@ -129,23 +141,61 @@ public struct LibrarySeries: Identifiable, Equatable, Sendable {
     }
 }
 
+/// A film, or a show — what a shelf holds when it can hold either.
+///
+/// A "recently added" shelf that listed episodes showed the same series four times in
+/// a row. It has to name the show once, which means the shelf's element cannot be an
+/// episode.
+public enum MediaLibraryEntry: Identifiable, Equatable, Sendable {
+    case movie(MediaLibraryItem)
+    case series(MediaLibrarySeries)
+
+    public var id: String {
+        switch self {
+        case .movie(let item): "movie:\(item.id)"
+        case .series(let show): "series:\(show.id)"
+        }
+    }
+
+    public var title: String {
+        switch self {
+        case .movie(let item): item.displayTitle
+        case .series(let show): show.title
+        }
+    }
+
+    public var posterURL: URL? {
+        switch self {
+        case .movie(let item): item.posterURL
+        case .series(let show): show.posterURL
+        }
+    }
+
+    public var dateAdded: Date? {
+        switch self {
+        case .movie(let item): item.dateAdded
+        case .series(let show): show.dateAdded
+        }
+    }
+}
+
 /// A folder of files, understood.
 public struct MediaLibrary: Equatable, Sendable {
-    public let movies: [LibraryItem]
-    public let series: [LibrarySeries]
-    /// Newest first, films and episodes together — what the Home shelf shows.
-    public let recentlyAdded: [LibraryItem]
+    public let movies: [MediaLibraryItem]
+    public let series: [MediaLibrarySeries]
+    /// Newest first. A show appears once, dated by its newest episode.
+    public let recentlyAdded: [MediaLibraryEntry]
     /// Genre name to the films and shows in it, largest first. Empty when nothing in
     /// the folder has an NFO, which is the honest answer rather than one "기타" bucket.
-    public let genres: [LibraryGenre]
+    public let genres: [MediaLibraryGenre]
 
     public var isEmpty: Bool { movies.isEmpty && series.isEmpty }
 
     public init(
-        movies: [LibraryItem] = [],
-        series: [LibrarySeries] = [],
-        recentlyAdded: [LibraryItem] = [],
-        genres: [LibraryGenre] = []
+        movies: [MediaLibraryItem] = [],
+        series: [MediaLibrarySeries] = [],
+        recentlyAdded: [MediaLibraryEntry] = [],
+        genres: [MediaLibraryGenre] = []
     ) {
         self.movies = movies
         self.series = series
@@ -154,15 +204,15 @@ public struct MediaLibrary: Equatable, Sendable {
     }
 }
 
-public struct LibraryGenre: Identifiable, Equatable, Sendable {
+public struct MediaLibraryGenre: Identifiable, Equatable, Sendable {
     public let id: String
     public var name: String { id }
-    public let movies: [LibraryItem]
-    public let series: [LibrarySeries]
+    public let movies: [MediaLibraryItem]
+    public let series: [MediaLibrarySeries]
 
     public var count: Int { movies.count + series.count }
 
-    public init(id: String, movies: [LibraryItem], series: [LibrarySeries]) {
+    public init(id: String, movies: [MediaLibraryItem], series: [MediaLibrarySeries]) {
         self.id = id
         self.movies = movies
         self.series = series
