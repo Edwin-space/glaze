@@ -40,8 +40,20 @@ public struct WebDAVEntry: Identifiable, Equatable, Sendable {
     /// counted as an episode, and — worse — given the show's poster, which then hung
     /// off a file nothing else refers to.
     public var isHidden: Bool {
-        name.hasPrefix(".") || name == "Thumbs.db" || name == "desktop.ini"
+        if name.hasPrefix(".") { return true }
+        return Self.skippedNames.contains(name.lowercased())
     }
+
+    /// Folders a NAS keeps for itself.
+    ///
+    /// `@eaDir` is where Synology puts a thumbnail for every file it has ever indexed,
+    /// and it appears beside almost everything; walking into those turns a library scan
+    /// into a scan of the whole disk. `#recycle` is the share's wastebasket, and a film
+    /// deleted last year is not part of the library.
+    static let skippedNames: Set<String> = [
+        "@eadir", "#recycle", "@recycle", "#snapshot", "lost+found",
+        "thumbs.db", "desktop.ini", "$recycle.bin", "system volume information"
+    ]
 
     /// Whether this is a film worth listing.
     public var isVideo: Bool {

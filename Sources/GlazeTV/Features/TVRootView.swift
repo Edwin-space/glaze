@@ -41,6 +41,8 @@ private struct TVAppShell: View {
     @Environment(TVArtworkLoader.self) private var artwork
     @State private var selection: TVTab = .home
     @State private var route: TVLibrarySelection?
+    /// A NAS whose library folder has not been chosen yet.
+    @State private var folderChoice: WebDAVConnection?
 
     var body: some View {
         TabView(selection: $selection) {
@@ -78,8 +80,13 @@ private struct TVAppShell: View {
                     preferences: preferences,
                     onUseWebDAV: { connection in
                         connections.reload()
-                        useWebDAV(connection)
-                        selection = .home
+                        let saved = connections.connections.first { $0.id == connection.id } ?? connection
+                        if saved.libraryPath == nil {
+                            folderChoice = saved
+                        } else {
+                            useWebDAV(saved)
+                            selection = .home
+                        }
                     }
                 )
             }
@@ -98,6 +105,18 @@ private struct TVAppShell: View {
         }
         .onChange(of: media.homeNodes.count) { _, _ in
             adoptDLNAIfNeeded()
+        }
+        .fullScreenCover(item: $folderChoice) { connection in
+            TVLibraryFolderPicker(
+                connection: connection,
+                password: connections.password(for: connection)
+            ) { path in
+                var updated = connection
+                updated.libraryPath = path
+                connections.save(updated, password: nil)
+                useWebDAV(updated)
+                selection = .home
+            }
         }
         .fullScreenCover(item: $route) { selection in
             switch selection {
@@ -125,7 +144,13 @@ private struct TVAppShell: View {
         connections.reload()
 
         if let connection = connections.connections.first {
-            useWebDAV(connection)
+            // Asked once, on the first run with this NAS. Scanning a whole share is
+            // what made the television give up partway through.
+            if connection.libraryPath == nil {
+                folderChoice = connection
+            } else {
+                useWebDAV(connection)
+            }
             return
         }
 

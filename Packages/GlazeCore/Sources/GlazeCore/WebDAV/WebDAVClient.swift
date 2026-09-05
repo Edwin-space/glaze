@@ -11,14 +11,35 @@ public struct WebDAVConnection: Equatable, Sendable, Codable, Identifiable {
     /// The folder to start browsing from.
     public var rootURL: URL
     public var username: String
+    /// Which folder under the root holds the films, when the viewer has said.
+    ///
+    /// A WebDAV root is every share on the NAS — photos, home directories, a music
+    /// library, a wastebasket. Reading a library from there means reading the whole
+    /// disk, which is slow enough to look broken and heavy enough to be killed for it.
+    /// Optional so connections saved before this existed still decode.
+    public var libraryPath: String?
 
-    public init(id: String = UUID().uuidString, name: String, rootURL: URL, username: String) {
+    /// Where a library scan should start.
+    public var libraryURL: URL {
+        guard let libraryPath, !libraryPath.isEmpty else { return rootURL }
+        let url = rootURL.appendingPathComponent(libraryPath, isDirectory: true)
+        return url.hasDirectoryPath ? url : URL(string: url.absoluteString + "/") ?? url
+    }
+
+    public init(
+        id: String = UUID().uuidString,
+        name: String,
+        rootURL: URL,
+        username: String,
+        libraryPath: String? = nil
+    ) {
         self.id = id
         self.name = name
         // WebDAV collection URLs must end in a slash; a server given one without it
         // either redirects or answers about the parent.
         self.rootURL = rootURL.hasDirectoryPath ? rootURL : URL(string: rootURL.absoluteString + "/") ?? rootURL
         self.username = username
+        self.libraryPath = libraryPath
     }
 }
 

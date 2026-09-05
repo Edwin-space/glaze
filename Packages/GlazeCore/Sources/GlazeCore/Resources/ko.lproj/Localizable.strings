@@ -457,3 +457,8 @@
 "library.scan.which_series" = "이 시리즈는 무엇인가요?";
 "library.scan.series_scope_format" = "%@ · 에피소드 %d개에 함께 적용됩니다";
 "library.scan.summary.poster_added" = "포스터만 추가";
+"tv.library.folder.title" = "영상이 있는 폴더를 고르세요";
+"tv.library.folder.detail_format" = "%@ 전체를 훑으면 사진과 개인 폴더까지 읽게 됩니다. 영화가 있는 폴더 하나만 고르면 훨씬 빠릅니다.";
+"tv.library.folder.reading" = "폴더를 읽는 중입니다";
+"tv.library.folder.whole_share" = "공유 전체";
+"tv.library.folder.change" = "폴더 바꾸기";

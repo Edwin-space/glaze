@@ -457,3 +457,8 @@
 "library.scan.which_series" = "Which series is this?";
 "library.scan.series_scope_format" = "%@ · applies to all %d episodes";
 "library.scan.summary.poster_added" = "Poster added";
+"tv.library.folder.title" = "Which folder holds the films?";
+"tv.library.folder.detail_format" = "Reading all of %@ means reading photographs and home folders too. Pointing at one folder is far quicker.";
+"tv.library.folder.reading" = "Reading folders";
+"tv.library.folder.whole_share" = "The whole share";
+"tv.library.folder.change" = "Change folder";

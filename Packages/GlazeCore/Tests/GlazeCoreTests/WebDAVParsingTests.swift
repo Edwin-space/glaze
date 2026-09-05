@@ -243,3 +243,54 @@ struct WebDAVCompanionFinderTests {
         #expect(companions.poster?.name == "Film.2019-poster.jpg")
     }
 }
+
+/// A NAS keeps folders for itself, and walking into them turns a library scan into a
+/// scan of the whole disk.
+@Suite struct WebDAVSystemFolderTests {
+    private func folder(_ name: String) -> WebDAVEntry {
+        WebDAVEntry(url: URL(string: "https://nas.local/\(name)/")!, name: name, isDirectory: true)
+    }
+
+    @Test func skipsWhatTheNASKeepsForItself() {
+        // Synology writes a thumbnail for every indexed file into @eaDir, beside almost
+        // everything.
+        #expect(folder("@eaDir").isHidden)
+        #expect(folder("#recycle").isHidden)
+        #expect(folder("#snapshot").isHidden)
+        #expect(folder("lost+found").isHidden)
+        #expect(folder("$RECYCLE.BIN").isHidden)
+        #expect(folder("System Volume Information").isHidden)
+    }
+
+    @Test func leavesRealFoldersAlone() {
+        #expect(!folder("Media").isHidden)
+        #expect(!folder("영화").isHidden)
+        #expect(!folder("Fallout.S01.2160p").isHidden)
+    }
+}
+
+/// A WebDAV root is every share on the NAS; a library lives in one of them.
+@Suite struct WebDAVConnectionLibraryPathTests {
+    private let root = URL(string: "https://nas.local:5006/")!
+
+    @Test func scansTheChosenFolderRatherThanTheWholeShare() {
+        let connection = WebDAVConnection(
+            name: "집", rootURL: root, username: "someone", libraryPath: "Media"
+        )
+        #expect(connection.libraryURL.absoluteString == "https://nas.local:5006/Media/")
+    }
+
+    @Test func fallsBackToTheShareWhenNoFolderWasChosen() {
+        let connection = WebDAVConnection(name: "집", rootURL: root, username: "someone")
+        #expect(connection.libraryURL == root)
+        #expect(WebDAVConnection(name: "집", rootURL: root, username: "s", libraryPath: "").libraryURL == root)
+    }
+
+    /// Connections saved before the field existed still decode.
+    @Test func readsAConnectionSavedWithoutALibraryFolder() throws {
+        let json = #"{"id":"a","name":"집","rootURL":"https://nas.local:5006/","username":"someone"}"#
+        let decoded = try JSONDecoder().decode(WebDAVConnection.self, from: Data(json.utf8))
+        #expect(decoded.libraryPath == nil)
+        #expect(decoded.libraryURL.absoluteString == "https://nas.local:5006/")
+    }
+}
