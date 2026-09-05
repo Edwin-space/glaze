@@ -60,3 +60,30 @@ struct WebDAVConnectionStoreTests {
         #expect(WebDAVConnectionStore(defaults: defaults).connections.isEmpty)
     }
 }
+
+/// Two screens each hold their own store. One saving a connection left the other's
+/// copy empty, so a NAS added during onboarding was invisible to the app behind it.
+@Suite @MainActor struct WebDAVConnectionStoreReloadTests {
+    @Test func seesAConnectionSavedThroughAnotherCopy() throws {
+        let suiteName = "glaze.reload.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let onboarding = WebDAVConnectionStore(defaults: defaults)
+        let shell = WebDAVConnectionStore(defaults: defaults)
+        #expect(shell.connections.isEmpty)
+
+        onboarding.save(
+            WebDAVConnection(
+                name: "집",
+                rootURL: URL(string: "https://nas.local:5006/")!,
+                username: "someone"
+            ),
+            password: nil
+        )
+
+        #expect(shell.connections.isEmpty)
+        shell.reload()
+        #expect(shell.connections.map(\.name) == ["집"])
+    }
+}

@@ -77,11 +77,8 @@ private struct TVAppShell: View {
                     library: library,
                     preferences: preferences,
                     onUseWebDAV: { connection in
-                        artwork.use(
-                            username: connection.username,
-                            password: connections.password(for: connection)
-                        )
-                        library.load(connection, password: connections.password(for: connection))
+                        connections.reload()
+                        useWebDAV(connection)
                         selection = .home
                     }
                 )
@@ -123,13 +120,12 @@ private struct TVAppShell: View {
     /// A NAS the viewer typed in wins over a DLNA server that merely answered a
     /// broadcast: it is the one that can carry posters and subtitles.
     private func loadPreferredSource() async {
-        artwork.use(
-            username: connections.connections.first?.username ?? "",
-            password: connections.connections.first.flatMap { connections.password(for: $0) }
-        )
+        // A NAS added on the previous screen was saved through that screen's own copy
+        // of the store; this one has to look again before deciding there is none.
+        connections.reload()
 
         if let connection = connections.connections.first {
-            library.load(connection, password: connections.password(for: connection))
+            useWebDAV(connection)
             return
         }
 
@@ -139,6 +135,15 @@ private struct TVAppShell: View {
             await media.discoverIfNeeded()
         }
         adoptDLNAIfNeeded()
+    }
+
+    /// Artwork travels behind the same login as the films, so the loader is told about
+    /// the connection at the moment the library adopts it — not once at launch, when
+    /// there may not be one yet.
+    private func useWebDAV(_ connection: WebDAVConnection) {
+        let password = connections.password(for: connection)
+        artwork.use(username: connection.username, password: password)
+        library.load(connection, password: password)
     }
 
     private func adoptDLNAIfNeeded() {

@@ -25,6 +25,15 @@ public final class WebDAVConnectionStore {
         connections = Self.load(from: defaults, key: storageKey)
     }
 
+    /// Re-reads what is on disk.
+    ///
+    /// Two screens each hold their own store, and one saving a connection leaves the
+    /// other's copy as it was. A NAS added during onboarding was therefore invisible
+    /// to the app that came up behind it, and stayed invisible until the next launch.
+    public func reload() {
+        connections = Self.load(from: defaults, key: storageKey)
+    }
+
     /// Adds a connection or replaces the record with the same stable identifier.
     /// Passing `nil` preserves the password already stored for an edited record.
     public func save(_ connection: WebDAVConnection, password: String?) {
