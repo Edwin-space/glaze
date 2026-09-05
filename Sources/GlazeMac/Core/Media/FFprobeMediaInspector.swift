@@ -90,13 +90,14 @@ actor FFprobeMediaInspector {
 
         let data = try await run(
             executableURL: ffprobeURL,
-            arguments: [
+            arguments: Self.networkTimeoutArguments(for: url) + [
                 "-v", "error",
                 "-show_entries",
                 "format=format_name,duration,size,bit_rate:stream=index,codec_type,codec_name,width,height,r_frame_rate,sample_rate,channels,bit_rate:stream_tags=language,title:stream_disposition=default,forced",
                 "-of", "json",
                 url.isFileURL ? url.path : url.absoluteString
-            ]
+            ],
+            deadline: MediaCachingPolicy.isRemote(url) ? 20 : 10
         )
         let response = try JSONDecoder().decode(ProbeResponse.self, from: data)
         let video = response.streams.first { $0.codecType == "video" }
@@ -208,15 +209,39 @@ actor FFprobeMediaInspector {
         }
     }
 
-    private func run(executableURL: URL, arguments: [String]) async throws -> Data {
-        try await withCheckedThrowingContinuation { continuation in
-            let process = Process()
-            let output = Pipe()
-            let errors = Pipe()
-            process.executableURL = executableURL
-            process.arguments = arguments
-            process.standardOutput = output
-            process.standardError = errors
+    /// Tells ffmpeg to give up on a stalled read rather than wait forever.
+    ///
+    /// A NAS that stops answering mid-read leaves ffprobe blocked on the socket, and
+    /// nothing above it ever hears back: the Info panel spins and the process stays.
+    /// `rw_timeout` is in microseconds and applies per read.
+    static func networkTimeoutArguments(for url: URL) -> [String] {
+        guard MediaCachingPolicy.isRemote(url) else { return [] }
+        return ["-rw_timeout", "8000000"]
+    }
+
+    /// - Parameter deadline: seconds to wait before killing the probe. ffmpeg's own
+    ///   timeout covers a stalled socket; this covers everything else, including a
+    ///   server that answers slowly enough to never finish.
+    private func run(
+        executableURL: URL,
+        arguments: [String],
+        deadline: TimeInterval
+    ) async throws -> Data {
+        let process = Process()
+        let output = Pipe()
+        let errors = Pipe()
+        process.executableURL = executableURL
+        process.arguments = arguments
+        process.standardOutput = output
+        process.standardError = errors
+
+        let watchdog = Task {
+            try await Task.sleep(for: .seconds(deadline))
+            if process.isRunning { process.terminate() }
+        }
+        defer { watchdog.cancel() }
+
+        return try await withCheckedThrowingContinuation { continuation in
             process.terminationHandler = { process in
                 let data = output.fileHandleForReading.readDataToEndOfFile()
                 let errorData = errors.fileHandleForReading.readDataToEndOfFile()
