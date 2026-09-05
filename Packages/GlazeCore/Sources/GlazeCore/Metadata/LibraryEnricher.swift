@@ -62,14 +62,21 @@ public actor LibraryEnricher {
                 // A poster is not part of the description, and a library described
                 // without one stays a wall of grey rectangles. Fill it in without
                 // rewriting anything anyone curated.
-                outcomes[item.id] = item.posterURL == nil
-                    ? await posterOnlyOutcome(
-                        for: item,
-                        languageCode: languageCode,
-                        alreadyCarried: postersWritten,
-                        destination: destination
-                    )
-                    : .alreadyDescribed
+                if item.posterURL != nil {
+                    // The show already has its artwork on this episode. Recording that
+                    // is what stops the next run from adding a second copy to the next
+                    // episode, and the run after that a third.
+                    if let key = posterKey(for: item) { postersWritten.insert(key) }
+                    outcomes[item.id] = .alreadyDescribed
+                    continue
+                }
+
+                outcomes[item.id] = await posterOnlyOutcome(
+                    for: item,
+                    languageCode: languageCode,
+                    alreadyCarried: postersWritten,
+                    destination: destination
+                )
                 if case .posterAdded = outcomes[item.id], let key = posterKey(for: item) {
                     postersWritten.insert(key)
                 }

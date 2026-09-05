@@ -353,6 +353,32 @@ private actor EpisodeRecordingDestination: SidecarDestination {
         #expect(!written.contains { $0.hasSuffix(".nfo") })
     }
 
+    /// Seen on a real NAS: five copies of one show's poster, one per run. An episode
+    /// that already carries the artwork has to count as the show's poster, or the next
+    /// run hands a second copy to the next episode along.
+    @Test func doesNotAddASecondPosterToAShowThatAlreadyHasOne() async {
+        let destination = PosterDestination()
+        let enricher = LibraryEnricher(provider: PosterStubProvider()) { _ in Data("jpeg".utf8) }
+
+        func episode(_ index: Int, poster: URL?) -> MediaLibraryItem {
+            MediaLibraryItem(
+                id: "e\(index)",
+                sourceName: String(format: "Fallout.S01E%02d.2160p.mkv", index),
+                parsed: MediaTitleParser.parse(String(format: "Fallout.S01E%02d.2160p.mkv", index)),
+                metadata: MediaNFO(kind: .episode, title: "T", showTitle: "폴아웃", season: 1, episode: index),
+                posterURL: poster,
+                playbackURL: URL(string: "https://nas.local/e\(index).mkv")!
+            )
+        }
+
+        // The state a second run finds: episode one already has the poster.
+        let episodes = [episode(1, poster: URL(string: "https://nas/p.jpg")!)]
+            + (2...5).map { episode($0, poster: nil) }
+
+        _ = await enricher.enrich(episodes, languageCode: "ko", destination: { _ in destination })
+        #expect(await destination.written.isEmpty)
+    }
+
     @Test func leavesAFilmThatAlreadyHasArtworkAlone() async {
         let destination = PosterDestination()
         let enricher = LibraryEnricher(provider: PosterStubProvider()) { _ in Data("jpeg".utf8) }
