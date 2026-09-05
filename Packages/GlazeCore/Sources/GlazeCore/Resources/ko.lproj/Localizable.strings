@@ -462,3 +462,4 @@
 "tv.library.folder.reading" = "폴더를 읽는 중입니다";
 "tv.library.folder.whole_share" = "공유 전체";
 "tv.library.folder.change" = "폴더 바꾸기";
+"webdav.field.url.hint" = "NAS의 WebDAV 주소입니다. 시놀로지라면 대개 https://내NAS주소:5006/폴더이름 형태입니다.";

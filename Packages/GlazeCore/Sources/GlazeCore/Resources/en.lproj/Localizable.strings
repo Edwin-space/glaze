@@ -462,3 +462,4 @@
 "tv.library.folder.reading" = "Reading folders";
 "tv.library.folder.whole_share" = "The whole share";
 "tv.library.folder.change" = "Change folder";
+"webdav.field.url.hint" = "The NAS's WebDAV address. On a Synology this is usually https://your-nas:5006/folder.";
