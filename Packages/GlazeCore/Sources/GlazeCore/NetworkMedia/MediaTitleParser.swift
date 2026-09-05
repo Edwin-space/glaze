@@ -20,6 +20,12 @@ public struct ParsedMediaTitle: Equatable, Sendable {
     /// `Fallout.S01E01.The.End.2160p…` is called "The End". An episode list that fell
     /// back to the whole release string was unreadable across a room.
     public let episodeTitle: String?
+    /// Other ways to write the same title, for looking it up.
+    ///
+    /// Korean libraries name files in both scripts at once —
+    /// `더 러닝 맨 The Running Man, 2025` — and neither TMDB index has an entry under
+    /// the two of them joined together. Each half on its own finds the film.
+    public let alternateTitles: [String]
     /// Short marks worth showing next to the title — resolution, dynamic range, audio.
     public let badges: [String]
 
@@ -29,6 +35,7 @@ public struct ParsedMediaTitle: Equatable, Sendable {
         season: Int? = nil,
         episode: Int? = nil,
         episodeTitle: String? = nil,
+        alternateTitles: [String] = [],
         badges: [String] = []
     ) {
         self.title = title
@@ -36,6 +43,7 @@ public struct ParsedMediaTitle: Equatable, Sendable {
         self.season = season
         self.episode = episode
         self.episodeTitle = episodeTitle
+        self.alternateTitles = alternateTitles
         self.badges = badges
     }
 }
@@ -59,14 +67,101 @@ public enum MediaTitleParser {
             // Includes the opening bracket a parenthesised year leaves behind.
             .trimmingCharacters(in: CharacterSet(charactersIn: " -–—,._([{"))
 
+        // A show numbered `라이어니스- 특수 작전팀 2` carries its season in its name.
+        // Only for something already known to be an episode: `Toy Story 5` is a film.
+        var finalTitle = title.isEmpty ? raw : title
+        var finalSeason = season
+        if season == nil, episode != nil,
+           let trailing = trailingSeasonNumber(in: finalTitle) {
+            finalSeason = trailing.season
+            finalTitle = trailing.title
+        }
+
         return ParsedMediaTitle(
-            title: title.isEmpty ? raw : title,
+            title: finalTitle,
             year: year,
-            season: season,
+            season: finalSeason,
             episode: episode,
             episodeTitle: season == nil ? nil : episodeTitle(in: cleaned),
+            alternateTitles: alternateTitles(for: finalTitle, in: cleaned, year: year),
             badges: badges
         )
+    }
+
+    /// `제목 2` at the end of a show's name is its season, not part of what it is called.
+    private static func trailingSeasonNumber(in title: String) -> (title: String, season: Int)? {
+        guard let range = title.range(of: #"\s+(\d{1,2})$"#, options: .regularExpression),
+              let season = Int(title[range].filter(\.isNumber)),
+              season >= 1, season <= 30
+        else { return nil }
+
+        let stripped = String(title[title.startIndex..<range.lowerBound])
+            .trimmingCharacters(in: CharacterSet(charactersIn: " -–—,._"))
+        // A title that is only a number is not a season of anything.
+        guard !stripped.isEmpty else { return nil }
+        return (stripped, season)
+    }
+
+    /// The Korean half, the Latin half, and any Latin run left after the year.
+    static func alternateTitles(for title: String, in cleaned: String, year: Int?) -> [String] {
+        var candidates: [String] = []
+
+        let hangul = run(of: #"[가-힣0-9\s:·]+"#, in: title)
+        let latin = run(of: #"[A-Za-z0-9'’&:\s]+"#, in: title)
+        candidates.append(contentsOf: [hangul, latin].compactMap { $0 })
+
+        // `슈퍼 마리오 갤럭시 (2026) The Super Mario Galaxy Movie` keeps its English name
+        // on the far side of the year, where truncation cuts it away.
+        if let year, let yearRange = cleaned.range(of: String(year)) {
+            let tail = String(cleaned[yearRange.upperBound...])
+            let stop = tail.range(of: releaseMetadataPattern, options: .regularExpression)?.lowerBound
+                ?? tail.endIndex
+            if let trailing = run(of: #"[A-Za-z0-9'’&:\s]+"#, in: separatorsToSpaces(String(tail[..<stop]))) {
+                candidates.append(trailing)
+            }
+        }
+
+        var seen = Set([normalizedKey(title)])
+        return candidates.compactMap { candidate in
+            let trimmed = candidate
+                .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+                .trimmingCharacters(in: CharacterSet(charactersIn: " -–—,._:·"))
+            // Two characters is not a title; it is whatever fell out of the split.
+            guard trimmed.count > 2, seen.insert(normalizedKey(trimmed)).inserted else { return nil }
+            // `[1080p] [WEBRip]` leaves `WEBRip` behind, which is not another name for
+            // anything.
+            guard !isReleaseMetadata(trimmed) else { return nil }
+            return trimmed
+        }
+    }
+
+    private static func isReleaseMetadata(_ text: String) -> Bool {
+        let padded = " " + text
+        guard let range = padded.range(of: releaseMetadataPattern, options: .regularExpression) else {
+            return false
+        }
+        return padded[range].trimmingCharacters(in: CharacterSet(charactersIn: " ._-")).count == text.count
+    }
+
+    private static func normalizedKey(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+            .filter { !$0.isWhitespace }
+    }
+
+    /// The longest stretch of `pattern` in the text, which for a mixed-script name is
+    /// the half written in one script.
+    private static func run(of pattern: String, in text: String) -> String? {
+        var best: String?
+        var searchRange = text.startIndex..<text.endIndex
+        while let found = text.range(of: pattern, options: .regularExpression, range: searchRange) {
+            let candidate = String(text[found])
+            if candidate.trimmingCharacters(in: .whitespaces).count > (best?.count ?? 0) {
+                best = candidate
+            }
+            guard found.upperBound < text.endIndex else { break }
+            searchRange = found.upperBound..<text.endIndex
+        }
+        return best?.trimmingCharacters(in: .whitespaces)
     }
 
     /// `PSArips.com | Avatar…` — the site that packaged it is not part of the title.
@@ -78,7 +173,9 @@ public enum MediaTitleParser {
     private static func year(in text: String) -> Int? {
         // Anchored on a separator so a year inside a title like "2012" survives only
         // when it really is the release year sitting between metadata.
-        let pattern = #"(?:^|[\s.\(\[])((?:19|20)\d{2})(?:[\s.\)\]]|$)"#
+        // The trailing separator includes `-` and `_`: `Ghost.War.2026-2160p` is a
+        // 2026 release, and reading it as part of the title lost both.
+        let pattern = #"(?:^|[\s._\(\[\-])((?:19|20)\d{2})(?:[\s._\)\]\-]|$)"#
         guard let match = text.range(of: pattern, options: .regularExpression) else { return nil }
         let digits = text[match].filter(\.isNumber)
         return Int(digits)

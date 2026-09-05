@@ -82,7 +82,11 @@ public actor LibraryEnricher {
                 if let cached = seriesResults[key] {
                     ranked = cached
                 } else {
-                    ranked = await rankedSeries(for: showTitle, languageCode: languageCode)
+                    ranked = await rankedSeries(
+                        for: showTitle,
+                        alternates: item.parsed.alternateTitles,
+                        languageCode: languageCode
+                    )
                     seriesResults[key] = ranked
                 }
                 outcomes[item.id] = await episodeOutcome(
@@ -140,7 +144,11 @@ public actor LibraryEnricher {
 
         let ranked: [RankedMetadataMatch]
         if item.isEpisode, let showTitle = item.metadata?.showTitle ?? item.showTitle {
-            ranked = await rankedSeries(for: showTitle, languageCode: languageCode)
+            ranked = await rankedSeries(
+                        for: showTitle,
+                        alternates: item.parsed.alternateTitles,
+                        languageCode: languageCode
+                    )
         } else {
             let title = item.metadata?.title ?? item.parsed.title
             let parsed = ParsedMediaTitle(title: title, year: item.year)
@@ -174,15 +182,19 @@ public actor LibraryEnricher {
 
     private func rankedSeries(
         for showTitle: String,
+        alternates: [String],
         languageCode: String
     ) async -> [RankedMetadataMatch] {
         let parsed = ParsedMediaTitle(title: showTitle)
-        guard let matches = try? await provider.searchSeries(
-            title: showTitle,
-            year: nil,
-            languageCode: languageCode
-        ) else { return [] }
-        return MetadataMatchRanker.rank(matches, against: parsed)
+        for candidate in [showTitle] + alternates {
+            guard let matches = try? await provider.searchSeries(
+                title: candidate,
+                year: nil,
+                languageCode: languageCode
+            ), !matches.isEmpty else { continue }
+            return MetadataMatchRanker.rank(matches, against: parsed)
+        }
+        return []
     }
 
     private func episodeOutcome(
@@ -253,15 +265,21 @@ public actor LibraryEnricher {
         let parsed = item.parsed
         guard !parsed.title.isEmpty else { return .notFound }
 
-        let matches: [MediaMetadataMatch]
-        do {
-            matches = try await provider.search(
-                title: parsed.title,
-                year: parsed.year,
-                languageCode: languageCode
-            )
-        } catch {
-            return .failed(String(describing: error))
+        // The name as written first, then the halves of it. A Korean library names a
+        // file in both scripts at once and neither index has an entry under the two
+        // joined together.
+        var matches: [MediaMetadataMatch] = []
+        for candidate in [parsed.title] + parsed.alternateTitles {
+            do {
+                matches = try await provider.search(
+                    title: candidate,
+                    year: parsed.year,
+                    languageCode: languageCode
+                )
+            } catch {
+                return .failed(String(describing: error))
+            }
+            if !matches.isEmpty { break }
         }
 
         let ranked = MetadataMatchRanker.rank(matches, against: parsed)

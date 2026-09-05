@@ -190,7 +190,10 @@ struct DIDLResourceDetailTests {
     @Test func readsAKoreanEpisodeNumber() {
         let parsed = MediaTitleParser.parse("라이어니스- 특수 작전팀 2 3회.mp4")
         #expect(parsed.episode == 3)
-        #expect(parsed.title == "라이어니스- 특수 작전팀 2")
+        // The trailing 2 is the season, and is taken out of the show's name — see
+        // `KoreanLibraryNamingTests`.
+        #expect(parsed.title == "라이어니스- 특수 작전팀")
+        #expect(parsed.season == 2)
     }
 
     /// A release group with digits in its name is not an episode number.
@@ -203,5 +206,49 @@ struct DIDLResourceDetailTests {
         let parsed = MediaTitleParser.parse("Show.S02E07.The.Name.1080p.WEB-DL")
         #expect(parsed.season == 2)
         #expect(parsed.episode == 7)
+    }
+}
+
+/// Filenames taken verbatim from a real Korean library, each of which found nothing.
+@Suite struct KoreanLibraryNamingTests {
+    @Test func offersBothHalvesOfAMixedScriptName() {
+        let parsed = MediaTitleParser.parse("더 러닝 맨 The Running Man, 2025.KORSUB.1080p.WEB-DL.H264.AAC")
+        #expect(parsed.year == 2025)
+        #expect(parsed.alternateTitles.contains("더 러닝 맨"))
+        #expect(parsed.alternateTitles.contains("The Running Man"))
+    }
+
+    /// Here the English name sits after the year, where truncation cuts it away.
+    @Test func keepsAnEnglishNameThatFollowsTheYear() {
+        let parsed = MediaTitleParser.parse("슈퍼 마리오 갤럭시 (2026) The Super Mario Galaxy Movie.KORsub.1080p.FHD")
+        #expect(parsed.title == "슈퍼 마리오 갤럭시")
+        #expect(parsed.alternateTitles.contains("The Super Mario Galaxy Movie"))
+    }
+
+    /// `2026-2160p`: a hyphen after the year is still a boundary.
+    @Test func readsAYearFollowedByAHyphen() {
+        let parsed = MediaTitleParser.parse("Tom.Clancys.Jack.Ryan.Ghost.War.2026-2160p.HDR.DV.WEB.ATMOS.AV1")
+        #expect(parsed.year == 2026)
+        #expect(parsed.title == "Tom Clancys Jack Ryan Ghost War")
+    }
+
+    /// A show numbered in its own name carries its season there.
+    @Test func readsASeasonWrittenIntoTheShowsName() {
+        let parsed = MediaTitleParser.parse("라이어니스- 특수 작전팀 2 3회")
+        #expect(parsed.title == "라이어니스- 특수 작전팀")
+        #expect(parsed.season == 2)
+        #expect(parsed.episode == 3)
+    }
+
+    /// A film with a number in its name keeps it: `Toy Story 5` is not a season.
+    @Test func leavesANumberedFilmAlone() {
+        let parsed = MediaTitleParser.parse("Toy Story 5 (2026) [1080p] [WEBRip]")
+        #expect(parsed.title == "Toy Story 5")
+        #expect(parsed.season == nil)
+        #expect(!parsed.alternateTitles.contains("WEBRip"))
+    }
+
+    @Test func offersNoAlternativesForAPlainReleaseName() {
+        #expect(MediaTitleParser.parse("Dune.Part.Two.2024.2160p.BluRay.x265").alternateTitles.isEmpty)
     }
 }
