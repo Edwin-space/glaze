@@ -22,68 +22,9 @@ actor EmbeddedSubtitleService {
         }
     }
 
-    func discoverTracks(in mediaURL: URL) async throws -> [EmbeddedSubtitleTrack] {
-        guard let ffprobeURL = FFmpegTool.ffprobeURL else {
-            throw ServiceError.toolUnavailable
-        }
-
-        let output = try await runForData(
-            executableURL: ffprobeURL,
-            arguments: [
-                "-v", "error",
-                "-select_streams", "s",
-                "-show_entries", "stream=index,codec_name:stream_tags=language,title:stream_disposition=default,forced",
-                "-of", "json",
-                inputArgument(for: mediaURL)
-            ],
-            failure: ServiceError.probeFailed
-        )
-
-        let response: ProbeResponse
-        do {
-            response = try JSONDecoder().decode(ProbeResponse.self, from: output)
-        } catch {
-            throw ServiceError.probeFailed(error.localizedDescription)
-        }
-
-        return response.streams.map { stream in
-            EmbeddedSubtitleTrack(
-                streamIndex: stream.index,
-                codec: stream.codecName ?? "unknown",
-                languageCode: stream.tags?.language,
-                title: stream.tags?.title,
-                isDefault: stream.disposition?.defaultValue == 1,
-                isForced: stream.disposition?.forced == 1
-            )
-        }
-    }
-
-    /// The language the film is spoken in, as the container declares it.
-    ///
-    /// Whisper detects the language itself when not told, and gets it wrong on
-    /// material it has heard less of — silently, producing confident text in the wrong
-    /// language. The container usually knows; when it does, that beats a guess.
-    ///
-    /// - Returns: nil when no track is tagged, or the tag is "und", in which case
-    ///   detection is the only option left.
-    func spokenLanguageCode(in mediaURL: URL) async -> String? {
-        guard let ffprobeURL = FFmpegTool.ffprobeURL else { return nil }
-
-        let output = try? await runForData(
-            executableURL: ffprobeURL,
-            arguments: [
-                "-v", "error",
-                "-select_streams", "a:0",
-                "-show_entries", "stream_tags=language",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                inputArgument(for: mediaURL)
-            ],
-            failure: ServiceError.probeFailed
-        )
-
-        guard let output, let text = String(data: output, encoding: .utf8) else { return nil }
-        return SubtitleLanguageCode.normalized(text.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
+    // Track discovery and the audio language tag both moved to `MediaProbeCoordinator`,
+    // which reads the container once for every panel that needs it rather than
+    // launching a separate ffprobe per question.
 
     func extract(track: EmbeddedSubtitleTrack, from mediaURL: URL) async throws -> URL {
         guard track.canProvideTimedText else {
