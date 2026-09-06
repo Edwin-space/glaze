@@ -17,6 +17,10 @@ fi
 
 APP_RESOURCES="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Resources"
 APP_EXECUTABLES="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/MacOS"
+# Apple's bundle layout puts loadable code under Frameworks, not Resources. The VLC
+# runtime lived in Resources/Tools/vlc, which signs and runs locally but is rejected
+# on the way to the App Store.
+APP_FRAMEWORKS="$BUILT_PRODUCTS_DIR/${FRAMEWORKS_FOLDER_PATH:-$CONTENTS_FOLDER_PATH/Frameworks}"
 HELPER_ENTITLEMENTS="$ROOT_DIR/Packaging/GlazeHelper.entitlements"
 mkdir -p "$APP_RESOURCES"
 
@@ -82,18 +86,37 @@ sign_library() {
 }
 
 if [[ -d "$LOCAL_TOOLS_DIR/vlc" ]]; then
-  rm -rf "$APP_RESOURCES/Tools/vlc"
-  cp -R "$LOCAL_TOOLS_DIR/vlc" "$APP_RESOURCES/Tools/vlc"
+  vlc_destination="$APP_FRAMEWORKS/vlc"
+  mkdir -p "$APP_FRAMEWORKS"
+  rm -rf "$vlc_destination"
+  cp -R "$LOCAL_TOOLS_DIR/vlc" "$vlc_destination"
+
+  # The notice belongs with the app's other documents, not among its libraries.
+  if [[ -f "$vlc_destination/LICENSE-THIRD-PARTY.md" ]]; then
+    mv "$vlc_destination/LICENSE-THIRD-PARTY.md" "$APP_RESOURCES/VLC-LICENSE-THIRD-PARTY.md"
+  fi
+
+  # Everything under Frameworks is treated as code and has to carry a signature.
+  # VLC's data — the HRTF impulse responses — is not code, and leaving it there
+  # fails the app's own signing step with "code object is not signed at all".
+  rm -rf "$APP_RESOURCES/vlc-share"
+  if [[ -d "$vlc_destination/share" ]]; then
+    mv "$vlc_destination/share" "$APP_RESOURCES/vlc-share"
+  fi
 
   while IFS= read -r dylib_path; do
     dylib_name="$(basename "$dylib_path")"
     install_name_tool -id "@loader_path/$dylib_name" "$dylib_path" 2>/dev/null || true
     install_name_tool -change "@rpath/libvlccore.dylib" "@loader_path/libvlccore.dylib" "$dylib_path" 2>/dev/null || true
     sign_library "$dylib_path"
-  done < <(find "$APP_RESOURCES/Tools/vlc/lib" -maxdepth 1 -type f -name "*.dylib")
+  done < <(find "$vlc_destination/lib" -maxdepth 1 -type f -name "*.dylib")
 
   while IFS= read -r plugin_path; do
     install_name_tool -change "@rpath/libvlccore.dylib" "@loader_path/../lib/libvlccore.dylib" "$plugin_path" 2>/dev/null || true
     sign_library "$plugin_path"
-  done < <(find "$APP_RESOURCES/Tools/vlc/plugins" -type f -name "*.dylib")
+  done < <(find "$vlc_destination/plugins" -type f -name "*.dylib")
+
+  # Anything an earlier build left in Resources would be unsigned loadable code in
+  # a place Apple does not allow it.
+  rm -rf "$APP_RESOURCES/Tools"
 fi

@@ -117,7 +117,7 @@ final class NativeVLCLibrary: @unchecked Sendable {
         let coreURL = runtimeURL.appendingPathComponent("lib/libvlccore.dylib")
 
         setenv("VLC_PLUGIN_PATH", pluginsURL.path, 1)
-        setenv("VLC_DATA_PATH", runtimeURL.appendingPathComponent("share").path, 1)
+        setenv("VLC_DATA_PATH", Self.resolveDataURL(runtimeURL: runtimeURL).path, 1)
 
         guard let coreHandle = dlopen(coreURL.path, RTLD_NOW | RTLD_GLOBAL) else {
             throw NativeVLCError.libraryUnavailable("libvlccore.dylib is not available: \(Self.dlErrorMessage())")
@@ -176,7 +176,12 @@ final class NativeVLCLibrary: @unchecked Sendable {
     }
 
     private static func resolveRuntimeURL() throws -> URL {
+        // Frameworks first: that is where Apple's bundle layout puts loadable code,
+        // and where a shipped build stages the runtime. The rest are the paths a
+        // working copy and older bundles used.
         let candidates = [
+            Bundle.main.privateFrameworksURL?.appendingPathComponent("vlc"),
+            Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/vlc"),
             Bundle.main.resourceURL?.appendingPathComponent("Tools/vlc"),
             Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Tools/vlc"),
             executableRelativeResourcesURL().appendingPathComponent("Tools/vlc"),
@@ -189,6 +194,17 @@ final class NativeVLCLibrary: @unchecked Sendable {
         }
 
         throw NativeVLCError.runtimeMissing(candidates)
+    }
+
+    /// VLC's data files live in Resources, apart from the libraries, because
+    /// everything under Frameworks must be signed and data cannot be.
+    private static func resolveDataURL(runtimeURL: URL) -> URL {
+        let staged = Bundle.main.resourceURL?.appendingPathComponent("vlc-share")
+        if let staged, FileManager.default.fileExists(atPath: staged.path) {
+            return staged
+        }
+        // A working copy still has them beside the runtime.
+        return runtimeURL.appendingPathComponent("share")
     }
 
     private static func executableRelativeResourcesURL() -> URL {
