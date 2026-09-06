@@ -279,7 +279,7 @@
 "metadata.error.rate_limited" = "요청이 너무 잦습니다. 잠시 후 다시 시도하세요.";
 "metadata.error.network" = "작품 정보를 가져오지 못했습니다.";
 "metadata.error.write_failed" = "영상 옆에 저장하지 못했습니다. 폴더 권한을 확인하세요.";
-"metadata.attribution" = "작품 정보 제공: TMDB";
+"metadata.attribution" = "이 제품은 TMDB API를 사용하지만 TMDB가 보증하거나 인증한 것은 아닙니다.";
 "settings.tab.metadata" = "작품 정보";
 "settings.section.metadata" = "TMDB";
 "metadata.settings.key" = "API 키";

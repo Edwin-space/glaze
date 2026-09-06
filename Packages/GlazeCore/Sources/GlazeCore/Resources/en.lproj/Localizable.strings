@@ -279,7 +279,7 @@
 "metadata.error.rate_limited" = "Too many requests. Try again shortly.";
 "metadata.error.network" = "Could not fetch film information.";
 "metadata.error.write_failed" = "Could not save beside the video. Check the folder permission.";
-"metadata.attribution" = "Film information from TMDB";
+"metadata.attribution" = "This product uses the TMDB API but is not endorsed or certified by TMDB.";
 "settings.tab.metadata" = "Film information";
 "settings.section.metadata" = "TMDB";
 "metadata.settings.key" = "API key";
