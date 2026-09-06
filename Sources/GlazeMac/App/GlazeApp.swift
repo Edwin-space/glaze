@@ -5,6 +5,7 @@ import SwiftUI
 @main
 struct GlazeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup {
@@ -20,6 +21,13 @@ struct GlazeApp: App {
         .handlesExternalEvents(matching: ["*"])
         .windowToolbarStyle(.unifiedCompact)
         .commands {
+            // Not a nicety: libVLC and FFmpeg are LGPL, and the licence requires that
+            // whoever has a copy of this app can read the notice and find the source.
+            CommandGroup(after: .appInfo) {
+                Button(L10n.string("legal.title")) {
+                    openWindow(id: Self.licensesWindowID)
+                }
+            }
             CommandGroup(replacing: .newItem) {
                 Button(L10n.string("command.open_video")) {
                     NotificationCenter.default.post(name: .openVideoCommand, object: nil)
@@ -33,7 +41,14 @@ struct GlazeApp: App {
         Settings {
             GlazeSettingsView()
         }
+
+        Window(L10n.string("legal.title"), id: Self.licensesWindowID) {
+            MacLicensesView()
+        }
+        .defaultSize(width: 820, height: 560)
     }
+
+    static let licensesWindowID = "licenses"
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {

@@ -490,3 +490,15 @@
 "ios.sources.device" = "This Device";
 "ios.sources.open_file" = "Open a Video File";
 "ios.sources.open_file.hint" = "Play a video held on this device or in iCloud Drive, with no server involved.";
+
+/* Open-source notices */
+"legal.title" = "Open Source Licenses";
+"legal.detail" = "Glaze uses the open-source software below. Libraries under the LGPL may be obtained in source form and replaced, as that licence provides.";
+"legal.license_text" = "Full licence text";
+"legal.source" = "Source code";
+"legal.usage.libvlc_dlopen" = "Bundled with the app and loaded at runtime to play video. It is not linked in, so it can be replaced with a library of the same name.";
+"legal.usage.vlckit_static" = "Used to play video; linked statically into the application binary.";
+"legal.usage.ffmpeg" = "Used to read media information and, when needed, to repackage a container. Built without GPL or non-free components.";
+"legal.usage.whisperkit" = "Used to transcribe speech on the device.";
+"legal.usage.support" = "Required by the libraries above.";
+"legal.view" = "View";

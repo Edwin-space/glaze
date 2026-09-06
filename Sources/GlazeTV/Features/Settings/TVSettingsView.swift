@@ -4,6 +4,8 @@ import SwiftUI
 struct TVSettingsView: View {
     @Bindable var preferences: TVUserPreferences
 
+    @State private var showsLicenses = false
+
     private let sizeOptions: [(String, Float)] = [
         ("subtitle.appearance.size.small", 85),
         ("subtitle.appearance.size.medium", 100),
@@ -166,6 +168,19 @@ struct TVSettingsView: View {
                 }
             }
             .padding(26)
+
+            // Not a nicety: libVLC is LGPL and the licence requires that whoever has a
+            // copy of this app can read the notice and find the source.
+            HStack {
+                Text(L10n.string("legal.title"))
+                    .font(.system(size: 28, weight: .semibold))
+                Spacer()
+                Button(L10n.string("legal.view")) { showsLicenses = true }
+            }
+            .padding(26)
+        }
+        .fullScreenCover(isPresented: $showsLicenses) {
+            TVLicensesView()
         }
     }
 

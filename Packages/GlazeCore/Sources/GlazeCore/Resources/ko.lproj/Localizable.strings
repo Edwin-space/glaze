@@ -490,3 +490,15 @@
 "ios.sources.device" = "이 기기";
 "ios.sources.open_file" = "영상 파일 열기";
 "ios.sources.open_file.hint" = "서버 없이, 이 기기나 iCloud Drive에 있는 영상을 바로 재생합니다.";
+
+/* Open-source notices */
+"legal.title" = "오픈소스 라이선스";
+"legal.detail" = "글레이즈는 아래의 오픈소스 소프트웨어를 사용합니다. LGPL로 배포되는 라이브러리는 그 조건에 따라 원본 소스를 받아 교체할 수 있습니다.";
+"legal.license_text" = "라이선스 전문";
+"legal.source" = "소스 코드";
+"legal.usage.libvlc_dlopen" = "앱과 함께 들어 있는 라이브러리를 실행 중에 불러와 영상을 재생합니다. 별도로 링크되어 있지 않으므로 같은 이름의 라이브러리로 교체할 수 있습니다.";
+"legal.usage.vlckit_static" = "영상 재생에 사용하며, 앱 실행 파일에 정적으로 링크되어 있습니다.";
+"legal.usage.ffmpeg" = "영상 정보를 읽고 필요할 때 컨테이너를 다시 담는 데 사용합니다. GPL·비자유 구성 요소 없이 빌드했습니다.";
+"legal.usage.whisperkit" = "기기 안에서 음성을 받아쓰는 데 사용합니다.";
+"legal.usage.support" = "위 라이브러리가 동작하는 데 필요합니다.";
+"legal.view" = "보기";

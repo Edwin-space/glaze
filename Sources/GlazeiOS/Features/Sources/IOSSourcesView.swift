@@ -57,6 +57,12 @@ struct IOSSourcesView: View {
                     Label(L10n.string("webdav.add"), systemImage: "plus")
                 }
             }
+
+            Section {
+                NavigationLink(L10n.string("legal.title")) {
+                    IOSLicensesView()
+                }
+            }
         }
         .navigationTitle(L10n.string("tv.navigation.sources"))
         .task { await discovery.discoverIfNeeded() }

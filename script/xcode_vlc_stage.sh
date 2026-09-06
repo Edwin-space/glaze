@@ -58,6 +58,29 @@ rm -f \
   "$APP_EXECUTABLES/Tools/ffmpeg" \
   "$APP_EXECUTABLES/Tools/ffprobe"
 
+# Ad-hoc signatures are fine for a local Debug run but are rejected on the way to
+# the App Store and by notarisation, so a Release build signs the VLC runtime with
+# the same identity as the app itself.
+signing_identity_for_config() {
+  if [[ "${CONFIGURATION:-Debug}" == "Release" ]]; then
+    printf '%s' "${EXPANDED_CODE_SIGN_IDENTITY:--}"
+  else
+    printf '%s' "-"
+  fi
+}
+
+sign_library() {
+  local path="$1"
+  local identity
+  identity="$(signing_identity_for_config)"
+  if [[ "$identity" == "-" ]]; then
+    codesign --force --sign - "$path" >/dev/null 2>&1 || true
+  else
+    codesign --force --sign "$identity" --options runtime --timestamp "$path" >/dev/null 2>&1 \
+      || { echo "xcode_vlc_stage.sh: failed to sign $path" >&2; exit 1; }
+  fi
+}
+
 if [[ -d "$LOCAL_TOOLS_DIR/vlc" ]]; then
   rm -rf "$APP_RESOURCES/Tools/vlc"
   cp -R "$LOCAL_TOOLS_DIR/vlc" "$APP_RESOURCES/Tools/vlc"
@@ -66,11 +89,11 @@ if [[ -d "$LOCAL_TOOLS_DIR/vlc" ]]; then
     dylib_name="$(basename "$dylib_path")"
     install_name_tool -id "@loader_path/$dylib_name" "$dylib_path" 2>/dev/null || true
     install_name_tool -change "@rpath/libvlccore.dylib" "@loader_path/libvlccore.dylib" "$dylib_path" 2>/dev/null || true
-    codesign --force --sign - "$dylib_path" >/dev/null 2>&1 || true
+    sign_library "$dylib_path"
   done < <(find "$APP_RESOURCES/Tools/vlc/lib" -maxdepth 1 -type f -name "*.dylib")
 
   while IFS= read -r plugin_path; do
     install_name_tool -change "@rpath/libvlccore.dylib" "@loader_path/../lib/libvlccore.dylib" "$plugin_path" 2>/dev/null || true
-    codesign --force --sign - "$plugin_path" >/dev/null 2>&1 || true
+    sign_library "$plugin_path"
   done < <(find "$APP_RESOURCES/Tools/vlc/plugins" -type f -name "*.dylib")
 fi

@@ -25,6 +25,8 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: Sources/GlazeMac
+      - path: Packaging/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - package: GlazeCore
         product: GlazeCore
@@ -62,6 +64,8 @@ targets:
     deploymentTarget: "18.0"
     sources:
       - path: Sources/GlazeTV
+      - path: Packaging/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - package: GlazeCore
         product: GlazeCore
@@ -91,6 +95,8 @@ targets:
     deploymentTarget: "18.0"
     sources:
       - path: Sources/GlazeiOS
+      - path: Packaging/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - package: GlazeCore
         product: GlazeCore
@@ -104,6 +110,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Packaging/InfoiOS.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: JBN99YZ7KN
