@@ -78,7 +78,7 @@ final class TVPlaybackModel {
         }
 
         player.media = media
-        player.currentSubTitleFontScale = preferredSubtitleScale
+        player.currentSubTitleFontScale = SubtitleScale.fraction(fromPercent: preferredSubtitleScale)
         pendingSeek = startAt > 0 ? startAt : nil
 
         let observer = PlayerObserver(
@@ -149,10 +149,11 @@ final class TVPlaybackModel {
     }
 
     func setSubtitleScale(_ scale: Float) {
-        let next = min(max(scale, 75), 160)
-        player.currentSubTitleFontScale = next
+        let next = SubtitleScale.clampPercent(scale)
+        player.currentSubTitleFontScale = SubtitleScale.fraction(fromPercent: next)
         subtitleScale = next
     }
+
 
     fileprivate func update(state: VLCMediaPlayerState) {
         isPlaying = player.isPlaying
@@ -222,7 +223,7 @@ final class TVPlaybackModel {
         }
         selectedSubtitleTrackID = subtitleTracks.first(where: \.isSelected)?.id
         subtitleDelay = TimeInterval(player.currentVideoSubTitleDelay) / 1_000_000
-        let reportedScale = player.currentSubTitleFontScale
+        let reportedScale = SubtitleScale.percent(fromFraction: player.currentSubTitleFontScale)
         if reportedScale > 0 {
             subtitleScale = reportedScale
         }

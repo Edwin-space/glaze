@@ -1,5 +1,6 @@
 import GlazeCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Where the films come from: servers found on the network, and NAS addresses typed in.
 struct IOSSourcesView: View {
@@ -9,9 +10,13 @@ struct IOSSourcesView: View {
     let onUseWebDAV: (WebDAVConnection) -> Void
 
     @State private var isAdding = false
+    @State private var isOpeningFile = false
+    @State private var localFile: LocalFile?
 
     var body: some View {
         List {
+            deviceSection
+
             Section(L10n.string("settings.network.discovery.title")) {
                 if discovery.servers.isEmpty {
                     Label(
@@ -62,6 +67,60 @@ struct IOSSourcesView: View {
                 onUseWebDAV(connection)
             }
         }
+        .fileImporter(
+            isPresented: $isOpeningFile,
+            allowedContentTypes: [.movie, .video, .mpeg4Movie, .quickTimeMovie, .data],
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let picked = urls.first else { return }
+            localFile = LocalFile(url: picked)
+        }
+        .fullScreenCover(item: $localFile, onDismiss: { localFile?.release() }) { file in
+            IOSPlayerView(resource: file.resource, title: file.url.lastPathComponent)
+        }
+    }
+
+    /// A film already on the phone — downloaded on a train, or handed over by AirDrop.
+    /// Everything else here needs a server; this does not.
+    private var deviceSection: some View {
+        Section {
+            Button { isOpeningFile = true } label: {
+                Label(L10n.string("ios.sources.open_file"), systemImage: "doc.badge.plus")
+            }
+        } header: {
+            Text(L10n.string("ios.sources.device"))
+        } footer: {
+            Text(L10n.string("ios.sources.open_file.hint"))
+        }
+    }
+}
+
+/// A video picked out of Files.
+///
+/// The URL lives outside the sandbox, so access has to be claimed before playback and
+/// given back after — and held for the whole film rather than copied, because these are
+/// gigabytes.
+final class LocalFile: Identifiable {
+    let url: URL
+    nonisolated var id: String { url.absoluteString }
+    private let accessed: Bool
+
+    init(url: URL) {
+        self.url = url
+        accessed = url.startAccessingSecurityScopedResource()
+    }
+
+    var resource: NetworkMediaResource {
+        NetworkMediaResource(
+            serverID: "device",
+            objectID: url.path,
+            playbackURL: url,
+            byteCount: (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).flatMap { Int64($0) }
+        )
+    }
+
+    func release() {
+        if accessed { url.stopAccessingSecurityScopedResource() }
     }
 }
 

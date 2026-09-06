@@ -10,8 +10,9 @@ struct IOSRootView: View {
     @State private var library = IOSLibraryModel()
     @State private var artwork = IOSArtworkLoader()
     @State private var connections = WebDAVConnectionStore()
+    @State private var preferences = IOSUserPreferences()
     @State private var selection: IOSTab = .library
-    @State private var route: IOSLibrarySelection?
+    @State private var path = NavigationPath()
 
     private enum IOSTab: Hashable {
         case library
@@ -21,12 +22,13 @@ struct IOSRootView: View {
     var body: some View {
         TabView(selection: $selection) {
             Tab(L10n.string("tv.navigation.library"), systemImage: "rectangle.stack", value: IOSTab.library) {
-                NavigationStack {
+                NavigationStack(path: $path) {
                     IOSLibraryView(
                         library: library,
                         onOpenSources: { selection = .sources },
-                        onSelect: { route = $0 }
+                        onSelect: { path.append($0) }
                     )
+                    .navigationDestination(for: IOSLibrarySelection.self, destination: destination)
                 }
             }
 
@@ -42,6 +44,7 @@ struct IOSRootView: View {
                                     dlnaNodes: discovery.homeNodes,
                                     serverName: server.friendlyName
                                 )
+                                path = NavigationPath()
                                 selection = .library
                             }
                         },
@@ -49,6 +52,7 @@ struct IOSRootView: View {
                             connections.reload()
                             let saved = connections.connections.first { $0.id == connection.id } ?? connection
                             useWebDAV(saved)
+                            path = NavigationPath()
                             selection = .library
                         }
                     )
@@ -57,23 +61,17 @@ struct IOSRootView: View {
         }
         .tint(IOSTheme.amber)
         .environment(artwork)
+        .environment(preferences)
         .task { await restorePreferredSource() }
-        .fullScreenCover(item: $route) { selection in
-            destination(for: selection)
-        }
     }
 
     @ViewBuilder
     private func destination(for selection: IOSLibrarySelection) -> some View {
         switch selection {
         case .movie(let item):
-            if let resource = library.resource(for: item) {
-                IOSPlayerView(resource: resource, title: item.displayTitle)
-            }
+            IOSDetailView(item: item, library: library)
         case .series(let show):
-            NavigationStack {
-                IOSSeriesView(series: show, library: library)
-            }
+            IOSSeriesView(series: show, library: library)
         }
     }
 

@@ -12,6 +12,7 @@ struct IOSLibraryView: View {
     let onSelect: (IOSLibrarySelection) -> Void
 
     @State private var positions = PlaybackPositionStore()
+    @State private var query = ""
 
     private let columns = [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 14)]
 
@@ -20,12 +21,14 @@ struct IOSLibraryView: View {
             LazyVStack(alignment: .leading, spacing: 26, pinnedViews: []) {
                 if library.library.isEmpty {
                     status
+                } else if isSearching {
+                    searchResults
                 } else {
                     if !resumable.isEmpty {
                         section(L10n.string("tv.home.continue"), items: resumable, showsProgress: true)
                     }
                     if !library.library.series.isEmpty {
-                        seriesSection(L10n.string("tv.home.series"))
+                        seriesSection(L10n.string("tv.home.series"), shows: library.library.series)
                     }
                     if !library.library.movies.isEmpty {
                         section(L10n.string("tv.home.movies"), items: library.library.movies)
@@ -38,6 +41,49 @@ struct IOSLibraryView: View {
         .background(IOSTheme.ground)
         .navigationTitle(sourceName)
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(
+            text: $query,
+            placement: .navigationBarDrawer(displayMode: .automatic),
+            prompt: L10n.string("ios.library.search")
+        )
+    }
+
+    // MARK: - Search
+
+    /// A library of a hundred films on a phone screen is a lot of scrolling, and the
+    /// name is what people remember. Titles are matched as well as file names, so
+    /// `기생충` finds `Parasite.2019.1080p.mkv` once the Mac has described it.
+    private var isSearching: Bool {
+        !query.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    @ViewBuilder
+    private var searchResults: some View {
+        let shows = library.library.series.filter { matches($0.title) }
+        let films = (library.library.movies + library.library.series.flatMap(\.allEpisodes))
+            .filter { matches($0.displayTitle) || matches($0.sourceName) }
+
+        if shows.isEmpty, films.isEmpty {
+            Text(L10n.string("ios.library.search.empty"))
+                .font(.callout)
+                .foregroundStyle(IOSTheme.dim)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 70)
+        } else {
+            if !shows.isEmpty {
+                seriesSection(L10n.string("tv.home.series"), shows: shows)
+            }
+            if !films.isEmpty {
+                section(L10n.string("tv.home.movies"), items: films)
+            }
+        }
+    }
+
+    private func matches(_ text: String) -> Bool {
+        text.range(
+            of: query.trimmingCharacters(in: .whitespaces),
+            options: [.caseInsensitive, .diacriticInsensitive]
+        ) != nil
     }
 
     private func section(
@@ -64,11 +110,11 @@ struct IOSLibraryView: View {
         }
     }
 
-    private func seriesSection(_ title: String) -> some View {
+    private func seriesSection(_ title: String, shows: [MediaLibrarySeries]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(.headline)
             LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
-                ForEach(library.library.series) { show in
+                ForEach(shows) { show in
                     Button { onSelect(.series(show)) } label: {
                         IOSPosterCard(
                             title: show.title,
@@ -150,7 +196,7 @@ struct IOSLibraryView: View {
     }
 }
 
-enum IOSLibrarySelection: Identifiable, Equatable {
+enum IOSLibrarySelection: Identifiable, Hashable {
     case movie(MediaLibraryItem)
     case series(MediaLibrarySeries)
 
@@ -160,4 +206,9 @@ enum IOSLibrarySelection: Identifiable, Equatable {
         case .series(let show): "series:\(show.id)"
         }
     }
+
+    // The payloads are value types the library rebuilt from a folder listing; their
+    // identity is the address they came from, which is what the navigation path needs.
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }

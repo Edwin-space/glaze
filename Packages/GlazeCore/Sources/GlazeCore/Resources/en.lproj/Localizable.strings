@@ -463,3 +463,30 @@
 "tv.library.folder.whole_share" = "The whole share";
 "tv.library.folder.change" = "Change folder";
 "webdav.field.url.hint" = "The NAS's WebDAV address. On a Synology this is usually https://your-nas:5006/folder.";
+
+/* iPhone·iPad player */
+"ios.player.rate" = "Playback Speed";
+"ios.player.next" = "Next";
+"ios.player.failed" = "This video cannot be played.";
+"ios.player.unplayable" = "No playable address was found.";
+"ios.player.settings" = "Subtitles & Audio";
+"ios.player.subtitle.tracks" = "Subtitle Tracks";
+"ios.player.subtitle.none" = "This video has no subtitle tracks.";
+"ios.player.subtitle.off" = "Off";
+"ios.player.subtitle.files" = "Subtitle Files";
+"ios.player.subtitle.files.hint" = "Subtitles in the same folder appear here even when their name differs from the film. Files saved on this device can be imported.";
+"ios.player.subtitle.searching" = "Looking through the folder";
+"ios.player.subtitle.matched" = "Recognised as this film's subtitle";
+"ios.player.subtitle.import" = "Import from Files";
+"ios.player.subtitle.import_failed" = "The subtitle could not be loaded";
+"ios.player.subtitle.adjust" = "Subtitle Timing";
+"ios.player.subtitle.delay" = "Delay";
+"ios.player.audio" = "Audio";
+"ios.player.audio.none" = "Audio tracks have not been read yet.";
+"ios.player.defaults" = "Defaults";
+"ios.detail.no_subtitles" = "No subtitle file travelled with this film.";
+"ios.library.search" = "Search films and shows";
+"ios.library.search.empty" = "Nothing matches that.";
+"ios.sources.device" = "This Device";
+"ios.sources.open_file" = "Open a Video File";
+"ios.sources.open_file.hint" = "Play a video held on this device or in iCloud Drive, with no server involved.";

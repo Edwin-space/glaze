@@ -463,3 +463,30 @@
 "tv.library.folder.whole_share" = "공유 전체";
 "tv.library.folder.change" = "폴더 바꾸기";
 "webdav.field.url.hint" = "NAS의 WebDAV 주소입니다. 시놀로지라면 대개 https://내NAS주소:5006/폴더이름 형태입니다.";
+
+/* iPhone·iPad player */
+"ios.player.rate" = "재생 속도";
+"ios.player.next" = "다음 화";
+"ios.player.failed" = "이 영상을 재생할 수 없습니다.";
+"ios.player.unplayable" = "재생 주소를 찾지 못했습니다.";
+"ios.player.settings" = "자막과 음성";
+"ios.player.subtitle.tracks" = "자막 트랙";
+"ios.player.subtitle.none" = "이 영상에는 자막 트랙이 없습니다.";
+"ios.player.subtitle.off" = "자막 끄기";
+"ios.player.subtitle.files" = "자막 파일";
+"ios.player.subtitle.files.hint" = "영상과 이름이 다른 자막도 같은 폴더에 있으면 여기에 나옵니다. 기기에 받아둔 자막은 파일에서 가져올 수 있습니다.";
+"ios.player.subtitle.searching" = "폴더에서 자막을 찾는 중";
+"ios.player.subtitle.matched" = "이 영상의 자막으로 인식됨";
+"ios.player.subtitle.import" = "파일에서 가져오기";
+"ios.player.subtitle.import_failed" = "자막을 불러오지 못했습니다";
+"ios.player.subtitle.adjust" = "자막 맞춤";
+"ios.player.subtitle.delay" = "자막 시간 조정";
+"ios.player.audio" = "음성";
+"ios.player.audio.none" = "음성 트랙 정보를 아직 읽지 못했습니다.";
+"ios.player.defaults" = "기본값";
+"ios.detail.no_subtitles" = "함께 있는 자막 파일이 없습니다.";
+"ios.library.search" = "영화, 프로그램 검색";
+"ios.library.search.empty" = "일치하는 영상이 없습니다.";
+"ios.sources.device" = "이 기기";
+"ios.sources.open_file" = "영상 파일 열기";
+"ios.sources.open_file.hint" = "서버 없이, 이 기기나 iCloud Drive에 있는 영상을 바로 재생합니다.";

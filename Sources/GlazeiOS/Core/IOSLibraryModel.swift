@@ -29,6 +29,9 @@ final class IOSLibraryModel {
     /// carries credentials and the library is handed to views.
     private var resources: [String: NetworkMediaResource] = [:]
     private var loadTask: Task<Void, Never>?
+    /// Kept so a folder can be listed again later — the subtitle picker needs to see
+    /// every subtitle beside a film, not only the ones whose name matched it.
+    private var webDAV: (connection: WebDAVConnection, password: String?)?
 
     var isLoading: Bool {
         if case .loading = phase { return true }
@@ -66,6 +69,7 @@ final class IOSLibraryModel {
 
         self.resources = resources
         library = MediaLibraryIndex.build(from: items)
+        webDAV = nil
         source = .dlna(serverName: serverName)
         phase = .ready
     }
@@ -76,6 +80,7 @@ final class IOSLibraryModel {
         loadTask?.cancel()
         phase = .loading(foldersRead: 0)
         source = .webDAV(connectionName: connection.name)
+        webDAV = (connection, password)
 
         loadTask = Task { [weak self] in
             let credentials = password.map { (username: connection.username, password: $0) }
@@ -160,4 +165,43 @@ final class IOSLibraryModel {
         default: L10n.string("webdav.error.network")
         }
     }
+
+    // MARK: - Subtitles
+
+    /// Every subtitle sitting in the same folder as the film, whatever it is called.
+    ///
+    /// The library only attaches a subtitle whose name follows the film's, which is the
+    /// right rule for building a library and the wrong one when a viewer downloaded
+    /// `기생충.srt` to sit beside `Parasite.2019.1080p.mkv`. This lists the folder
+    /// again and offers the lot.
+    func subtitleCandidates(for item: MediaLibraryItem) async -> [IOSSubtitleCandidate] {
+        guard let webDAV else { return [] }
+        let folder = item.playbackURL.deletingLastPathComponent()
+        let credentials = webDAV.password.map { (username: webDAV.connection.username, password: $0) }
+        guard let entries = try? await WebDAVClient().list(folder, credentials: credentials) else { return [] }
+
+        let matched = Set(item.subtitleURLs.map(\.absoluteString))
+        return entries
+            .filter { !$0.isDirectory && !$0.isHidden && Self.subtitleExtensions.contains($0.url.pathExtension.lowercased()) }
+            .sorted { $0.name < $1.name }
+            .map { entry in
+                IOSSubtitleCandidate(
+                    id: entry.url.absoluteString,
+                    name: entry.name,
+                    url: Self.authenticated(entry.url, connection: webDAV.connection, password: webDAV.password),
+                    isBesideTheFilm: matched.contains(entry.url.absoluteString)
+                )
+            }
+    }
+
+    private static let subtitleExtensions: Set<String> = ["srt", "vtt", "smi", "ass", "ssa", "sub"]
+}
+
+/// A subtitle file the viewer can attach by hand.
+struct IOSSubtitleCandidate: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let url: URL
+    /// True when the library already recognised this one as belonging to the film.
+    let isBesideTheFilm: Bool
 }
