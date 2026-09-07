@@ -30,6 +30,7 @@ struct IOSPlayerSettingsView: View {
                 audioSection
                 defaultsSection
             }
+            .glazeListBackground()
             .navigationTitle(L10n.string("ios.player.settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -83,7 +84,7 @@ struct IOSPlayerSettingsView: View {
     private var subtitleFileSection: some View {
         Section {
             if isLookingForFiles {
-                HStack(spacing: 10) {
+                HStack(spacing: IOSTheme.Spacing.small) {
                     ProgressView()
                     Text(L10n.string("ios.player.subtitle.searching")).foregroundStyle(IOSTheme.dim)
                 }
@@ -93,7 +94,7 @@ struct IOSPlayerSettingsView: View {
                     model.addSubtitle(candidate.url)
                 } label: {
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
                             Text(candidate.name).lineLimit(1)
                             if candidate.isBesideTheFilm {
                                 Text(L10n.string("ios.player.subtitle.matched"))

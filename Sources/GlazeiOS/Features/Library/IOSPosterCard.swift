@@ -18,10 +18,24 @@ struct IOSPosterCard: View {
     @Environment(IOSArtworkLoader.self) private var artwork
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.tight) {
             poster
             if showsCaption { caption }
         }
+        // One card is one thing to a reader, not a picture and two stray labels.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spokenLabel)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var spokenLabel: String {
+        var parts = [title]
+        if let subtitle { parts.append(subtitle) }
+        parts.append(contentsOf: badges)
+        if let progress, progress > 0 {
+            parts.append(String(format: L10n.string("ios.a11y.watched_format"), Int(progress * 100)))
+        }
+        return parts.joined(separator: ", ")
     }
 
     /// The frame is set by an empty rectangle, not by the artwork.
@@ -61,7 +75,7 @@ struct IOSPosterCard: View {
     private var placeholder: some View {
         ZStack {
             IOSTheme.signature(for: title)
-            VStack(spacing: 6) {
+            VStack(spacing: IOSTheme.Spacing.tight) {
                 Image(systemName: "film")
                     .font(.title3)
                     .foregroundStyle(.white.opacity(0.35))
@@ -71,18 +85,18 @@ struct IOSPosterCard: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
             }
-            .padding(8)
+            .padding(IOSTheme.Spacing.tight)
         }
     }
 
     private var caption: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
             Text(title)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)
 
-            HStack(spacing: 4) {
+            HStack(spacing: IOSTheme.Spacing.hair) {
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption2)

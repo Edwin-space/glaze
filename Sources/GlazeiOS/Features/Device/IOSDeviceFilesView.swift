@@ -24,6 +24,7 @@ struct IOSDeviceFilesView: View {
             }
             importSection
         }
+        .glazeListBackground()
         .navigationTitle(L10n.string("ios.device.title"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.reload() }
@@ -49,7 +50,7 @@ struct IOSDeviceFilesView: View {
     /// The empty state has a job: nobody guesses the USB route on their own.
     private var howToGetFilmsOn: some View {
         Section {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: IOSTheme.Spacing.medium) {
                 Image(systemName: "iphone.and.arrow.forward")
                     .font(.largeTitle)
                     .foregroundStyle(IOSTheme.amber)
@@ -64,7 +65,7 @@ struct IOSDeviceFilesView: View {
                     .font(.footnote)
                     .foregroundStyle(IOSTheme.dim)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, IOSTheme.Spacing.tight)
         }
     }
 
@@ -87,9 +88,9 @@ struct IOSDeviceFilesView: View {
     private var files: some View {
         Section(L10n.string("ios.device.files")) {
             ForEach(model.files) { file in
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
                     Text(file.name).font(.callout).lineLimit(2)
-                    HStack(spacing: 8) {
+                    HStack(spacing: IOSTheme.Spacing.tight) {
                         Text(ByteCountFormatter.string(fromByteCount: file.byteCount, countStyle: .file))
                         if file.subtitleCount > 0 {
                             Label(
@@ -102,6 +103,7 @@ struct IOSDeviceFilesView: View {
                     .font(.caption2)
                     .foregroundStyle(IOSTheme.dim)
                 }
+                .accessibilityElement(children: .combine)
                 .swipeActions {
                     Button(L10n.string("common.delete"), role: .destructive) {
                         model.delete(file)

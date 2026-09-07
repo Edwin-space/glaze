@@ -14,11 +14,11 @@ struct IOSLibraryView: View {
     @State private var positions = PlaybackPositionStore()
     @State private var query = ""
 
-    private let columns = [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 14)]
+    private let columns = [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: IOSTheme.Spacing.medium)]
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 26, pinnedViews: []) {
+            LazyVStack(alignment: .leading, spacing: IOSTheme.Spacing.section, pinnedViews: []) {
                 if library.library.isEmpty {
                     status
                 } else if isSearching {
@@ -35,8 +35,8 @@ struct IOSLibraryView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, IOSTheme.Spacing.medium)
+            .padding(.vertical, IOSTheme.Spacing.small)
         }
         .background(IOSTheme.ground)
         .navigationTitle(sourceName)
@@ -68,6 +68,8 @@ struct IOSLibraryView: View {
                 .font(.callout)
                 .foregroundStyle(IOSTheme.dim)
                 .frame(maxWidth: .infinity)
+                // Pushed down the screen rather than spaced: an empty result
+                // should sit where the eye lands, not under the search field.
                 .padding(.top, 70)
         } else {
             if !shows.isEmpty {
@@ -91,9 +93,9 @@ struct IOSLibraryView: View {
         items: [MediaLibraryItem],
         showsProgress: Bool = false
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.small) {
             Text(title).font(.headline)
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: IOSTheme.Spacing.large) {
                 ForEach(items) { item in
                     Button { onSelect(.movie(item)) } label: {
                         IOSPosterCard(
@@ -111,9 +113,9 @@ struct IOSLibraryView: View {
     }
 
     private func seriesSection(_ title: String, shows: [MediaLibrarySeries]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.small) {
             Text(title).font(.headline)
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: IOSTheme.Spacing.large) {
                 ForEach(shows) { show in
                     Button { onSelect(.series(show)) } label: {
                         IOSPosterCard(
@@ -133,7 +135,7 @@ struct IOSLibraryView: View {
 
     @ViewBuilder
     private var status: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: IOSTheme.Spacing.small) {
             if library.isLoading {
                 ProgressView()
             } else {
@@ -153,6 +155,8 @@ struct IOSLibraryView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        // Same idea as the empty search: the invitation to connect belongs in
+        // the middle of an empty screen, not at the top of it.
         .padding(.top, 80)
     }
 

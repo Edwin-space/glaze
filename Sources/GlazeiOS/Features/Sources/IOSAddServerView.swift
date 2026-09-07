@@ -22,7 +22,11 @@ struct IOSAddServerView: View {
                             dismiss()
                             onChoose(kind)
                         } label: {
-                            row(for: kind)
+                            IOSListRow(
+                                symbol: kind.symbol,
+                                title: kind.title,
+                                detail: kind.detail
+                            )
                         }
                     }
                 }
@@ -31,7 +35,7 @@ struct IOSAddServerView: View {
                 // address for a server that could just be tapped.
                 Section {
                     if discovery.servers.isEmpty {
-                        HStack(spacing: 10) {
+                        HStack(spacing: IOSTheme.Spacing.small) {
                             if discovery.phase == .discovering { ProgressView() }
                             Text(
                                 discovery.phase == .discovering
@@ -56,6 +60,7 @@ struct IOSAddServerView: View {
                     Text(L10n.string("ios.server.found.detail"))
                 }
             }
+            .glazeListBackground()
             .navigationTitle(L10n.string("ios.server.add"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -68,18 +73,4 @@ struct IOSAddServerView: View {
         }
     }
 
-    private func row(for kind: IOSServerKind) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: kind.symbol)
-                .font(.title3)
-                .foregroundStyle(IOSTheme.amber)
-                .frame(width: 30)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(kind.title).foregroundStyle(.primary)
-                Text(kind.detail)
-                    .font(.caption)
-                    .foregroundStyle(IOSTheme.dim)
-            }
-        }
-    }
 }

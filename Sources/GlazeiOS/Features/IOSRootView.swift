@@ -88,6 +88,9 @@ struct IOSRootView: View {
             }
         }
         .tint(IOSTheme.amber)
+        // One ground for the whole app. The lists hide their own so this shows
+        // through, which is what stops the darkness shifting between tabs.
+        .background(IOSTheme.ground.ignoresSafeArea())
         .environment(artwork)
         .environment(preferences)
         .task { await restorePreferredSource() }

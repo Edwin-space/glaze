@@ -562,3 +562,16 @@
 "ios.pairing.not_a_code" = "글레이즈의 페어링 코드가 아닙니다.";
 "ios.pairing.failed" = "보내지 못했습니다. 두 기기가 같은 네트워크에 있는지 확인하세요.";
 "ios.pairing.send" = "TV로 보내기";
+
+/* Player, for VoiceOver */
+"ios.player.a11y.close" = "재생 닫기";
+"ios.player.a11y.lock" = "화면 잠금";
+"ios.player.a11y.unlock" = "화면 잠금 해제";
+"ios.player.a11y.fill" = "화면 채우기";
+"ios.player.a11y.fit" = "화면에 맞추기";
+"ios.player.a11y.back" = "10초 뒤로";
+"ios.player.a11y.forward" = "10초 앞으로";
+"ios.player.a11y.play" = "재생";
+"ios.player.a11y.pause" = "일시정지";
+"ios.player.a11y.timeline" = "재생 위치";
+"ios.a11y.watched_format" = "%d퍼센트 봤음";

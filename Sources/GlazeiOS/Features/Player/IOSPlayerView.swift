@@ -22,6 +22,7 @@ struct IOSPlayerView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(IOSUserPreferences.self) private var preferences
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model = IOSPlaybackModel()
     @State private var showsControls = true
     @State private var isLocked = false
@@ -60,8 +61,10 @@ struct IOSPlayerView: View {
         .contentShape(Rectangle())
         .onTapGesture { isLocked ? revealLock() : revealControls() }
         .gesture(playbackGesture)
-        .animation(.easeOut(duration: 0.2), value: showsControls)
-        .animation(.easeOut(duration: 0.2), value: isLocked)
+        // Someone who has asked for less movement should not have the chrome slide
+        // in and out over the film.
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: showsControls)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: isLocked)
         .sheet(isPresented: $showsSettings) {
             IOSPlayerSettingsView(model: model, subtitleCandidates: subtitleCandidates)
                 .environment(preferences)
@@ -91,8 +94,8 @@ struct IOSPlayerView: View {
             Spacer()
             transport
             timeline
-                .padding(.horizontal, 20)
-                .padding(.bottom, 22)
+                .padding(.horizontal, IOSTheme.Spacing.large)
+                .padding(.bottom, IOSTheme.Spacing.large)
         }
         .foregroundStyle(.white)
         .background(
@@ -107,8 +110,8 @@ struct IOSPlayerView: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 14) {
-            circleButton("chevron.down") { dismiss() }
+        HStack(spacing: IOSTheme.Spacing.medium) {
+            circleButton("chevron.down", label: L10n.string("ios.player.a11y.close")) { dismiss() }
 
             Text(title)
                 .font(.subheadline.weight(.medium))
@@ -116,16 +119,24 @@ struct IOSPlayerView: View {
 
             Spacer(minLength: 0)
 
-            circleButton("lock.open") { isLocked = true; showsControls = false }
-            circleButton(model.isFillingScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") {
+            circleButton("lock.open", label: L10n.string("ios.player.a11y.lock")) {
+                isLocked = true
+                showsControls = false
+            }
+            circleButton(
+                model.isFillingScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
+                label: L10n.string(model.isFillingScreen ? "ios.player.a11y.fit" : "ios.player.a11y.fill")
+            ) {
                 model.setFillingScreen(!model.isFillingScreen)
                 revealControls()
             }
             rateMenu
-            circleButton("captions.bubble") { showsSettings = true }
+            circleButton("captions.bubble", label: L10n.string("ios.player.settings")) {
+                showsSettings = true
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .padding(.horizontal, IOSTheme.Spacing.medium)
+        .padding(.top, IOSTheme.Spacing.small)
     }
 
     private var rateMenu: some View {
@@ -139,9 +150,12 @@ struct IOSPlayerView: View {
             Text(Self.rateLabel(model.rate))
                 .font(.caption.weight(.semibold).monospacedDigit())
                 .frame(minWidth: 34)
-                .padding(.vertical, 8)
+                .padding(.vertical, IOSTheme.Spacing.tight)
                 .background(.black.opacity(0.45), in: Capsule())
+                .touchTarget()
         }
+        .accessibilityLabel(L10n.string("ios.player.rate"))
+        .accessibilityValue(Self.rateLabel(model.rate))
     }
 
     private var rateBinding: Binding<Float> {
@@ -153,23 +167,31 @@ struct IOSPlayerView: View {
     }
 
     private var transport: some View {
+        // Wider than any gap on the scale, deliberately: the three transport
+        // controls are hit in the dark and must not be neighbours.
         HStack(spacing: 44) {
             Button { model.skip(by: -IOSPlaybackModel.skipInterval); revealControls() } label: {
-                Image(systemName: "gobackward.10").font(.title)
+                Image(systemName: "gobackward.10").font(.title).touchTarget()
             }
+            .accessibilityLabel(L10n.string("ios.player.a11y.back"))
+
             Button { model.togglePlayback(); revealControls() } label: {
                 Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 44))
+                    .touchTarget()
             }
+            .accessibilityLabel(L10n.string(model.isPlaying ? "ios.player.a11y.pause" : "ios.player.a11y.play"))
+
             Button { model.skip(by: IOSPlaybackModel.skipInterval); revealControls() } label: {
-                Image(systemName: "goforward.10").font(.title)
+                Image(systemName: "goforward.10").font(.title).touchTarget()
             }
+            .accessibilityLabel(L10n.string("ios.player.a11y.forward"))
         }
-        .padding(.bottom, 18)
+        .padding(.bottom, IOSTheme.Spacing.large)
     }
 
     private var timeline: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: IOSTheme.Spacing.hair) {
             Slider(
                 value: Binding(
                     get: { displayedTime },
@@ -190,6 +212,8 @@ struct IOSPlayerView: View {
             )
             .tint(IOSTheme.amber)
             .disabled(model.duration <= 0)
+            .accessibilityLabel(L10n.string("ios.player.a11y.timeline"))
+            .accessibilityValue(Self.timecode(displayedTime))
 
             HStack {
                 Text(Self.timecode(displayedTime))
@@ -201,6 +225,7 @@ struct IOSPlayerView: View {
                     } label: {
                         Label(L10n.string("ios.player.next"), systemImage: "forward.end.fill")
                             .font(.caption2.weight(.semibold))
+                            .touchTarget()
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -212,14 +237,22 @@ struct IOSPlayerView: View {
         }
     }
 
-    private func circleButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+    /// The glyph stays small — a bar across a film should be quiet — but the target
+    /// under it is a thumb's width.
+    private func circleButton(
+        _ symbol: String,
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.subheadline.weight(.semibold))
                 .frame(width: 34, height: 34)
                 .background(.black.opacity(0.45), in: Circle())
+                .touchTarget()
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     // MARK: - Locked, failed, HUD
@@ -236,19 +269,21 @@ struct IOSPlayerView: View {
                             .font(.subheadline.weight(.semibold))
                             .frame(width: 40, height: 40)
                             .background(.black.opacity(0.55), in: Circle())
+                            .touchTarget()
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.white)
+                    .accessibilityLabel(L10n.string("ios.player.a11y.unlock"))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
+            .padding(.horizontal, IOSTheme.Spacing.medium)
+            .padding(.top, IOSTheme.Spacing.medium)
             Spacer()
         }
     }
 
     private var failure: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: IOSTheme.Spacing.medium) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
                 .foregroundStyle(IOSTheme.amber)
@@ -259,7 +294,7 @@ struct IOSPlayerView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(IOSTheme.amber)
         }
-        .padding(28)
+        .padding(IOSTheme.Spacing.section)
         .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 18))
     }
 
@@ -267,8 +302,8 @@ struct IOSPlayerView: View {
         Label(hud.text, systemImage: hud.symbol)
             .font(.callout.weight(.semibold).monospacedDigit())
             .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
+            .padding(.horizontal, IOSTheme.Spacing.large)
+            .padding(.vertical, IOSTheme.Spacing.small)
             .background(.black.opacity(0.6), in: Capsule())
     }
 

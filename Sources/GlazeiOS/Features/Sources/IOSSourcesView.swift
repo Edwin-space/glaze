@@ -20,6 +20,7 @@ struct IOSSourcesView: View {
     let onUseSynology: (SynologyConnection) -> Void
     let onConnectedSynology: (SynologyConnection, String, SynologySession, String) -> Void
 
+    @State private var opening: IOSSavedServer.ID?
     @State private var isAddingServer = false
     @State private var addingKind: IOSServerKind?
     @State private var sendingToTV: IOSPairingRequest?
@@ -36,6 +37,7 @@ struct IOSSourcesView: View {
             serverSection
             aboutSection
         }
+        .glazeListBackground()
         .navigationTitle(L10n.string("tv.navigation.sources"))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -94,24 +96,59 @@ struct IOSSourcesView: View {
     }
 
     private var serverSection: some View {
-        Section(L10n.string("ios.server.section")) {
+        Section {
             if servers.isEmpty {
                 Text(L10n.string("ios.server.empty"))
                     .font(.footnote)
                     .foregroundStyle(IOSTheme.dim)
             }
+            ForEach(servers, content: serverRow)
+                .onDelete(perform: remove)
+        } header: {
+            Text(L10n.string("ios.server.section"))
+        } footer: {
+            failureNote
+        }
+    }
 
-            ForEach(servers) { server in
-                Button { open(server) } label: { row(for: server) }
-                    .contextMenu {
-                        // Typing this again on a remote control is the worst job in
-                        // the app; the phone already knows it.
-                        Button(L10n.string("ios.pairing.send"), systemImage: "tv.badge.wifi") {
-                            sendingToTV = payload(for: server).map(IOSPairingRequest.init)
-                        }
-                    }
+    // Kept as its own view rather than inline: the section had grown a row with an
+    // overlay, a disabled state and a context menu inside a ForEach inside a Section
+    // with a header and a footer, and SwiftUI fell over instantiating the type.
+    private func serverRow(_ server: IOSSavedServer) -> some View {
+        Button { open(server) } label: {
+            // The protocol under the name, so two entries for the same box are told
+            // apart at a glance.
+            IOSListRow(
+                symbol: server.kind.symbol,
+                title: server.name,
+                detail: "\(server.kind.title) · \(server.detail)"
+            )
+        }
+        .disabled(opening != nil)
+        .overlay(alignment: .trailing) {
+            // Opening a NAS means signing in again, which takes a moment. The
+            // feedback belongs here, not on the screen it moves to.
+            if opening == server.id {
+                ProgressView()
             }
-            .onDelete(perform: remove)
+        }
+        .contextMenu {
+            // Typing this again on a remote control is the worst job in the app;
+            // the phone already knows it.
+            Button(L10n.string("ios.pairing.send"), systemImage: "tv.badge.wifi") {
+                sendingToTV = payload(for: server).map(IOSPairingRequest.init)
+            }
+        }
+    }
+
+    /// A failed sign-in used to show only after the library screen had already
+    /// replaced this one, which read as nothing having happened.
+    @ViewBuilder
+    private var failureNote: some View {
+        if opening == nil, case .failed(let message) = library.phase {
+            Label(message, systemImage: "exclamationmark.triangle")
+                .font(.footnote)
+                .foregroundStyle(IOSTheme.amber)
         }
     }
 
@@ -119,24 +156,6 @@ struct IOSSourcesView: View {
         Section {
             NavigationLink(L10n.string("legal.title")) {
                 IOSLicensesView()
-            }
-        }
-    }
-
-    private func row(for server: IOSSavedServer) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: server.kind.symbol)
-                .font(.title3)
-                .foregroundStyle(IOSTheme.amber)
-                .frame(width: 30)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(server.name).foregroundStyle(.primary).lineLimit(1)
-                // The protocol under the name, so two entries for the same box are
-                // told apart at a glance.
-                Text("\(server.kind.title) · \(server.detail)")
-                    .font(.caption)
-                    .foregroundStyle(IOSTheme.dim)
-                    .lineLimit(1)
             }
         }
     }
@@ -171,9 +190,16 @@ struct IOSSourcesView: View {
     }
 
     private func open(_ server: IOSSavedServer) {
+        opening = server.id
         switch server {
         case .synology(let connection): onUseSynology(connection)
         case .webDAV(let connection): onUseWebDAV(connection)
+        }
+        // The callers move to the library on success; if they do not, the spinner
+        // must not be left turning for ever.
+        Task {
+            try? await Task.sleep(for: .seconds(20))
+            opening = nil
         }
     }
 

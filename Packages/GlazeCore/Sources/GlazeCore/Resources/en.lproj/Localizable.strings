@@ -561,3 +561,16 @@
 "ios.pairing.not_a_code" = "That is not a Glaze pairing code.";
 "ios.pairing.failed" = "That did not send. Check both devices are on the same network.";
 "ios.pairing.send" = "Send to TV";
+
+/* Player, for VoiceOver */
+"ios.player.a11y.close" = "Close player";
+"ios.player.a11y.lock" = "Lock screen";
+"ios.player.a11y.unlock" = "Unlock screen";
+"ios.player.a11y.fill" = "Fill screen";
+"ios.player.a11y.fit" = "Fit to screen";
+"ios.player.a11y.back" = "Back 10 seconds";
+"ios.player.a11y.forward" = "Forward 10 seconds";
+"ios.player.a11y.play" = "Play";
+"ios.player.a11y.pause" = "Pause";
+"ios.player.a11y.timeline" = "Playback position";
+"ios.a11y.watched_format" = "%d percent watched";

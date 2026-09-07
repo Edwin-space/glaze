@@ -36,6 +36,7 @@ struct IOSLicensesView: View {
                 }
             }
         }
+        .glazeListBackground()
         .navigationTitle(L10n.string("legal.title"))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -52,7 +53,7 @@ struct LicenseTextView: View {
                 .font(.caption.monospaced())
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
+                .padding(IOSTheme.Spacing.medium)
         }
         .navigationTitle(notice.license.displayName)
         .navigationBarTitleDisplayMode(.inline)

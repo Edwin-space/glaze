@@ -18,7 +18,7 @@ struct IOSDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: IOSTheme.Spacing.large) {
                 header
                 actions
                 if let plot = item.plot, !plot.isEmpty {
@@ -27,8 +27,8 @@ struct IOSDetailView: View {
                 subtitleNote
                 facts
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
+            .padding(.horizontal, IOSTheme.Spacing.large)
+            .padding(.vertical, IOSTheme.Spacing.medium)
         }
         .background(IOSTheme.ground)
         .navigationTitle(item.displayTitle)
@@ -49,7 +49,7 @@ struct IOSDetailView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: IOSTheme.Spacing.medium) {
             IOSPosterCard(
                 title: item.displayTitle,
                 subtitle: nil,
@@ -59,14 +59,14 @@ struct IOSDetailView: View {
             .frame(width: 118)
             .allowsHitTesting(false)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: IOSTheme.Spacing.tight) {
                 Text(item.displayTitle).font(.title3.weight(.semibold)).lineLimit(3)
 
                 if let original = item.metadata?.originalTitle, original != item.displayTitle {
                     Text(original).font(.footnote).foregroundStyle(IOSTheme.dim)
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: IOSTheme.Spacing.tight) {
                     if let year = item.year {
                         Text(String(year)).font(.footnote).foregroundStyle(IOSTheme.dim)
                     }
@@ -81,7 +81,7 @@ struct IOSDetailView: View {
                 }
 
                 if !badges.isEmpty {
-                    HStack(spacing: 6) {
+                    HStack(spacing: IOSTheme.Spacing.tight) {
                         ForEach(badges, id: \.self) { IOSChip(text: $0) }
                     }
                 }
@@ -91,7 +91,7 @@ struct IOSDetailView: View {
     }
 
     private var actions: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: IOSTheme.Spacing.small) {
             if let resumeTime {
                 Button {
                     startAt = resumeTime
@@ -154,7 +154,7 @@ struct IOSDetailView: View {
     }
 
     private var facts: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
             Text(item.sourceName).lineLimit(2)
             if let size = sizeLabel { Text(size) }
         }
@@ -212,7 +212,7 @@ struct IOSUnplayableView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VStack(spacing: 14) {
+            VStack(spacing: IOSTheme.Spacing.medium) {
                 Image(systemName: "questionmark.folder")
                     .font(.largeTitle)
                     .foregroundStyle(IOSTheme.amber)
@@ -228,7 +228,7 @@ struct IOSUnplayableView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(IOSTheme.amber)
             }
-            .padding(30)
+            .padding(IOSTheme.Spacing.section)
         }
     }
 }

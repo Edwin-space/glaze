@@ -43,12 +43,12 @@ struct IOSPairingScannerView: View {
     private var overlay: some View {
         VStack {
             Spacer()
-            VStack(spacing: 12) {
+            VStack(spacing: IOSTheme.Spacing.small) {
                 switch status {
                 case .looking:
                     Label(L10n.string("ios.pairing.aim"), systemImage: "qrcode.viewfinder")
                 case .sending:
-                    HStack(spacing: 10) {
+                    HStack(spacing: IOSTheme.Spacing.small) {
                         ProgressView().tint(.white)
                         Text(L10n.string("ios.pairing.sending"))
                     }
@@ -65,7 +65,7 @@ struct IOSPairingScannerView: View {
             }
             .font(.callout.weight(.medium))
             .foregroundStyle(.white)
-            .padding(20)
+            .padding(IOSTheme.Spacing.large)
             .frame(maxWidth: .infinity)
             .background(.black.opacity(0.55))
         }

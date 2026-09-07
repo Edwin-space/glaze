@@ -30,6 +30,7 @@ struct IOSSynologySetupView: View {
                     shareChoice
                 }
             }
+            .glazeListBackground()
             .navigationTitle(L10n.string(session == nil ? "synology.title" : "synology.shares"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -79,7 +80,7 @@ struct IOSSynologySetupView: View {
                 Task { await connect() }
             } label: {
                 HStack {
-                    if isWorking { ProgressView().padding(.trailing, 6) }
+                    if isWorking { ProgressView().padding(.trailing, IOSTheme.Spacing.tight) }
                     Text(L10n.string("synology.connect"))
                 }
             }

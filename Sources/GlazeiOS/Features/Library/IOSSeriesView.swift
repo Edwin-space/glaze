@@ -52,6 +52,7 @@ struct IOSSeriesView: View {
                 }
             }
         }
+        .glazeListBackground()
         .navigationTitle(series.title)
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(item: $playing) { request in
@@ -81,7 +82,7 @@ struct IOSSeriesView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: IOSTheme.Spacing.medium) {
             IOSPosterCard(
                 title: series.title,
                 subtitle: nil,
@@ -91,9 +92,9 @@ struct IOSSeriesView: View {
             .frame(width: 96)
             .allowsHitTesting(false)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: IOSTheme.Spacing.tight) {
                 Text(series.title).font(.headline)
-                HStack(spacing: 6) {
+                HStack(spacing: IOSTheme.Spacing.tight) {
                     if let year = series.year {
                         Text(String(year)).font(.caption).foregroundStyle(IOSTheme.dim)
                     }
@@ -110,17 +111,17 @@ struct IOSSeriesView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(14)
+        .padding(IOSTheme.Spacing.medium)
     }
 
     private func row(for episode: MediaLibraryItem) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: IOSTheme.Spacing.small) {
             Text(episode.episodeNumber.map { String(format: "%02d", $0) } ?? "–")
                 .font(.callout.monospacedDigit().weight(.semibold))
                 .foregroundStyle(IOSTheme.dim)
                 .frame(width: 28, alignment: .trailing)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
                 Text(episode.episodeDisplayTitle).font(.callout).lineLimit(1)
                 if let plot = episode.plot, !plot.isEmpty {
                     Text(plot).font(.caption2).foregroundStyle(IOSTheme.dim).lineLimit(2)
@@ -134,8 +135,11 @@ struct IOSSeriesView: View {
                 }
             }
             Spacer(minLength: 0)
-            Image(systemName: "play.circle").foregroundStyle(IOSTheme.amber)
+            Image(systemName: "play.circle")
+                .foregroundStyle(IOSTheme.amber)
+                .accessibilityHidden(true)
         }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Playing
