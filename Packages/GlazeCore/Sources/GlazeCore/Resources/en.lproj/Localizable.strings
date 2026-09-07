@@ -502,3 +502,18 @@
 "legal.usage.whisperkit" = "Used to transcribe speech on the device.";
 "legal.usage.support" = "Required by the libraries above.";
 "legal.view" = "View";
+
+/* Films kept on the device */
+"ios.device.title" = "On This Device";
+"ios.device.files" = "Files";
+"ios.device.open_library" = "Open as Library";
+"ios.device.summary_format" = "%d videos · %@";
+"ios.device.subtitle_count_format" = "%d subtitles";
+"ios.device.import" = "Import Files";
+"ios.device.import.hint" = "Copies a video from Files or iCloud Drive onto this device. Once copied it plays with no network at all.";
+"ios.device.import_failed" = "Could not import";
+"ios.device.empty.title" = "Nothing on this device yet";
+"ios.device.empty.usb" = "Connect to a computer with a cable, select the device in Finder, and drag videos onto Glaze under the Files tab. Whole folders work too.";
+"ios.device.empty.files" = "Or use Import Files below to copy a video from Files or iCloud Drive.";
+"ios.device.empty.subtitles" = "Subtitles and posters named after the video are picked up automatically.";
+"ios.sources.device.hint" = "Plays videos you put on the device by cable or through Files, with no network involved.";

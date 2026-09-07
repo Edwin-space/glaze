@@ -8,10 +8,10 @@ struct IOSSourcesView: View {
     let connections: WebDAVConnectionStore
     let onUseDLNA: (NetworkMediaServer) -> Void
     let onUseWebDAV: (WebDAVConnection) -> Void
+    let library: IOSLibraryModel
+    let onUseDevice: () -> Void
 
     @State private var isAdding = false
-    @State private var isOpeningFile = false
-    @State private var localFile: LocalFile?
 
     var body: some View {
         List {
@@ -73,62 +73,26 @@ struct IOSSourcesView: View {
                 onUseWebDAV(connection)
             }
         }
-        .fileImporter(
-            isPresented: $isOpeningFile,
-            allowedContentTypes: [.movie, .video, .mpeg4Movie, .quickTimeMovie, .data],
-            allowsMultipleSelection: false
-        ) { result in
-            guard case .success(let urls) = result, let picked = urls.first else { return }
-            localFile = LocalFile(url: picked)
-        }
-        .fullScreenCover(item: $localFile, onDismiss: { localFile?.release() }) { file in
-            IOSPlayerView(resource: file.resource, title: file.url.lastPathComponent)
-        }
     }
 
-    /// A film already on the phone — downloaded on a train, or handed over by AirDrop.
-    /// Everything else here needs a server; this does not.
+    /// Films kept on the phone. A server is not always reachable, and this is the
+    /// one source that needs nothing but the phone.
     private var deviceSection: some View {
         Section {
-            Button { isOpeningFile = true } label: {
-                Label(L10n.string("ios.sources.open_file"), systemImage: "doc.badge.plus")
+            NavigationLink {
+                IOSDeviceFilesView(library: library, onOpenLibrary: onUseDevice)
+            } label: {
+                Label(L10n.string("ios.device.title"), systemImage: "iphone")
             }
         } header: {
             Text(L10n.string("ios.sources.device"))
         } footer: {
-            Text(L10n.string("ios.sources.open_file.hint"))
+            Text(L10n.string("ios.sources.device.hint"))
         }
     }
 }
 
-/// A video picked out of Files.
-///
-/// The URL lives outside the sandbox, so access has to be claimed before playback and
-/// given back after — and held for the whole film rather than copied, because these are
-/// gigabytes.
-final class LocalFile: Identifiable {
-    let url: URL
-    nonisolated var id: String { url.absoluteString }
-    private let accessed: Bool
 
-    init(url: URL) {
-        self.url = url
-        accessed = url.startAccessingSecurityScopedResource()
-    }
-
-    var resource: NetworkMediaResource {
-        NetworkMediaResource(
-            serverID: "device",
-            objectID: url.path,
-            playbackURL: url,
-            byteCount: (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).flatMap { Int64($0) }
-        )
-    }
-
-    func release() {
-        if accessed { url.stopAccessingSecurityScopedResource() }
-    }
-}
 
 /// Typing a NAS address on a phone, which is the one place people will actually do it
 /// rather than on a television remote.

@@ -82,9 +82,14 @@ struct IOSSeriesView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
-            IOSPosterCard(title: series.title, subtitle: nil, posterURL: series.posterURL)
-                .frame(width: 96)
-                .allowsHitTesting(false)
+            IOSPosterCard(
+                title: series.title,
+                subtitle: nil,
+                posterURL: series.posterURL,
+                showsCaption: false
+            )
+            .frame(width: 96)
+            .allowsHitTesting(false)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(series.title).font(.headline)

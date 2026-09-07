@@ -60,10 +60,5 @@ public struct WebDAVEntry: Identifiable, Equatable, Sendable {
         !isHidden && Self.videoExtensions.contains(url.pathExtension.lowercased())
     }
 
-    /// Matched on extension rather than the server's content type: NAS servers routinely
-    /// report `application/octet-stream` for anything they do not recognise, and
-    /// Matroska is exactly the thing they do not recognise.
-    static let videoExtensions: Set<String> = [
-        "mkv", "mp4", "m4v", "mov", "avi", "webm", "ts", "m2ts", "wmv", "flv", "mpg", "mpeg"
-    ]
+    static var videoExtensions: Set<String> { MediaFileTypes.video }
 }

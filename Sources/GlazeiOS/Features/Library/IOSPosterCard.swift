@@ -11,39 +11,51 @@ struct IOSPosterCard: View {
     let posterURL: URL?
     var badges: [String] = []
     var progress: Double?
+    /// A grid needs the title under the poster. A detail screen already has the
+    /// title beside it, and repeating it there reads as a mistake.
+    var showsCaption = true
 
     @Environment(IOSArtworkLoader.self) private var artwork
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             poster
-            caption
+            if showsCaption { caption }
         }
     }
 
+    /// The frame is set by an empty rectangle, not by the artwork.
+    ///
+    /// A resizable image told to fill has no size of its own and was taking the
+    /// container with it: posters came out square instead of 2:3, and on the detail
+    /// screen the artwork ran off the side of the display. Laying the image over a
+    /// shape that already has the right shape, and clipping, pins it down.
     private var poster: some View {
-        ZStack(alignment: .bottom) {
-            if let image = artwork.image(for: posterURL) {
-                image.resizable().aspectRatio(contentMode: .fill)
-            } else {
-                placeholder
-            }
-
-            if let progress, progress > 0 {
-                ZStack(alignment: .leading) {
-                    Rectangle().fill(.black.opacity(0.55))
-                    GeometryReader { geometry in
-                        Rectangle()
-                            .fill(IOSTheme.amber)
-                            .frame(width: geometry.size.width * min(1, progress))
-                    }
+        Rectangle()
+            .fill(Color.clear)
+            .aspectRatio(2.0 / 3.0, contentMode: .fit)
+            .overlay {
+                if let image = artwork.image(for: posterURL) {
+                    image.resizable().scaledToFill()
+                } else {
+                    placeholder
                 }
-                .frame(height: 3)
             }
-        }
-        .aspectRatio(2 / 3, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous))
-        .task { artwork.loadIfNeeded(posterURL) }
+            .overlay(alignment: .bottom) {
+                if let progress, progress > 0 {
+                    ZStack(alignment: .leading) {
+                        Rectangle().fill(.black.opacity(0.55))
+                        GeometryReader { geometry in
+                            Rectangle()
+                                .fill(IOSTheme.amber)
+                                .frame(width: geometry.size.width * min(1, progress))
+                        }
+                    }
+                    .frame(height: 3)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous))
+            .task { artwork.loadIfNeeded(posterURL) }
     }
 
     private var placeholder: some View {

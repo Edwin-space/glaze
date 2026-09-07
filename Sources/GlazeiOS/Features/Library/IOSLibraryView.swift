@@ -171,6 +171,7 @@ struct IOSLibraryView: View {
     private var sourceName: String {
         switch library.source {
         case .dlna(let name), .webDAV(let name): name
+        case .device: L10n.string("ios.device.title")
         case .none: "Glaze"
         }
     }

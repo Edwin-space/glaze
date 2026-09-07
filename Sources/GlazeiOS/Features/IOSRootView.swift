@@ -40,6 +40,7 @@ struct IOSRootView: View {
                         onUseDLNA: { server in
                             Task {
                                 await discovery.select(server)
+                                preferences.lastSource = "dlna"
                                 library.adopt(
                                     dlnaNodes: discovery.homeNodes,
                                     serverName: server.friendlyName
@@ -51,7 +52,14 @@ struct IOSRootView: View {
                         onUseWebDAV: { connection in
                             connections.reload()
                             let saved = connections.connections.first { $0.id == connection.id } ?? connection
+                            preferences.lastSource = "webdav"
                             useWebDAV(saved)
+                            path = NavigationPath()
+                            selection = .library
+                        },
+                        library: library,
+                        onUseDevice: {
+                            useDevice()
                             path = NavigationPath()
                             selection = .library
                         }
@@ -83,15 +91,54 @@ struct IOSRootView: View {
         library.load(connection, password: password)
     }
 
+    private func useDevice() {
+        preferences.lastSource = "device"
+        // Nothing on the device is behind a login, and leaving stale NAS credentials
+        // in the loader would send them to a file:// URL.
+        artwork.use(username: "", password: nil)
+        library.loadDevice()
+    }
+
+    /// Comes back to whatever was open last. Someone who watches films they copied
+    /// onto the phone should not have to find them again on every launch.
     private func restorePreferredSource() async {
         connections.reload()
+
+        if preferences.lastSource == "device" {
+            useDevice()
+            return
+        }
+
         if let connection = connections.connections.first {
+            preferences.lastSource = "webdav"
             useWebDAV(connection)
             return
         }
+
+        // No server has ever been set up, but there may be films sitting on the
+        // device already — copied over a cable, most likely.
+        if hasFilmsOnDevice {
+            useDevice()
+            return
+        }
+
         await discovery.discoverIfNeeded()
         if let server = discovery.selectedServer, !discovery.homeNodes.isEmpty {
+            preferences.lastSource = "dlna"
             library.adopt(dlnaNodes: discovery.homeNodes, serverName: server.friendlyName)
         }
+    }
+
+    private var hasFilmsOnDevice: Bool {
+        let root = IOSLibraryModel.deviceLibraryURL
+        guard let walker = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { return false }
+        for case let url as URL in walker where MediaFileTypes.isVideo(url) {
+            return true
+        }
+        return false
     }
 }

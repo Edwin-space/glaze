@@ -50,9 +50,14 @@ struct IOSDetailView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
-            IOSPosterCard(title: item.displayTitle, subtitle: nil, posterURL: item.posterURL)
-                .frame(width: 118)
-                .allowsHitTesting(false)
+            IOSPosterCard(
+                title: item.displayTitle,
+                subtitle: nil,
+                posterURL: item.posterURL,
+                showsCaption: false
+            )
+            .frame(width: 118)
+            .allowsHitTesting(false)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(item.displayTitle).font(.title3.weight(.semibold)).lineLimit(3)

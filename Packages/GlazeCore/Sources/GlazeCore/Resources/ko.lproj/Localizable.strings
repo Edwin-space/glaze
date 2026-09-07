@@ -502,3 +502,19 @@
 "legal.usage.whisperkit" = "기기 안에서 음성을 받아쓰는 데 사용합니다.";
 "legal.usage.support" = "위 라이브러리가 동작하는 데 필요합니다.";
 "legal.view" = "보기";
+
+/* Films kept on the device */
+"ios.device.title" = "이 기기의 영상";
+"ios.device.files" = "파일";
+"ios.device.open_library" = "보관함으로 열기";
+"ios.device.summary_format" = "영상 %d개 · %@";
+"ios.device.subtitle_count_format" = "자막 %d";
+"ios.device.import" = "파일 가져오기";
+"ios.device.import.hint" = "파일 앱이나 iCloud Drive에 있는 영상을 이 기기로 복사합니다. 복사한 뒤에는 네트워크 없이 재생됩니다.";
+"ios.device.import_failed" = "가져오지 못했습니다";
+"ios.device.empty.title" = "아직 이 기기에 영상이 없습니다";
+"ios.device.empty.usb" = "케이블로 컴퓨터에 연결하고 Finder에서 기기를 선택한 뒤 '파일' 탭의 Glaze 항목으로 영상을 끌어다 놓으세요. 폴더째 넣어도 됩니다.";
+"ios.device.empty.files" = "또는 아래 '파일 가져오기'로 파일 앱·iCloud Drive에 있는 영상을 복사할 수 있습니다.";
+"ios.device.empty.subtitles" = "자막과 포스터를 영상과 같은 이름으로 함께 넣으면 그대로 인식합니다.";
+"common.delete" = "삭제";
+"ios.sources.device.hint" = "케이블이나 파일 앱으로 넣어둔 영상을 네트워크 없이 재생합니다.";

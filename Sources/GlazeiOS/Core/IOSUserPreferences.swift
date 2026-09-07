@@ -14,6 +14,7 @@ final class IOSUserPreferences {
         static let automaticallySelectSubtitles = "ios.subtitle.automaticallySelect"
         static let subtitleScale = "ios.subtitle.scale"
         static let playbackRate = "ios.playback.rate"
+        static let lastSource = "ios.library.lastSource"
     }
 
     private let defaults: UserDefaults
@@ -35,6 +36,12 @@ final class IOSUserPreferences {
         didSet { defaults.set(playbackRate, forKey: Key.playbackRate) }
     }
 
+    /// Which library was open last, so the app comes back to it. Without this the
+    /// app forgot the films on the device every time it was launched.
+    var lastSource: String? {
+        didSet { defaults.set(lastSource, forKey: Key.lastSource) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaultSubtitleLanguageCode = defaults.string(forKey: Key.defaultSubtitleLanguage)
@@ -44,6 +51,7 @@ final class IOSUserPreferences {
         subtitleScale = storedScale > 0 ? storedScale : 100
         let storedRate = defaults.float(forKey: Key.playbackRate)
         playbackRate = storedRate > 0 ? storedRate : 1
+        lastSource = defaults.string(forKey: Key.lastSource)
     }
 }
 

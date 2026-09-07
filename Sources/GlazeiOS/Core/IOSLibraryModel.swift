@@ -17,8 +17,16 @@ final class IOSLibraryModel {
 
     enum Source: Equatable {
         case none
+        case device
         case dlna(serverName: String)
         case webDAV(connectionName: String)
+    }
+
+    /// Where films copied onto the phone live: the app's own Documents folder,
+    /// which is what Finder shows over USB and what the Files app calls
+    /// "On My iPhone → Glaze".
+    static var deviceLibraryURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
     private(set) var library = MediaLibrary()
@@ -71,6 +79,51 @@ final class IOSLibraryModel {
         library = MediaLibraryIndex.build(from: items)
         webDAV = nil
         source = .dlna(serverName: serverName)
+        phase = .ready
+    }
+
+    // MARK: - This device
+
+    /// Reads the app's own folder. Films arrive there over USB or through the
+    /// Files app, and once there they are read exactly as a NAS folder is —
+    /// grouped into films and shows, with whatever subtitle sits beside them.
+    func loadDevice() {
+        loadTask?.cancel()
+        phase = .loading(foldersRead: 0)
+        source = .device
+        webDAV = nil
+
+        let root = Self.deviceLibraryURL
+        loadTask = Task { [weak self] in
+            let library = await LocalLibraryLoader().load(root: root) { [weak self] read in
+                Task { @MainActor in self?.noteProgress(read) }
+            }
+            guard let self, !Task.isCancelled else { return }
+            adoptDevice(library)
+        }
+    }
+
+    private func adoptDevice(_ library: MediaLibrary) {
+        var resources: [String: NetworkMediaResource] = [:]
+        for item in library.movies + library.series.flatMap(\.allEpisodes) {
+            resources[item.id] = NetworkMediaResource(
+                serverID: "device",
+                objectID: item.id,
+                playbackURL: item.playbackURL,
+                byteCount: item.byteCount,
+                duration: item.duration,
+                dateAdded: item.dateAdded,
+                subtitleResources: item.subtitleURLs.map { url in
+                    NetworkSubtitleResource(
+                        url: url,
+                        displayName: url.lastPathComponent,
+                        languageCode: SubtitleFile.manual(url: url).languageCode
+                    )
+                }
+            )
+        }
+        self.resources = resources
+        self.library = library
         phase = .ready
     }
 
