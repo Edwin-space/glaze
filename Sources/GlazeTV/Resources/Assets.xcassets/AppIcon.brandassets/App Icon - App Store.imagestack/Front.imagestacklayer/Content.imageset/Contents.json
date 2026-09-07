@@ -1,21 +1,12 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "glaze-tv-app-store-icon.png",
-      "idiom" : "universal",
-      "scale" : "1x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "3x"
+      "filename": "glaze-tv-app-store-icon.png",
+      "idiom": "tv-marketing"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   }
 }
