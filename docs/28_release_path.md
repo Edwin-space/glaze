@@ -86,14 +86,38 @@
 - **가격** 무료, **출시** 175개국 전체
 - **세 플랫폼 모두** 설명·키워드·지원 URL·저작권 입력 (플랫폼마다 하는 일이 달라 문구도 다르다)
 
+### 빌드 업로드 (2026-09-07)
+
+| 플랫폼 | 빌드 | 상태 |
+|---|---|---|
+| macOS | `1.0 (6)` | 버전에 연결됨 |
+| iOS | `1.0 (3)` | 버전에 연결됨 |
+| tvOS | `1.0 (3)` | 버전에 연결됨 |
+
+**빌드 번호가 저장소와 다르다.** `project.yml`은 `CURRENT_PROJECT_VERSION: 3`이지만
+macOS는 (6)으로 올라갔다. Xcode의 `manageAppVersionAndBuildNumber`가 기본으로 켜져 있어,
+이미 (5)까지 올라가 있던 것과 충돌하지 않도록 자동으로 올린 것이다. 다음에 올릴 때는
+**macOS 기준 7 이상**이어야 한다.
+
+`Apple Distribution` 인증서는 `-allowProvisioningUpdates`가 export 단계에서 만들었다.
+그 인증서는 Xcode 자체 저장소에 있어 `security find-identity`에 **나오지 않는다** —
+거기 없다고 서명이 실패한 것이 아니다. 패키지 안의 앱은
+`Apple Distribution: TAESUNG YOO`로 서명되고 Mac Team Store 프로파일을 달고 있다.
+
+수출 규정 항목은 `ITSAppUsesNonExemptEncryption`을 plist에 넣은 덕에 이미 해결되어 있다
+(8월 빌드 하나는 `Missing Compliance`로 선택조차 되지 않는다).
+
+`script/archive_and_upload.sh`가 이 과정을 그대로 반복한다.
+
 ### 남은 것 — 계정 소유자만 할 수 있다
 
 1. **App Privacy의 `Publish`** — "응답이 정확하며 심사 지침과 관련 법을 준수함에 동의한다"는
    법적 확인이라 대신 누르지 않았다
 2. **Content Rights** — 서드파티 콘텐츠 관련 선언
 3. **연령 등급** — 임의의 영상을 재생하는 앱이라 설문의 답을 정해야 한다
-4. **이 맥의 배포 인증서 개인 키** — Xcode → Settings → Accounts → Manage Certificates
-5. **처리방침의 연락처 이메일** — `docs/PRIVACY.md`에 자리만 비워 두었다
+4. **처리방침의 연락처 이메일** — `docs/PRIVACY.md`에 자리만 비워 두었다. 저장소가
+   공개되어 있으므로 지금은 `—문의 이메일—`이 그대로 보인다
+5. **스크린샷** — 세 플랫폼 모두 0장. 제출을 막는 마지막 실질 항목이다
 
 ## 5. 그다음 우리가 할 수 있는 것
 
@@ -134,9 +158,8 @@
 
 ## 8. 남은 순서
 
-1. 이 맥에 배포 인증서 개인 키 받기 (Xcode Accounts)
-2. 실기기에서 맥·아이폰·애플TV 재생 확인 (미뤄둔 항목)
-3. 스크린샷 — 보관함이 채워진 화면이라야 하므로 NAS 연결 필요
-4. App Privacy Publish · Content Rights · 연령 등급 (사용자)
-5. 세 플랫폼 아카이브 → 업로드 (macOS의 8월 빌드는 교체)
-6. 심사 제출
+1. 스크린샷 — 보관함이 채워진 화면이라야 하므로 NAS 연결 필요
+2. App Privacy Publish · Content Rights · 연령 등급 (사용자)
+3. 처리방침 연락처 이메일 (사용자)
+4. 실기기에서 맥·아이폰·애플TV 재생 확인 (미뤄둔 항목)
+5. 심사 제출
