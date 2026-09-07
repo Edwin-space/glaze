@@ -548,3 +548,17 @@
 "ios.server.webdav.detail" = "주소와 계정을 직접 입력합니다. NAS에서 WebDAV를 켜두어야 합니다.";
 "ios.server.dlna.detail" = "같은 네트워크의 미디어 서버를 자동으로 찾습니다.";
 "ios.server.empty" = "아직 추가한 서버가 없습니다.";
+
+/* Handing a server from the phone to the television */
+"tv.pairing.title" = "아이폰에서 가져오기";
+"tv.pairing.detail" = "아이폰이나 아이패드의 글레이즈에서 이 코드를 찍으면, 이미 연결해 둔 NAS가 그대로 넘어옵니다. 주소와 비밀번호를 리모컨으로 입력하지 않아도 됩니다.";
+"tv.pairing.steps" = "아이폰 글레이즈 → 미디어 소스 → 서버를 길게 눌러 'TV로 보내기'";
+"tv.pairing.failed" = "가져오지 못했습니다. 두 기기가 같은 네트워크에 있는지 확인하고 다시 시도하세요.";
+"tv.pairing.open" = "아이폰에서 가져오기";
+"ios.pairing.title" = "TV로 보내기";
+"ios.pairing.aim" = "애플TV 화면의 코드를 비추세요";
+"ios.pairing.sending" = "보내는 중";
+"ios.pairing.sent" = "보냈습니다";
+"ios.pairing.not_a_code" = "글레이즈의 페어링 코드가 아닙니다.";
+"ios.pairing.failed" = "보내지 못했습니다. 두 기기가 같은 네트워크에 있는지 확인하세요.";
+"ios.pairing.send" = "TV로 보내기";

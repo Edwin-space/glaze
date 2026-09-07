@@ -8,6 +8,7 @@ struct TVMediaSourcesView: View {
     @Bindable var preferences: TVUserPreferences
     /// Choosing a NAS here makes it the library, rather than opening a file browser
     /// beside the one the rest of the app reads.
+    let onOpenPairing: () -> Void
     let onUseWebDAV: (WebDAVConnection) -> Void
 
     @State private var webdav = TVWebDAVConnections()
@@ -17,6 +18,7 @@ struct TVMediaSourcesView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 44) {
                 header
+                pairingSection
                 automaticDiscovery
                 webDAVSection
             }
@@ -32,6 +34,27 @@ struct TVMediaSourcesView: View {
                 onUseWebDAV(connection)
             }
         }
+    }
+
+    /// The easy way in, put before the ways that involve typing.
+    private var pairingSection: some View {
+        HStack(spacing: 26) {
+            Image(systemName: "qrcode")
+                .font(.system(size: 44))
+                .foregroundStyle(TVTheme.amber)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.string("tv.pairing.open"))
+                    .font(.system(size: 31, weight: .semibold))
+                Text(L10n.string("tv.pairing.detail"))
+                    .font(.system(size: 21))
+                    .foregroundStyle(TVTheme.dim)
+                    .frame(maxWidth: 900, alignment: .leading)
+            }
+            Spacer()
+            Button(L10n.string("tv.settings.start")) { onOpenPairing() }
+        }
+        .padding(30)
+        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private var header: some View {

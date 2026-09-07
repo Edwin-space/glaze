@@ -6,10 +6,15 @@ struct TVOnboardingView: View {
     let model: NetworkMediaBrowserModel
     @Bindable var preferences: TVUserPreferences
 
+    /// Offered during setup as well as in settings, because setup can be skipped and
+    /// then the easy way in would only exist somewhere the viewer never went back to.
+    var onPaired: (PairingPayload) -> Void = { _ in }
+
     @State private var step: Step = .welcome
     @State private var selectedServerID: String?
     @State private var isFinishing = false
     @State private var isAddingWebDAV = false
+    @State private var isPairing = false
     @State private var webdav = TVWebDAVConnections()
     @FocusState private var focusedControl: FocusControl?
 
@@ -28,6 +33,7 @@ struct TVOnboardingView: View {
         case sourceRefresh
         case sourceBack
         case sourceWebDAV
+        case sourcePairing
         case sourceFinish
     }
 
@@ -51,6 +57,11 @@ struct TVOnboardingView: View {
             }
         }
         .task { await model.discoverIfNeeded() }
+        .fullScreenCover(isPresented: $isPairing) {
+            TVPairingView { payload in
+                onPaired(payload)
+            }
+        }
         .fullScreenCover(isPresented: $isAddingWebDAV) {
             TVWebDAVSetupView { connection, password in
                 webdav.save(connection, password: password)
@@ -185,6 +196,8 @@ struct TVOnboardingView: View {
             HStack(spacing: 22) {
                 Button(L10n.string("network.browser.back")) { step = .language }
                     .focused($focusedControl, equals: .sourceBack)
+                Button(L10n.string("tv.pairing.open")) { isPairing = true }
+                    .focused($focusedControl, equals: .sourcePairing)
                 Button(L10n.string("webdav.add")) { isAddingWebDAV = true }
                     .focused($focusedControl, equals: .sourceWebDAV)
                 Button {

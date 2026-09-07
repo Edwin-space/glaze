@@ -22,6 +22,7 @@ struct IOSSourcesView: View {
 
     @State private var isAddingServer = false
     @State private var addingKind: IOSServerKind?
+    @State private var sendingToTV: IOSPairingRequest?
 
     private var servers: [IOSSavedServer] {
         let all = synologyConnections.connections.map(IOSSavedServer.synology)
@@ -57,6 +58,9 @@ struct IOSSourcesView: View {
                 },
                 onUseDLNA: onUseDLNA
             )
+        }
+        .sheet(item: $sendingToTV) { request in
+            IOSPairingScannerView(payload: request.payload)
         }
         .sheet(item: $addingKind) { kind in
             switch kind {
@@ -99,6 +103,13 @@ struct IOSSourcesView: View {
 
             ForEach(servers) { server in
                 Button { open(server) } label: { row(for: server) }
+                    .contextMenu {
+                        // Typing this again on a remote control is the worst job in
+                        // the app; the phone already knows it.
+                        Button(L10n.string("ios.pairing.send"), systemImage: "tv.badge.wifi") {
+                            sendingToTV = payload(for: server).map(IOSPairingRequest.init)
+                        }
+                    }
             }
             .onDelete(perform: remove)
         }
@@ -130,6 +141,35 @@ struct IOSSourcesView: View {
         }
     }
 
+    /// What to hand the television. The password comes out of the keychain here and
+    /// goes no further than the sealed message.
+    private func payload(for server: IOSSavedServer) -> PairingPayload? {
+        switch server {
+        case .synology(let connection):
+            guard let password = synologyConnections.password(for: connection) else { return nil }
+            return PairingPayload(
+                name: connection.name,
+                server: .synology(
+                    baseURL: connection.baseURL,
+                    account: connection.account,
+                    password: password,
+                    libraryPath: connection.libraryPath
+                )
+            )
+        case .webDAV(let connection):
+            guard let password = connections.password(for: connection) else { return nil }
+            return PairingPayload(
+                name: connection.name,
+                server: .webDAV(
+                    rootURL: connection.rootURL,
+                    username: connection.username,
+                    password: password,
+                    libraryPath: connection.libraryPath
+                )
+            )
+        }
+    }
+
     private func open(_ server: IOSSavedServer) {
         switch server {
         case .synology(let connection): onUseSynology(connection)
@@ -145,6 +185,12 @@ struct IOSSourcesView: View {
             }
         }
     }
+}
+
+/// A payload on its way to a television, wrapped so it can drive a sheet.
+struct IOSPairingRequest: Identifiable {
+    let payload: PairingPayload
+    var id: String { payload.name }
 }
 
 /// Typing a NAS address on a phone, which is the one place people will actually do it

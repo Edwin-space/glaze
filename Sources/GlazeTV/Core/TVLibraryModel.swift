@@ -23,6 +23,7 @@ final class TVLibraryModel {
         case none
         case dlna(serverName: String)
         case webDAV(connectionName: String)
+        case synology(connectionName: String)
     }
 
     private(set) var library = MediaLibrary()
@@ -75,6 +76,54 @@ final class TVLibraryModel {
     }
 
     // MARK: - WebDAV
+
+    /// A Synology handed over from the phone, or signed in to here.
+    func loadSynology(name: String, session: SynologySession, path: String) {
+        loadTask?.cancel()
+        phase = .loading(foldersRead: 0)
+        source = .synology(connectionName: name)
+
+        loadTask = Task { [weak self] in
+            do {
+                let library = try await SynologyLibraryLoader().load(
+                    root: path,
+                    session: session
+                ) { [weak self] read in
+                    Task { @MainActor in self?.noteProgress(read) }
+                }
+                guard let self, !Task.isCancelled else { return }
+                adoptSynology(library, session: session)
+            } catch {
+                guard let self, !Task.isCancelled else { return }
+                phase = .failed(Self.message(for: error))
+            }
+        }
+    }
+
+    private func adoptSynology(_ library: MediaLibrary, session: SynologySession) {
+        var resources: [String: NetworkMediaResource] = [:]
+        for item in library.movies + library.series.flatMap(\.allEpisodes) {
+            // DSM's addresses already carry the session token.
+            resources[item.id] = NetworkMediaResource(
+                serverID: session.baseURL.absoluteString,
+                objectID: item.id,
+                playbackURL: item.playbackURL,
+                byteCount: item.byteCount,
+                duration: item.duration,
+                dateAdded: item.dateAdded,
+                subtitleResources: item.subtitleURLs.map { url in
+                    NetworkSubtitleResource(
+                        url: url,
+                        displayName: url.lastPathComponent,
+                        languageCode: SubtitleFile.manual(url: url).languageCode
+                    )
+                }
+            )
+        }
+        self.resources = resources
+        self.library = library
+        phase = .ready
+    }
 
     func load(_ connection: WebDAVConnection, password: String?) {
         loadTask?.cancel()
@@ -149,6 +198,11 @@ final class TVLibraryModel {
         components.user = connection.username
         components.password = password
         return components.url ?? url
+    }
+
+    /// Lets a failed sign-in show up where every other library failure does.
+    func reportFailure(_ error: Error) {
+        phase = .failed(Self.message(for: error))
     }
 
     private static func message(for error: Error) -> String {

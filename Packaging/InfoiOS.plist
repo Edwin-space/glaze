@@ -31,6 +31,8 @@
 	<array>
 		<string>_http._tcp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>애플TV 화면의 페어링 코드를 읽어 NAS 연결을 옮기는 데에만 카메라를 사용합니다.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Glaze. All rights reserved.</string>
 	<key>NSLocalNetworkUsageDescription</key>

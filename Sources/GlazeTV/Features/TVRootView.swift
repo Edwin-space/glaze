@@ -7,6 +7,7 @@ struct TVRootView: View {
     @State private var library = TVLibraryModel()
     @State private var artwork = TVArtworkLoader()
     @State private var connections = TVWebDAVConnections()
+    @State private var synologyConnections = SynologyConnectionStore()
 
     var body: some View {
         Group {
@@ -15,10 +16,24 @@ struct TVRootView: View {
                     media: media,
                     library: library,
                     connections: connections,
+                    synologyConnections: synologyConnections,
                     preferences: preferences
                 )
             } else {
-                TVOnboardingView(model: media, preferences: preferences)
+                TVOnboardingView(
+                    model: media,
+                    preferences: preferences,
+                    onPaired: { payload in
+                        TVPairingAdoption.adopt(
+                            payload,
+                            connections: connections,
+                            synologyConnections: synologyConnections,
+                            library: library,
+                            artwork: artwork
+                        )
+                        preferences.finishOnboarding(serverID: nil)
+                    }
+                )
             }
         }
         .environment(artwork)
@@ -36,6 +51,7 @@ private struct TVAppShell: View {
     let media: NetworkMediaBrowserModel
     let library: TVLibraryModel
     let connections: TVWebDAVConnections
+    let synologyConnections: SynologyConnectionStore
     @Bindable var preferences: TVUserPreferences
 
     @Environment(TVArtworkLoader.self) private var artwork
@@ -43,6 +59,7 @@ private struct TVAppShell: View {
     @State private var route: TVLibrarySelection?
     /// A NAS whose library folder has not been chosen yet.
     @State private var folderChoice: WebDAVConnection?
+    @State private var isPairing = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -78,6 +95,7 @@ private struct TVAppShell: View {
                     model: media,
                     library: library,
                     preferences: preferences,
+                    onOpenPairing: { isPairing = true },
                     onUseWebDAV: { connection in
                         connections.reload()
                         let saved = connections.connections.first { $0.id == connection.id } ?? connection
@@ -92,7 +110,7 @@ private struct TVAppShell: View {
             }
 
             Tab(L10n.string("settings.title"), systemImage: "gearshape.fill", value: TVTab.settings) {
-                TVSettingsView(preferences: preferences)
+                TVSettingsView(preferences: preferences, onOpenPairing: { isPairing = true })
             }
 
             Tab(value: TVTab.search, role: .search) {
@@ -105,6 +123,18 @@ private struct TVAppShell: View {
         }
         .onChange(of: media.homeNodes.count) { _, _ in
             adoptDLNAIfNeeded()
+        }
+        .fullScreenCover(isPresented: $isPairing) {
+            TVPairingView { payload in
+                TVPairingAdoption.adopt(
+                    payload,
+                    connections: connections,
+                    synologyConnections: synologyConnections,
+                    library: library,
+                    artwork: artwork
+                )
+                selection = .home
+            }
         }
         .fullScreenCover(item: $folderChoice) { connection in
             TVLibraryFolderPicker(
@@ -194,6 +224,57 @@ extension TVLibrarySelection: Identifiable {
         switch self {
         case .movie(let item): "movie:\(item.id)"
         case .series(let show): "series:\(show.id)"
+        }
+    }
+}
+
+
+/// What the television does with a server the phone handed it.
+///
+/// Saved first, so it survives the next launch, and then opened — the point of
+/// pairing is that the viewer is already sitting there wanting to watch something.
+@MainActor
+enum TVPairingAdoption {
+    static func adopt(
+        _ payload: PairingPayload,
+        connections: TVWebDAVConnections,
+        synologyConnections: SynologyConnectionStore,
+        library: TVLibraryModel,
+        artwork: TVArtworkLoader
+    ) {
+        switch payload.server {
+        case .webDAV(let rootURL, let username, let password, let libraryPath):
+            var connection = WebDAVConnection(name: payload.name, rootURL: rootURL, username: username)
+            connection.libraryPath = libraryPath
+            connections.save(connection, password: password)
+            artwork.use(username: username, password: password)
+            library.load(connection, password: password)
+
+        case .synology(let baseURL, let account, let password, let libraryPath):
+            let connection = SynologyConnection(
+                name: payload.name,
+                baseURL: baseURL,
+                account: account,
+                libraryPath: libraryPath
+            )
+            synologyConnections.save(connection, password: password)
+            // DSM's addresses carry their own session token, so the artwork loader
+            // needs no separate login.
+            artwork.use(username: "", password: nil)
+            Task {
+                do {
+                    let session = try await SynologyClient().logIn(
+                        to: baseURL, account: account, password: password
+                    )
+                    library.loadSynology(
+                        name: payload.name,
+                        session: session,
+                        path: libraryPath ?? "/"
+                    )
+                } catch {
+                    library.reportFailure(error)
+                }
+            }
         }
     }
 }

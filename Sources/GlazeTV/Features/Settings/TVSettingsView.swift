@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TVSettingsView: View {
     @Bindable var preferences: TVUserPreferences
+    var onOpenPairing: () -> Void = {}
 
     @State private var showsLicenses = false
 
@@ -166,6 +167,22 @@ struct TVSettingsView: View {
                 Button(L10n.string("tv.settings.start")) {
                     preferences.restartOnboarding()
                 }
+            }
+            .padding(26)
+
+            // Typing a NAS address and password on a remote control is the worst job
+            // in the app. The phone has already done it.
+            HStack {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(L10n.string("tv.pairing.open"))
+                        .font(.system(size: 28, weight: .semibold))
+                    Text(L10n.string("tv.pairing.detail"))
+                        .font(.system(size: 21))
+                        .foregroundStyle(TVTheme.dim)
+                        .frame(maxWidth: 900, alignment: .leading)
+                }
+                Spacer()
+                Button(L10n.string("tv.settings.start")) { onOpenPairing() }
             }
             .padding(26)
 

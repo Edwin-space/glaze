@@ -547,3 +547,17 @@
 "ios.server.webdav.detail" = "Type an address and account. WebDAV has to be switched on in the NAS.";
 "ios.server.dlna.detail" = "Finds media servers on the same network by itself.";
 "ios.server.empty" = "No servers added yet.";
+
+/* Handing a server from the phone to the television */
+"tv.pairing.title" = "Take It from Your iPhone";
+"tv.pairing.detail" = "Scan this code in Glaze on your iPhone or iPad and the NAS you have already connected comes across. No address or password typed on a remote control.";
+"tv.pairing.steps" = "Glaze on iPhone → Media Sources → press and hold a server → Send to TV";
+"tv.pairing.failed" = "That did not come across. Check both devices are on the same network and try again.";
+"tv.pairing.open" = "Take It from Your iPhone";
+"ios.pairing.title" = "Send to TV";
+"ios.pairing.aim" = "Point at the code on the Apple TV";
+"ios.pairing.sending" = "Sending";
+"ios.pairing.sent" = "Sent";
+"ios.pairing.not_a_code" = "That is not a Glaze pairing code.";
+"ios.pairing.failed" = "That did not send. Check both devices are on the same network.";
+"ios.pairing.send" = "Send to TV";

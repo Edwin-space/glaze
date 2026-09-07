@@ -326,7 +326,7 @@ struct TVHomeView: View {
     private var heroDetail: String {
         if let featured, let plot = featured.plot, !plot.isEmpty { return plot }
         switch library.source {
-        case .dlna(let name), .webDAV(let name):
+        case .dlna(let name), .webDAV(let name), .synology(let name):
             return String(format: L10n.string("tv.home.source.detail_format"), name)
         case .none:
             return L10n.string("tv.home.welcome.detail")
