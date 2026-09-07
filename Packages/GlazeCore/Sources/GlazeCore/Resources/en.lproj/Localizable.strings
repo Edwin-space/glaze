@@ -537,3 +537,13 @@
 "synology.error.disabled" = "This account is disabled.";
 "synology.error.not_synology" = "No DSM answered at that address. Check the address and port.";
 "synology.error.needs_https" = "This address has to be reached over HTTPS. Put https:// in front of it, or use port 5001.";
+
+/* Adding a server */
+"ios.server.add" = "New Server";
+"ios.server.section" = "Servers";
+"ios.server.found" = "Found on This Network";
+"ios.server.found.detail" = "Media servers on the same network can be opened without typing an address.";
+"ios.server.synology.detail" = "Sign in with your DSM account. Nothing has to be switched on in the NAS.";
+"ios.server.webdav.detail" = "Type an address and account. WebDAV has to be switched on in the NAS.";
+"ios.server.dlna.detail" = "Finds media servers on the same network by itself.";
+"ios.server.empty" = "No servers added yet.";

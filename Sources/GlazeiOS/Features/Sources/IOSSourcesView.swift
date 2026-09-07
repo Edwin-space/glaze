@@ -1,106 +1,74 @@
 import GlazeCore
 import SwiftUI
-import UniformTypeIdentifiers
 
-/// Where the films come from: servers found on the network, and NAS addresses typed in.
+/// Where the films come from.
+///
+/// Laid out the way every file app on this platform lays it out: what is on the
+/// device, then the servers that have been added, each saying what it speaks. Adding
+/// one starts by choosing the kind, because "what do you have?" is a question a
+/// person can answer — "what is the address?" is not, until you know which of your
+/// NAS's several addresses it wants.
 struct IOSSourcesView: View {
     let discovery: NetworkMediaBrowserModel
     let connections: WebDAVConnectionStore
+    let synologyConnections: SynologyConnectionStore
+    let library: IOSLibraryModel
+
+    let onUseDevice: () -> Void
     let onUseDLNA: (NetworkMediaServer) -> Void
     let onUseWebDAV: (WebDAVConnection) -> Void
-    let library: IOSLibraryModel
-    let onUseDevice: () -> Void
-    let synologyConnections: SynologyConnectionStore
     let onUseSynology: (SynologyConnection) -> Void
     let onConnectedSynology: (SynologyConnection, String, SynologySession, String) -> Void
 
-    @State private var isAdding = false
-    @State private var isAddingSynology = false
+    @State private var isAddingServer = false
+    @State private var addingKind: IOSServerKind?
+
+    private var servers: [IOSSavedServer] {
+        let all = synologyConnections.connections.map(IOSSavedServer.synology)
+            + connections.connections.map(IOSSavedServer.webDAV)
+        return all.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
 
     var body: some View {
         List {
             deviceSection
-
-            Section(L10n.string("settings.network.discovery.title")) {
-                if discovery.servers.isEmpty {
-                    Label(
-                        discovery.phase == .discovering
-                            ? L10n.string("network.browser.discovering")
-                            : L10n.string("network.browser.empty"),
-                        systemImage: "antenna.radiowaves.left.and.right"
-                    )
-                    .foregroundStyle(IOSTheme.dim)
-                } else {
-                    ForEach(discovery.servers) { server in
-                        Button { onUseDLNA(server) } label: {
-                            Label(server.friendlyName, systemImage: "play.tv")
-                        }
-                    }
-                }
-            }
-
-            Section(L10n.string("synology.section")) {
-                ForEach(synologyConnections.connections) { connection in
-                    Button { onUseSynology(connection) } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(connection.name)
-                            Text("\(connection.account) · \(connection.libraryPath ?? "/")")
-                                .font(.caption)
-                                .foregroundStyle(IOSTheme.dim)
-                                .lineLimit(1)
-                        }
-                    }
-                }
-                .onDelete { offsets in
-                    for index in offsets {
-                        synologyConnections.remove(synologyConnections.connections[index])
-                    }
-                }
-
-                Button { isAddingSynology = true } label: {
-                    Label(L10n.string("synology.add"), systemImage: "plus")
-                }
-            }
-
-            Section(L10n.string("webdav.section.title")) {
-                ForEach(connections.connections) { connection in
-                    Button { onUseWebDAV(connection) } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(connection.name)
-                            Text(connection.rootURL.absoluteString)
-                                .font(.caption)
-                                .foregroundStyle(IOSTheme.dim)
-                                .lineLimit(1)
-                        }
-                    }
-                }
-                .onDelete { offsets in
-                    for index in offsets { connections.remove(connections.connections[index]) }
-                }
-
-                Button {
-                    isAdding = true
-                } label: {
-                    Label(L10n.string("webdav.add"), systemImage: "plus")
-                }
-            }
-
-            Section {
-                NavigationLink(L10n.string("legal.title")) {
-                    IOSLicensesView()
-                }
-            }
+            serverSection
+            aboutSection
         }
         .navigationTitle(L10n.string("tv.navigation.sources"))
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    isAddingServer = true
+                } label: {
+                    Label(L10n.string("ios.server.add"), systemImage: "plus")
+                }
+            }
+        }
         .task { await discovery.discoverIfNeeded() }
         .refreshable { await discovery.discover() }
-        .sheet(isPresented: $isAddingSynology) {
-            IOSSynologySetupView(onConnected: onConnectedSynology)
+        .sheet(isPresented: $isAddingServer) {
+            IOSAddServerView(
+                discovery: discovery,
+                onChoose: { kind in
+                    // DLNA needs no details, so it is not a form.
+                    guard kind != .dlna else { return }
+                    addingKind = kind
+                },
+                onUseDLNA: onUseDLNA
+            )
         }
-        .sheet(isPresented: $isAdding) {
-            IOSWebDAVSetupView { connection, password in
-                connections.save(connection, password: password)
-                onUseWebDAV(connection)
+        .sheet(item: $addingKind) { kind in
+            switch kind {
+            case .synology:
+                IOSSynologySetupView(onConnected: onConnectedSynology)
+            case .webDAV:
+                IOSWebDAVSetupView { connection, password in
+                    connections.save(connection, password: password)
+                    onUseWebDAV(connection)
+                }
+            case .dlna:
+                EmptyView()
             }
         }
     }
@@ -120,9 +88,64 @@ struct IOSSourcesView: View {
             Text(L10n.string("ios.sources.device.hint"))
         }
     }
+
+    private var serverSection: some View {
+        Section(L10n.string("ios.server.section")) {
+            if servers.isEmpty {
+                Text(L10n.string("ios.server.empty"))
+                    .font(.footnote)
+                    .foregroundStyle(IOSTheme.dim)
+            }
+
+            ForEach(servers) { server in
+                Button { open(server) } label: { row(for: server) }
+            }
+            .onDelete(perform: remove)
+        }
+    }
+
+    private var aboutSection: some View {
+        Section {
+            NavigationLink(L10n.string("legal.title")) {
+                IOSLicensesView()
+            }
+        }
+    }
+
+    private func row(for server: IOSSavedServer) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: server.kind.symbol)
+                .font(.title3)
+                .foregroundStyle(IOSTheme.amber)
+                .frame(width: 30)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(server.name).foregroundStyle(.primary).lineLimit(1)
+                // The protocol under the name, so two entries for the same box are
+                // told apart at a glance.
+                Text("\(server.kind.title) · \(server.detail)")
+                    .font(.caption)
+                    .foregroundStyle(IOSTheme.dim)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    private func open(_ server: IOSSavedServer) {
+        switch server {
+        case .synology(let connection): onUseSynology(connection)
+        case .webDAV(let connection): onUseWebDAV(connection)
+        }
+    }
+
+    private func remove(at offsets: IndexSet) {
+        for index in offsets {
+            switch servers[index] {
+            case .synology(let connection): synologyConnections.remove(connection)
+            case .webDAV(let connection): connections.remove(connection)
+            }
+        }
+    }
 }
-
-
 
 /// Typing a NAS address on a phone, which is the one place people will actually do it
 /// rather than on a television remote.

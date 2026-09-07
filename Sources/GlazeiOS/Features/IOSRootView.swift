@@ -38,6 +38,13 @@ struct IOSRootView: View {
                     IOSSourcesView(
                         discovery: discovery,
                         connections: connections,
+                        synologyConnections: synologyConnections,
+                        library: library,
+                        onUseDevice: {
+                            useDevice()
+                            path = NavigationPath()
+                            selection = .library
+                        },
                         onUseDLNA: { server in
                             Task {
                                 await discovery.select(server)
@@ -58,13 +65,6 @@ struct IOSRootView: View {
                             path = NavigationPath()
                             selection = .library
                         },
-                        library: library,
-                        onUseDevice: {
-                            useDevice()
-                            path = NavigationPath()
-                            selection = .library
-                        },
-                        synologyConnections: synologyConnections,
                         onUseSynology: { connection in
                             Task {
                                 await useSynology(connection)
