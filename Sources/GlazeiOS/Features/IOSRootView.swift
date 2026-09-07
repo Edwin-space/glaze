@@ -10,6 +10,7 @@ struct IOSRootView: View {
     @State private var library = IOSLibraryModel()
     @State private var artwork = IOSArtworkLoader()
     @State private var connections = WebDAVConnectionStore()
+    @State private var synologyConnections = SynologyConnectionStore()
     @State private var preferences = IOSUserPreferences()
     @State private var selection: IOSTab = .library
     @State private var path = NavigationPath()
@@ -62,6 +63,25 @@ struct IOSRootView: View {
                             useDevice()
                             path = NavigationPath()
                             selection = .library
+                        },
+                        synologyConnections: synologyConnections,
+                        onUseSynology: { connection in
+                            Task {
+                                await useSynology(connection)
+                                path = NavigationPath()
+                                selection = .library
+                            }
+                        },
+                        onConnectedSynology: { connection, password, session, sharePath in
+                            synologyConnections.save(connection, password: password)
+                            preferences.lastSource = "synology:\(connection.id)"
+                            library.loadSynology(
+                                name: connection.name,
+                                session: session,
+                                path: sharePath
+                            )
+                            path = NavigationPath()
+                            selection = .library
                         }
                     )
                 }
@@ -91,6 +111,30 @@ struct IOSRootView: View {
         library.load(connection, password: password)
     }
 
+    /// Signs in again with the stored password. The session token DSM hands out does
+    /// not survive a relaunch, so coming back to a saved Synology means a fresh login.
+    private func useSynology(_ connection: SynologyConnection) async {
+        guard let password = synologyConnections.password(for: connection) else {
+            library.reportSynologyFailure(SynologyError.badCredentials)
+            return
+        }
+        do {
+            let session = try await SynologyClient().logIn(
+                to: connection.baseURL,
+                account: connection.account,
+                password: password
+            )
+            preferences.lastSource = "synology:\(connection.id)"
+            library.loadSynology(
+                name: connection.name,
+                session: session,
+                path: connection.libraryPath ?? "/"
+            )
+        } catch {
+            library.reportSynologyFailure(error)
+        }
+    }
+
     private func useDevice() {
         preferences.lastSource = "device"
         // Nothing on the device is behind a login, and leaving stale NAS credentials
@@ -106,6 +150,19 @@ struct IOSRootView: View {
 
         if preferences.lastSource == "device" {
             useDevice()
+            return
+        }
+
+        synologyConnections.reload()
+        if let stored = preferences.lastSource, stored.hasPrefix("synology:") {
+            let id = String(stored.dropFirst("synology:".count))
+            if let connection = synologyConnections.connections.first(where: { $0.id == id }) {
+                await useSynology(connection)
+                return
+            }
+        }
+        if let connection = synologyConnections.connections.first {
+            await useSynology(connection)
             return
         }
 

@@ -10,8 +10,12 @@ struct IOSSourcesView: View {
     let onUseWebDAV: (WebDAVConnection) -> Void
     let library: IOSLibraryModel
     let onUseDevice: () -> Void
+    let synologyConnections: SynologyConnectionStore
+    let onUseSynology: (SynologyConnection) -> Void
+    let onConnectedSynology: (SynologyConnection, String, SynologySession, String) -> Void
 
     @State private var isAdding = false
+    @State private var isAddingSynology = false
 
     var body: some View {
         List {
@@ -32,6 +36,29 @@ struct IOSSourcesView: View {
                             Label(server.friendlyName, systemImage: "play.tv")
                         }
                     }
+                }
+            }
+
+            Section(L10n.string("synology.section")) {
+                ForEach(synologyConnections.connections) { connection in
+                    Button { onUseSynology(connection) } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(connection.name)
+                            Text("\(connection.account) · \(connection.libraryPath ?? "/")")
+                                .font(.caption)
+                                .foregroundStyle(IOSTheme.dim)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .onDelete { offsets in
+                    for index in offsets {
+                        synologyConnections.remove(synologyConnections.connections[index])
+                    }
+                }
+
+                Button { isAddingSynology = true } label: {
+                    Label(L10n.string("synology.add"), systemImage: "plus")
                 }
             }
 
@@ -67,6 +94,9 @@ struct IOSSourcesView: View {
         .navigationTitle(L10n.string("tv.navigation.sources"))
         .task { await discovery.discoverIfNeeded() }
         .refreshable { await discovery.discover() }
+        .sheet(isPresented: $isAddingSynology) {
+            IOSSynologySetupView(onConnected: onConnectedSynology)
+        }
         .sheet(isPresented: $isAdding) {
             IOSWebDAVSetupView { connection, password in
                 connections.save(connection, password: password)

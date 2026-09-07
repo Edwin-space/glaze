@@ -20,6 +20,7 @@ final class IOSLibraryModel {
         case device
         case dlna(serverName: String)
         case webDAV(connectionName: String)
+        case synology(connectionName: String)
     }
 
     /// Where films copied onto the phone live: the app's own Documents folder,
@@ -40,6 +41,9 @@ final class IOSLibraryModel {
     /// Kept so a folder can be listed again later — the subtitle picker needs to see
     /// every subtitle beside a film, not only the ones whose name matched it.
     private var webDAV: (connection: WebDAVConnection, password: String?)?
+    /// Kept for the same reason as the WebDAV one: the subtitle picker lists the
+    /// film's folder again, and that needs the signed-in session.
+    private var synology: (name: String, session: SynologySession)?
 
     var isLoading: Bool {
         if case .loading = phase { return true }
@@ -125,6 +129,77 @@ final class IOSLibraryModel {
         self.resources = resources
         self.library = library
         phase = .ready
+    }
+
+    // MARK: - Synology
+
+    /// Reads a shared folder over DSM's own API, so nothing has to be switched on in
+    /// the NAS first.
+    func loadSynology(name: String, session: SynologySession, path: String) {
+        loadTask?.cancel()
+        phase = .loading(foldersRead: 0)
+        source = .synology(connectionName: name)
+        webDAV = nil
+        synology = (name, session)
+
+        loadTask = Task { [weak self] in
+            do {
+                let library = try await SynologyLibraryLoader().load(
+                    root: path,
+                    session: session
+                ) { [weak self] read in
+                    Task { @MainActor in self?.noteProgress(read) }
+                }
+                guard let self, !Task.isCancelled else { return }
+                adoptSynology(library, session: session)
+            } catch {
+                guard let self, !Task.isCancelled else { return }
+                phase = .failed(Self.message(forSynology: error))
+            }
+        }
+    }
+
+    private func adoptSynology(_ library: MediaLibrary, session: SynologySession) {
+        var resources: [String: NetworkMediaResource] = [:]
+        for item in library.movies + library.series.flatMap(\.allEpisodes) {
+            // The addresses already carry the session token, so nothing else is needed
+            // to hand them to the player.
+            resources[item.id] = NetworkMediaResource(
+                serverID: session.baseURL.absoluteString,
+                objectID: item.id,
+                playbackURL: item.playbackURL,
+                byteCount: item.byteCount,
+                duration: item.duration,
+                dateAdded: item.dateAdded,
+                subtitleResources: item.subtitleURLs.map { url in
+                    NetworkSubtitleResource(
+                        url: url,
+                        displayName: url.lastPathComponent,
+                        languageCode: SubtitleFile.manual(url: url).languageCode
+                    )
+                }
+            )
+        }
+        self.resources = resources
+        self.library = library
+        phase = .ready
+    }
+
+    /// Lets a failed sign-in show up where every other library failure does.
+    func reportSynologyFailure(_ error: Error) {
+        phase = .failed(Self.message(forSynology: error))
+    }
+
+    static func message(forSynology error: Error) -> String {
+        switch error {
+        case SynologyError.badCredentials: L10n.string("synology.error.credentials")
+        case SynologyError.needsOneTimeCode: L10n.string("synology.error.otp_required")
+        case SynologyError.oneTimeCodeRejected: L10n.string("synology.error.otp_rejected")
+        case SynologyError.accountDisabled: L10n.string("synology.error.disabled")
+        case SynologyError.notSynology: L10n.string("synology.error.not_synology")
+        case SynologyError.insecureConnectionBlocked: L10n.string("synology.error.needs_https")
+        default: L10n.string("webdav.error.network")
+        }
     }
 
     // MARK: - WebDAV
@@ -228,6 +303,7 @@ final class IOSLibraryModel {
     /// `기생충.srt` to sit beside `Parasite.2019.1080p.mkv`. This lists the folder
     /// again and offers the lot.
     func subtitleCandidates(for item: MediaLibraryItem) async -> [IOSSubtitleCandidate] {
+        if let synology { return await synologyCandidates(for: item, session: synology.session) }
         guard let webDAV else { return [] }
         let folder = item.playbackURL.deletingLastPathComponent()
         let credentials = webDAV.password.map { (username: webDAV.connection.username, password: $0) }
@@ -243,6 +319,30 @@ final class IOSLibraryModel {
                     name: entry.name,
                     url: Self.authenticated(entry.url, connection: webDAV.connection, password: webDAV.password),
                     isBesideTheFilm: matched.contains(entry.url.absoluteString)
+                )
+            }
+    }
+
+    private func synologyCandidates(
+        for item: MediaLibraryItem,
+        session: SynologySession
+    ) async -> [IOSSubtitleCandidate] {
+        // The item's id is the file's path on the NAS, which is what DSM lists by.
+        let folder = (item.id as NSString).deletingLastPathComponent
+        let client = SynologyClient()
+        guard let entries = try? await client.list(folder, session: session) else { return [] }
+
+        let matched = Set(item.subtitleURLs.map(\.absoluteString))
+        return entries
+            .filter { !$0.isDirectory && !$0.isHidden && Self.subtitleExtensions.contains(($0.name as NSString).pathExtension.lowercased()) }
+            .sorted { $0.name < $1.name }
+            .map { entry in
+                let url = client.mediaURL(for: entry.path, session: session)
+                return IOSSubtitleCandidate(
+                    id: entry.path,
+                    name: entry.name,
+                    url: url,
+                    isBesideTheFilm: matched.contains(url.absoluteString)
                 )
             }
     }

@@ -517,3 +517,23 @@
 "ios.device.empty.files" = "Or use Import Files below to copy a video from Files or iCloud Drive.";
 "ios.device.empty.subtitles" = "Subtitles and posters named after the video are picked up automatically.";
 "ios.sources.device.hint" = "Plays videos you put on the device by cable or through Files, with no network involved.";
+
+/* Synology */
+"synology.section" = "Synology";
+"synology.add" = "Connect a Synology";
+"synology.title" = "Sign in to Synology";
+"synology.field.address" = "Address or IP";
+"synology.field.address.hint" = "For example 203.0.113.10 or nas.example.com. Without a port it connects over HTTPS on 5001. An address reached from outside your home has to use HTTPS.";
+"synology.field.account" = "DSM account";
+"synology.field.password" = "Password";
+"synology.field.otp" = "Six-digit code";
+"synology.field.otp.hint" = "If two-factor sign-in is on, enter the code from your authenticator.";
+"synology.connect" = "Sign In";
+"synology.shares" = "Shared Folders";
+"synology.shares.detail" = "Choose the folder to open as your library.";
+"synology.error.credentials" = "That account or password is not right.";
+"synology.error.otp_required" = "A two-factor code is needed.";
+"synology.error.otp_rejected" = "That code is not right.";
+"synology.error.disabled" = "This account is disabled.";
+"synology.error.not_synology" = "No DSM answered at that address. Check the address and port.";
+"synology.error.needs_https" = "This address has to be reached over HTTPS. Put https:// in front of it, or use port 5001.";

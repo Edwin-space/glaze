@@ -518,3 +518,23 @@
 "ios.device.empty.subtitles" = "자막과 포스터를 영상과 같은 이름으로 함께 넣으면 그대로 인식합니다.";
 "common.delete" = "삭제";
 "ios.sources.device.hint" = "케이블이나 파일 앱으로 넣어둔 영상을 네트워크 없이 재생합니다.";
+
+/* Synology */
+"synology.section" = "시놀로지";
+"synology.add" = "시놀로지 연결";
+"synology.title" = "시놀로지에 로그인";
+"synology.field.address" = "주소 또는 IP";
+"synology.field.address.hint" = "예: 203.0.113.10 또는 nas.example.com. 포트를 적지 않으면 HTTPS 5001로 연결합니다. 집 밖에서 접속하는 주소는 HTTPS여야 합니다.";
+"synology.field.account" = "DSM 계정";
+"synology.field.password" = "비밀번호";
+"synology.field.otp" = "인증 코드 6자리";
+"synology.field.otp.hint" = "2단계 인증을 켜두셨다면 앱에 표시된 코드를 입력하세요.";
+"synology.connect" = "로그인";
+"synology.shares" = "공유 폴더";
+"synology.shares.detail" = "보관함으로 열 폴더를 고르세요.";
+"synology.error.credentials" = "계정이나 비밀번호가 맞지 않습니다.";
+"synology.error.otp_required" = "2단계 인증 코드가 필요합니다.";
+"synology.error.otp_rejected" = "인증 코드가 맞지 않습니다.";
+"synology.error.disabled" = "이 계정은 사용이 중지되어 있습니다.";
+"synology.error.not_synology" = "이 주소에서 DSM을 찾지 못했습니다. 주소와 포트를 확인하세요.";
+"synology.error.needs_https" = "이 주소는 HTTPS로 접속해야 합니다. 주소 앞에 https:// 를 붙이거나 포트를 5001로 지정하세요.";
