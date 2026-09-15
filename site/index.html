@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>글레이즈 Glaze</title>
+  <meta name="description" content="맥에서 자막을 만들고, 어디서나 봅니다. NAS의 영상을 재생하고 기기 안에서 자막을 만드는 미디어 플레이어.">
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="bar">
+      <a class="brand" href="./"><img src="assets/icon.png" alt="">글레이즈</a>
+      <nav class="nav" aria-label="사이트">
+        <a href="support/">지원</a>
+        <a href="privacy/">개인정보 처리방침</a>
+        <a href="terms/">이용약관</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="frame" role="img" aria-label="자막이 표시된 영화 장면">
+          <p class="caption">“강을 따라가면 바다가 나올 거야.”<small>기기 안에서 만든 자막</small></p>
+        </div>
+        <h1>맥에서 자막을 만들고,<br><em>어디서나 봅니다.</em></h1>
+        <p class="lede">글레이즈는 NAS와 내 맥에 있는 영상을 재생하는 플레이어입니다. 자막이 없는 영상은
+          맥이 직접 받아쓰고 한국어로 옮겨, 영상 옆에 자막 파일로 남겨 둡니다.</p>
+        <div class="cta">
+          <span class="badge-soon">Mac App Store 출시 준비 중</span>
+          <a class="button ghost" href="https://github.com/Edwin-space/glaze">소스 코드 보기</a>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="what">
+        <h2 id="what">맥에서 할 수 있는 일</h2>
+        <p>영상, 음성, 내 정보가 개발자에게 전송되지 않습니다. 개발자가 운영하는 서버가 없습니다.</p>
+        <div class="grid">
+          <article class="card">
+            <h3>MKV까지 그대로 재생</h3>
+            <p>VLC 엔진으로 MKV, MP4, AVI, WebM을 변환 없이 엽니다. 이어보기와 폴더 단위 재생목록을 지원합니다.</p>
+          </article>
+          <article class="card">
+            <h3>기기 안에서 자막 생성</h3>
+            <p>음성을 받아쓰고 한국어로 번역해 SRT 파일로 저장합니다. 영상과 음성은 맥 밖으로 나가지 않습니다.</p>
+          </article>
+          <article class="card">
+            <h3>NAS를 폴더째로</h3>
+            <p>시놀로지 같은 NAS를 WebDAV로 연결하거나, 같은 네트워크의 DLNA/UPnP 서버를 자동으로 찾아 폴더째로 엽니다.</p>
+          </article>
+          <article class="card">
+            <h3>작품 정보</h3>
+            <p>영상 옆의 <code>.nfo</code>를 읽고, 직접 입력한 TMDB 키로 포스터와 줄거리를 찾아 영상 옆에 저장합니다.</p>
+          </article>
+          <article class="card">
+            <h3>키보드로 조작</h3>
+            <p><span class="kbd">←</span> <span class="kbd">→</span> 10초 이동, <span class="kbd">↑</span> <span class="kbd">↓</span> 음량, <span class="kbd">⌘→</span> 다음 영상. 설정에서 원하는 키로 바꿀 수 있습니다.</p>
+          </article>
+          <article class="card">
+            <h3>시청 기록 표시</h3>
+            <p>재생목록에서 새 영상, 보던 영상, 다 본 영상을 구분해 보여줍니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="platforms">
+        <h2 id="platforms">플랫폼</h2>
+        <p>맥이 자막과 작품 정보를 준비하면, 다른 기기는 같은 폴더를 열어 바로 봅니다.</p>
+        <div class="platforms">
+          <div><strong>macOS</strong><span class="pill live">먼저 출시</span></div>
+          <div><strong>iPhone · iPad</strong><span class="pill soon">준비 중</span></div>
+          <div><strong>Apple TV</strong><span class="pill soon">준비 중</span></div>
+        </div>
+        <p class="note" style="margin-top:12px">macOS 26 이상이 필요합니다.</p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>© 2026 Glaze · 소스 코드 MIT 라이선스</span>
+      <span>이 제품은 TMDB API를 사용하지만 TMDB가 보증하거나 인증하지 않았습니다.</span>
+    </footer>
+  </div>
+</body>
+</html>

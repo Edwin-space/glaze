@@ -65,6 +65,11 @@ Apache-2.0과 MIT로 배포되는 나머지 의존성은 각 앱 안의 **오픈
 
 글레이즈의 소스 코드는 MIT다. [LICENSE](LICENSE)를 보라.
 
+## 사이트
+
+소개·개인정보 처리방침·이용약관·지원 페이지는 [`site/`](site)에 있고
+https://edwin-space.github.io/glaze/ 로 배포된다(`.github/workflows/pages.yml`).
+
 ## 기록
 
 설계 판단과 그 이유는 [`docs/`](docs)에 시간순으로 적혀 있다.

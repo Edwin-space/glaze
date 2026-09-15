@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>지원 · 글레이즈</title>
+  <link rel="icon" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="bar">
+      <a class="brand" href="../"><img src="../assets/icon.png" alt="">글레이즈</a>
+      <nav class="nav" aria-label="사이트">
+        <a href="./" aria-current="page">지원</a>
+        <a href="../privacy/">개인정보 처리방침</a>
+        <a href="../terms/">이용약관</a>
+      </nav>
+    </header>
+
+    <main class="doc">
+      <h1>지원</h1>
+      <p class="meta">문제가 생기면 <a href="https://github.com/Edwin-space/glaze/issues">GitHub Issues</a>에
+        남겨 주세요. macOS 버전, 앱 버전(글레이즈 → 글레이즈에 관하여), 무슨 일이 있었는지 적어 주시면
+        빨리 확인할 수 있습니다. NAS 주소나 비밀번호는 적지 마세요.</p>
+
+      <h2>자주 묻는 질문</h2>
+
+      <details>
+        <summary>어떤 파일을 재생할 수 있나요?</summary>
+        <p>MKV, MP4, MOV, AVI, WebM, M4V 영상과 SRT, VTT, SMI, ASS, SSA 자막을 열 수 있습니다.
+          Finder에서 파일을 끌어다 놓거나 “파일 → 영상 열기…”(⌘O)를 사용하세요.</p>
+      </details>
+
+      <details>
+        <summary>NAS는 어떻게 연결하나요?</summary>
+        <p>설정 → 네트워크에서 WebDAV 주소를 추가하세요. 시놀로지는 “WebDAV Server” 패키지를 켜면
+          연결할 수 있습니다. 같은 네트워크의 DLNA/UPnP 미디어 서버는 네트워크 미디어 화면에서
+          자동으로 찾습니다.</p>
+      </details>
+
+      <details>
+        <summary>HTTPS로 연결할 때 인증서 오류가 나요.</summary>
+        <p>인증서가 <code>my-nas.synology.me</code> 같은 이름으로 발급되었는데 IP 주소로 접속하면
+          생기는 오류입니다. 글레이즈가 인증서에 적힌 이름을 알려주면 그 이름으로 주소를 바꾸세요.
+          자체 서명 인증서라면 지문을 확인한 뒤 신뢰할 수 있습니다.</p>
+      </details>
+
+      <details>
+        <summary>자막 생성은 인터넷이 필요한가요?</summary>
+        <p>처음 한 번 음성 인식 모델과 번역 언어 자료를 내려받을 때만 필요합니다. 그 뒤로는
+          영상과 음성이 맥 밖으로 나가지 않고 기기 안에서 처리됩니다.</p>
+      </details>
+
+      <details>
+        <summary>작품 정보(포스터, 줄거리)가 안 나와요.</summary>
+        <p>작품 정보는 TMDB에서 가져오며 본인의 TMDB API 키가 필요합니다.
+          <a href="https://www.themoviedb.org/settings/api">themoviedb.org</a>에서 키를 발급받아
+          설정 → 작품 정보에 입력하세요. 잘못 찾은 작품은 정보 패널에서 다시 검색해 고칠 수 있습니다.</p>
+      </details>
+
+      <details>
+        <summary>키보드 단축키를 바꾸고 싶어요.</summary>
+        <p>설정 → 키보드에서 동작마다 원하는 키를 지정할 수 있습니다. 기본값은 스페이스 재생/일시정지,
+          ←/→ 10초 이동, ↑/↓ 음량, ⌘←/⌘→ 이전/다음 영상입니다.</p>
+      </details>
+
+      <details>
+        <summary>시스템 요구 사항은 무엇인가요?</summary>
+        <p>macOS 26 이상이 필요합니다.</p>
+      </details>
+
+      <h2>관련 문서</h2>
+      <ul>
+        <li><a href="../privacy/">개인정보 처리방침</a></li>
+        <li><a href="../terms/">이용약관</a></li>
+        <li><a href="https://github.com/Edwin-space/glaze">소스 코드와 오픈소스 라이선스</a></li>
+      </ul>
+    </main>
+
+    <footer class="foot">
+      <span>© 2026 Glaze</span>
+      <a href="../">글레이즈 홈</a>
+    </footer>
+  </div>
+</body>
+</html>

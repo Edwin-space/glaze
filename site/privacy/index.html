@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>개인정보 처리방침 · 글레이즈</title>
+  <link rel="icon" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="bar">
+      <a class="brand" href="../"><img src="../assets/icon.png" alt="">글레이즈</a>
+      <nav class="nav" aria-label="사이트">
+        <a href="../support/">지원</a>
+        <a href="./" aria-current="page">개인정보 처리방침</a>
+        <a href="../terms/">이용약관</a>
+      </nav>
+    </header>
+
+    <main class="doc">
+      <div class="lang-switch"><a href="#ko">한국어</a><a href="#en">English</a></div>
+
+      <article id="ko" lang="ko">
+        <h1>개인정보 처리방침</h1>
+        <p class="meta">시행일: 2026년 9월 15일 · 대상: 글레이즈 macOS · iOS · iPadOS · tvOS 앱</p>
+
+        <p>글레이즈는 이용자가 가진 영상을 재생하는 앱입니다. 개발자는 이용자에 관한 어떤 정보도
+          수집하거나 전송받지 않습니다.</p>
+
+        <h2>수집하지 않는 것</h2>
+        <p>계정을 만들지 않으며 이름, 이메일, 전화번호를 묻지 않습니다. 사용 기록을 수집하지 않고
+          분석 도구나 광고 SDK를 넣지 않았습니다. 개발자가 운영하는 서버가 없으므로 이용자가
+          개발자에게 보내는 정보도 없습니다.</p>
+
+        <h2>기기에만 저장되는 것</h2>
+        <ul>
+          <li>영상을 어디까지 보았는지, 다 본 영상인지</li>
+          <li>자막 언어, 자막 크기, 재생 속도, 키보드 단축키 같은 설정</li>
+          <li>이용자가 직접 입력한 NAS 주소와 로그인 정보, TMDB API 키</li>
+          <li>표지와 포스터 이미지 캐시(설정에서 지울 수 있습니다)</li>
+        </ul>
+        <p>이 정보는 기기 안에만 저장됩니다. NAS 비밀번호는 시스템 키체인에 저장되며, 앱을
+          삭제하면 함께 지워집니다.</p>
+
+        <h2>이용자의 지시로 외부와 통신하는 경우</h2>
+        <ul>
+          <li><strong>이용자의 NAS·미디어 서버</strong> — 이용자가 입력하거나 고른 서버에만
+            연결합니다. 같은 네트워크의 DLNA 서버를 찾을 때 로컬 네트워크를 사용합니다.</li>
+          <li><strong>TMDB(themoviedb.org)</strong> — 작품 정보를 찾을 때 영상 파일의 제목을
+            보냅니다. 이용자를 식별할 수 있는 정보는 보내지 않습니다. 이용자가 TMDB API 키를
+            직접 입력했을 때만 동작합니다. 이 제품은 TMDB API를 사용하지만 TMDB가 보증하거나
+            인증하지 않았습니다.</li>
+          <li><strong>음성 인식 모델(Hugging Face)</strong> — 맥에서 자막 생성을 처음 사용할 때
+            음성 인식 모델 파일을 Hugging Face에서 내려받습니다. 이 요청에는 영상, 음성,
+            이용자 정보가 들어가지 않습니다. 다른 웹 요청처럼 Hugging Face가 접속 IP 주소를
+            볼 수는 있습니다.</li>
+          <li><strong>번역 언어 자료(Apple)</strong> — 자막 번역은 macOS의 번역 기능을 씁니다.
+            필요한 언어 자료는 macOS가 Apple에서 내려받으며, Apple의 개인정보 처리방침을 따릅니다.</li>
+        </ul>
+        <p>음성 인식과 번역은 기기 안에서 이루어집니다. 영상과 음성은 기기 밖으로 전송되지 않습니다.</p>
+
+        <h2>어린이</h2>
+        <p>이 앱은 어린이를 대상으로 하지 않으며, 어린이에 관한 정보를 수집하지 않습니다.</p>
+
+        <h2>변경</h2>
+        <p>이 방침이 바뀌면 이 페이지를 고치고 시행일을 새로 적습니다.</p>
+
+        <h2>문의</h2>
+        <p><a href="https://github.com/Edwin-space/glaze/issues">GitHub Issues</a>에 남겨 주세요.
+          개인정보가 담긴 내용은 공개 이슈에 적지 마세요.</p>
+      </article>
+
+      <hr class="divider">
+
+      <article id="en" lang="en">
+        <h1>Privacy Policy</h1>
+        <p class="meta">Effective 15 September 2026 · Glaze for macOS, iOS, iPadOS and tvOS</p>
+
+        <p>Glaze plays video you already have. The developer collects nothing about you and
+          receives nothing from you.</p>
+
+        <h2>What is not collected</h2>
+        <p>There is no account and no request for your name, email or phone number. No usage is
+          recorded, and there is no analytics or advertising code in the app. The developer runs
+          no server, so there is nowhere for your information to be sent.</p>
+
+        <h2>What stays on your device</h2>
+        <ul>
+          <li>how far into a video you got, and which videos you have finished</li>
+          <li>settings such as subtitle language, subtitle size, playback speed and keyboard shortcuts</li>
+          <li>server addresses and credentials, and the TMDB API key, that you entered yourself</li>
+          <li>a cache of cover and poster images, which you can clear in Settings</li>
+        </ul>
+        <p>These stay on the device. NAS passwords are held in the system keychain. Deleting the
+          app removes them.</p>
+
+        <h2>When the app talks to something else, at your instruction</h2>
+        <ul>
+          <li><strong>Your own NAS or media server</strong> — only a server you entered or chose.
+            Finding DLNA servers uses your local network.</li>
+          <li><strong>TMDB (themoviedb.org)</strong> — looking up film information sends the title
+            of the file and nothing that identifies you. It runs only if you entered your own TMDB
+            API key. This product uses the TMDB API but is not endorsed or certified by TMDB.</li>
+          <li><strong>Speech recognition model (Hugging Face)</strong> — the first time you generate
+            subtitles on the Mac, the speech model files are downloaded from Hugging Face. The
+            request contains no video, audio or information about you. As with any web request,
+            Hugging Face can see the IP address it came from.</li>
+          <li><strong>Translation languages (Apple)</strong> — subtitle translation uses macOS's
+            built-in Translation. macOS downloads any language it needs from Apple, under Apple's
+            privacy policy.</li>
+        </ul>
+        <p>Speech recognition and translation run on the device. No video or audio leaves it.</p>
+
+        <h2>Children</h2>
+        <p>The app is not directed at children and collects nothing about them.</p>
+
+        <h2>Changes</h2>
+        <p>If this policy changes, the revised version appears on this page with a new date.</p>
+
+        <h2>Contact</h2>
+        <p>Open an issue on <a href="https://github.com/Edwin-space/glaze/issues">GitHub</a>.
+          Please keep personal information out of public issues.</p>
+      </article>
+    </main>
+
+    <footer class="foot">
+      <span>© 2026 Glaze</span>
+      <a href="../">글레이즈 홈</a>
+    </footer>
+  </div>
+</body>
+</html>
