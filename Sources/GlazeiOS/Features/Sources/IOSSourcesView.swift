@@ -14,7 +14,6 @@ struct IOSSourcesView: View {
     let synologyConnections: SynologyConnectionStore
     let library: IOSLibraryModel
 
-    let onUseDevice: () -> Void
     let onUseDLNA: (NetworkMediaServer) -> Void
     let onUseWebDAV: (WebDAVConnection) -> Void
     let onUseSynology: (SynologyConnection) -> Void
@@ -24,6 +23,7 @@ struct IOSSourcesView: View {
     @State private var isAddingServer = false
     @State private var addingKind: IOSServerKind?
     @State private var sendingToTV: IOSPairingRequest?
+    @State private var editing: IOSSavedServer?
 
     private var servers: [IOSSavedServer] {
         let all = synologyConnections.connections.map(IOSSavedServer.synology)
@@ -33,12 +33,10 @@ struct IOSSourcesView: View {
 
     var body: some View {
         List {
-            deviceSection
             serverSection
-            aboutSection
         }
         .glazeListBackground()
-        .navigationTitle(L10n.string("tv.navigation.sources"))
+        .navigationTitle(L10n.string("ios.network.title"))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -61,6 +59,17 @@ struct IOSSourcesView: View {
                 onUseDLNA: onUseDLNA
             )
         }
+        .sheet(item: $editing) { server in
+            IOSServerEditView(
+                server: server,
+                connections: connections,
+                synologyConnections: synologyConnections,
+                onSaved: {
+                    connections.reload()
+                    synologyConnections.reload()
+                }
+            )
+        }
         .sheet(item: $sendingToTV) { request in
             IOSPairingScannerView(payload: request.payload)
         }
@@ -81,20 +90,6 @@ struct IOSSourcesView: View {
 
     /// Films kept on the phone. A server is not always reachable, and this is the
     /// one source that needs nothing but the phone.
-    private var deviceSection: some View {
-        Section {
-            NavigationLink {
-                IOSDeviceFilesView(library: library, onOpenLibrary: onUseDevice)
-            } label: {
-                Label(L10n.string("ios.device.title"), systemImage: "iphone")
-            }
-        } header: {
-            Text(L10n.string("ios.sources.device"))
-        } footer: {
-            Text(L10n.string("ios.sources.device.hint"))
-        }
-    }
-
     private var serverSection: some View {
         Section {
             if servers.isEmpty {
@@ -115,6 +110,21 @@ struct IOSSourcesView: View {
     // overlay, a disabled state and a context menu inside a ForEach inside a Section
     // with a header and a footer, and SwiftUI fell over instantiating the type.
     private func serverRow(_ server: IOSSavedServer) -> some View {
+        HStack(spacing: IOSTheme.Spacing.tight) {
+            rowButton(server)
+            // The trailing detail button, the way every file app does it: tap the row
+            // to open, tap here to correct what you typed.
+            Button { editing = server } label: {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(IOSTheme.amber)
+                    .touchTarget()
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(L10n.string("ios.server.edit"))
+        }
+    }
+
+    private func rowButton(_ server: IOSSavedServer) -> some View {
         Button { open(server) } label: {
             // The protocol under the name, so two entries for the same box are told
             // apart at a glance.
@@ -132,11 +142,15 @@ struct IOSSourcesView: View {
                 ProgressView()
             }
         }
+        .buttonStyle(.borderless)
         .contextMenu {
             // Typing this again on a remote control is the worst job in the app;
             // the phone already knows it.
             Button(L10n.string("ios.pairing.send"), systemImage: "tv.badge.wifi") {
                 sendingToTV = payload(for: server).map(IOSPairingRequest.init)
+            }
+            Button(L10n.string("ios.server.edit"), systemImage: "pencil") {
+                editing = server
             }
         }
     }
@@ -146,16 +160,16 @@ struct IOSSourcesView: View {
     @ViewBuilder
     private var failureNote: some View {
         if opening == nil, case .failed(let message) = library.phase {
-            Label(message, systemImage: "exclamationmark.triangle")
-                .font(.footnote)
-                .foregroundStyle(IOSTheme.amber)
-        }
-    }
-
-    private var aboutSection: some View {
-        Section {
-            NavigationLink(L10n.string("legal.title")) {
-                IOSLicensesView()
+            VStack(alignment: .leading, spacing: IOSTheme.Spacing.tight) {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(IOSTheme.amber)
+                // Nothing in iOS lets an app ask whether this was granted, and with it
+                // off every NAS on the same network is simply unreachable with no
+                // error worth the name. Saying so beats leaving someone to guess.
+                Text(L10n.string("network.local_network.hint"))
+                    .font(.caption)
+                    .foregroundStyle(IOSTheme.dim)
             }
         }
     }
@@ -229,6 +243,12 @@ struct IOSWebDAVSetupView: View {
     @State private var address = ""
     @State private var username = ""
     @State private var password = ""
+    @State private var isConnecting = false
+    @State private var failure: String?
+    /// Set only once the server has actually answered. Until then there is nothing to
+    /// browse and nothing worth saving.
+    @State private var connected: WebDAVConnection?
+    @State private var showsFolders = false
 
     var body: some View {
         NavigationStack {
@@ -246,31 +266,85 @@ struct IOSWebDAVSetupView: View {
                 } footer: {
                     Text(L10n.string("webdav.field.url.hint"))
                 }
+
+                Section {
+                    Button {
+                        Task { await connect() }
+                    } label: {
+                        HStack {
+                            Text(L10n.string("webdav.connect"))
+                            if isConnecting {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(!canConnect || isConnecting)
+                } footer: {
+                    if let failure {
+                        VStack(alignment: .leading, spacing: IOSTheme.Spacing.tight) {
+                            Label(failure, systemImage: "exclamationmark.triangle")
+                                .foregroundStyle(IOSTheme.amber)
+                            Text(L10n.string("network.local_network.hint"))
+                                .foregroundStyle(IOSTheme.dim)
+                        }
+                        .font(.caption)
+                    }
+                }
             }
+            .glazeListBackground()
             .navigationTitle(L10n.string("webdav.add"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.string("common.cancel")) { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.string("webdav.connect")) { save() }
-                        .disabled(!canSave)
+            }
+            // The folder is chosen from the server that just answered, not typed from
+            // memory before anything has been reached. Asking which folder to read
+            // before knowing the address even works is asking a question nobody can
+            // answer.
+            .navigationDestination(isPresented: $showsFolders) {
+                if let connected {
+                    IOSFolderPicker(
+                        folders: IOSRemoteFolders.webDAV(
+                            connection: connected,
+                            password: password.isEmpty ? nil : password
+                        ),
+                        onChoose: { folder in save(connected, folder: folder) }
+                    )
                 }
             }
         }
     }
 
-    private var canSave: Bool {
+    private var canConnect: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && URL(string: address)?.host != nil
     }
 
-    private func save() {
+    /// Reads the share's root. It proves the address, the account and the password all
+    /// at once, and it is the same call the folder picker will make next.
+    private func connect() async {
         guard let url = URL(string: address.trimmingCharacters(in: .whitespaces)) else { return }
-        onSave(
-            WebDAVConnection(name: name, rootURL: url, username: username),
-            password.isEmpty ? nil : password
-        )
+        isConnecting = true
+        failure = nil
+        defer { isConnecting = false }
+
+        let connection = WebDAVConnection(name: name, rootURL: url, username: username)
+        let credentials = password.isEmpty ? nil : (username: username, password: password)
+        do {
+            _ = try await WebDAVClient().list(url, credentials: credentials)
+            connected = connection
+            showsFolders = true
+        } catch {
+            failure = IOSLibraryModel.message(forWebDAV: error)
+        }
+    }
+
+    private func save(_ connection: WebDAVConnection, folder: String) {
+        var saved = connection
+        saved.libraryPath = folder.isEmpty ? nil : folder
+        onSave(saved, password.isEmpty ? nil : password)
         dismiss()
     }
 }

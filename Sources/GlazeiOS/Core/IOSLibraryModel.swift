@@ -50,6 +50,19 @@ final class IOSLibraryModel {
         return false
     }
 
+    /// Which library a favourite belongs to. Named rather than keyed on the URL so a
+    /// NAS reachable at two addresses does not become two libraries with two sets of
+    /// stars.
+    var favoriteSourceKey: String {
+        switch source {
+        case .none: "none"
+        case .device: "device"
+        case .dlna(let name): "dlna:\(name)"
+        case .webDAV(let name): "webdav:\(name)"
+        case .synology(let name): "synology:\(name)"
+        }
+    }
+
     func resource(for item: MediaLibraryItem) -> NetworkMediaResource? {
         resources[item.id]
     }
@@ -198,6 +211,12 @@ final class IOSLibraryModel {
         case SynologyError.accountDisabled: L10n.string("synology.error.disabled")
         case SynologyError.notSynology: L10n.string("synology.error.not_synology")
         case SynologyError.insecureConnectionBlocked: L10n.string("synology.error.needs_https")
+        case SynologyError.certificateUntrusted: L10n.string("synology.error.certificate_untrusted")
+        // What the system actually said, rather than "could not connect" — which is
+        // true of every failure and therefore useless. A refused port, a name that
+        // does not resolve and a timeout each need a different thing done about them.
+        case SynologyError.transport(let detail):
+            String(format: L10n.string("synology.error.transport_format"), detail)
         default: L10n.string("webdav.error.network")
         }
     }
@@ -284,12 +303,17 @@ final class IOSLibraryModel {
         return components.url ?? url
     }
 
+    static func message(forWebDAV error: Error) -> String { message(for: error) }
+
     private static func message(for error: Error) -> String {
         switch error {
         case WebDAVError.unauthorized: L10n.string("webdav.error.unauthorized")
         case WebDAVError.notFound: L10n.string("webdav.error.not_found")
         case WebDAVError.notWebDAV: L10n.string("webdav.error.not_webdav")
         case WebDAVError.certificateMismatch: L10n.string("webdav.error.certificate")
+        case WebDAVError.certificateUntrusted: L10n.string("webdav.error.certificate_untrusted")
+        case WebDAVError.network(let detail):
+            String(format: L10n.string("synology.error.transport_format"), detail)
         default: L10n.string("webdav.error.network")
         }
     }

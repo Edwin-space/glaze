@@ -92,6 +92,17 @@ public struct MediaLibraryItem: Identifiable, Equatable, Sendable {
         guard let episode = episodeNumber else { return String(format: "S%02d", season) }
         return String(format: "S%02dE%02d", season, episode)
     }
+
+    /// The name a list of neighbouring files should show.
+    ///
+    /// `displayTitle` is the show's name, which is right under a poster and useless in a
+    /// folder: four episodes of one show all read "Gundam 0083", and nothing in the list
+    /// or the playlist tells them apart. The episode comes first because it is the only
+    /// part that differs — and a long show name truncated at the end must not take the
+    /// episode number with it.
+    public var listTitle: String {
+        episodeLabel.map { "\($0) · \(displayTitle)" } ?? displayTitle
+    }
 }
 
 public struct MediaLibrarySeason: Identifiable, Equatable, Sendable {

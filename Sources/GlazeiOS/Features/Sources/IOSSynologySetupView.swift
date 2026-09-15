@@ -17,6 +17,10 @@ struct IOSSynologySetupView: View {
     @State private var needsOneTimeCode = false
     @State private var isWorking = false
     @State private var failure: String?
+    /// A certificate the NAS presented that nothing vouches for. Shown so the viewer
+    /// can compare the fingerprint and decide, rather than being told "could not
+    /// connect" about a NAS that is answering perfectly well.
+    @State private var untrusted: ServerCertificate?
 
     @State private var session: SynologySession?
     @State private var shares: [SynologyEntry] = []
@@ -37,6 +41,11 @@ struct IOSSynologySetupView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.string("common.cancel")) { dismiss() }
                 }
+            }
+            .sheet(
+                isPresented: Binding(get: { untrusted != nil }, set: { if !$0 { untrusted = nil } })
+            ) {
+                trustSheet
             }
         }
     }
@@ -67,6 +76,11 @@ struct IOSSynologySetupView: View {
             }
         }
 
+        if failure != nil {
+            Text(L10n.string("network.local_network.hint"))
+                .font(.caption)
+                .foregroundStyle(IOSTheme.dim)
+        }
         if let failure {
             Section {
                 Label(failure, systemImage: "exclamationmark.triangle")
@@ -119,9 +133,96 @@ struct IOSSynologySetupView: View {
         } catch SynologyError.needsOneTimeCode {
             needsOneTimeCode = true
             failure = L10n.string("synology.error.otp_required")
+        } catch SynologyError.certificateUntrusted(let certificate) {
+            untrusted = certificate
         } catch {
             failure = IOSLibraryModel.message(forSynology: error)
         }
+    }
+
+    /// Takes the name off the certificate and connects to that instead. No override:
+    /// with the right address the certificate verifies normally.
+    private func useCertifiedName(_ name: String) {
+        // Whatever else was typed — a port, a scheme — is kept; only the host changes.
+        address = address.replacingOccurrences(
+            of: untrusted?.host ?? "",
+            with: name
+        )
+        untrusted = nil
+        Task { await connect() }
+    }
+
+    private var trustTitleKey: String {
+        if case .useCertifiedName? = untrusted.map(ServerTrustPrompt.init) { return "network.name.title" }
+        return "network.trust.title"
+    }
+
+    private func trustAndRetry(_ certificate: ServerCertificate) {
+        ServerTrustStore.shared.accept(certificate)
+        untrusted = nil
+        Task { await connect() }
+    }
+
+    /// Deliberately a sheet the viewer has to read, not a toggle buried in settings.
+    /// Accepting pins this one certificate for this one host; a different one later
+    /// is refused again.
+    private var trustSheet: some View {
+        NavigationStack {
+            Form {
+                if case .useCertifiedName(let name, _)? = untrusted.map(ServerTrustPrompt.init) {
+                    // Nothing is wrong with this server. Offering "trust anyway" here
+                    // would teach someone to wave away a warning that is telling them
+                    // the truth, when one tap fixes it properly.
+                    Section {
+                        Text(String(format: L10n.string("network.name.detail"), name))
+                            .font(.callout)
+                    } header: {
+                        Text(L10n.string("network.name.title"))
+                    }
+
+                    Section {
+                        Button(String(format: L10n.string("network.name.use"), name)) {
+                            useCertifiedName(name)
+                        }
+                    }
+                } else {
+                    Section {
+                        Text(L10n.string("network.trust.detail"))
+                            .font(.callout)
+                    } header: {
+                        Text(L10n.string("synology.error.certificate_untrusted"))
+                    }
+
+                    if let untrusted {
+                        Section(L10n.string("network.trust.fingerprint")) {
+                            LabeledContent(untrusted.host) { EmptyView() }
+                            Text(untrusted.fingerprint)
+                                .font(.caption.monospaced())
+                                .textSelection(.enabled)
+                            if untrusted.summary != untrusted.host {
+                                Text(untrusted.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(IOSTheme.dim)
+                            }
+                        }
+
+                        Section {
+                            Button(L10n.string("network.trust.accept")) { trustAndRetry(untrusted) }
+                        }
+                    }
+                }
+            }
+            .glazeListBackground()
+            .navigationTitle(L10n.string(trustTitleKey))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L10n.string("common.close")) { untrusted = nil }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationBackground(IOSTheme.ground)
     }
 
     // MARK: - Choosing a folder

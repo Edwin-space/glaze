@@ -1,3 +1,4 @@
+import AppKit
 import AVKit
 import GlazeCore
 import SwiftUI
@@ -22,6 +23,13 @@ struct PlayerView: View {
     @State private var areControlsVisible = true
     @State private var isSeeking = false
     @State private var hideControlsTask: Task<Void, Never>?
+    /// The keyboard listener. An event monitor rather than `onKeyPress`, because shortcuts
+    /// are stored by key code: the arrow keys have no character, and a Korean input source
+    /// turns the same key into a different letter.
+    @State private var keyMonitor: Any?
+    private let playlistPositions = PlaybackPositionStore()
+    @State private var nowPlaying = MacNowPlaying()
+    @State private var playlistRevision = 0
 
     @Environment(\.controlActiveState) private var controlActiveState
 
@@ -54,6 +62,10 @@ struct PlayerView: View {
             .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
             .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime), perform: handlePlaybackEnd)
             .onReceive(NotificationCenter.default.publisher(for: .openVideoCommand)) { _ in openVideo() }
+            .onReceive(NotificationCenter.default.publisher(for: .showPanelCommand)) { note in
+                guard let name = note.object as? String, let panel = PlayerPanel(rawValue: name) else { return }
+                togglePanel(panel)
+            }
             .onReceive(NotificationCenter.default.publisher(for: .openMediaURL)) { notification in
                 guard let url = notification.object as? URL else { return }
                 PendingOpenMediaURLs.consume(url)
@@ -68,6 +80,8 @@ struct PlayerView: View {
             }
             .onAppear {
                 configureControllers()
+                installKeyboardShortcuts()
+                registerMediaKeys()
                 NativeVLCLibrary.prewarm()
                 if let url = PendingOpenMediaURLs.consumeFirst() {
                     openMedia(from: url)
@@ -75,6 +89,8 @@ struct PlayerView: View {
             }
             .onDisappear {
                 hideControlsTask?.cancel()
+                removeKeyboardShortcuts()
+                nowPlaying.unregister()
                 playback.stopForWindowClose()
             }
     }
@@ -200,11 +216,6 @@ struct PlayerView: View {
         // of the picture for the whole of playback.
         .focusable()
         .focusEffectDisabled()
-        .onKeyPress(.space) {
-            playback.togglePlayback()
-            revealControls()
-            return .handled
-        }
         .onContinuousHover { phase in
             switch phase {
             case .active:
@@ -225,7 +236,12 @@ struct PlayerView: View {
         }
         .onChange(of: playback.displayedIsPlaying) { _, _ in
             revealControls()
+            refreshNowPlaying()
         }
+        .onChange(of: playback.currentVideoURL) { _, _ in refreshNowPlaying() }
+        // Whole seconds are plenty for Control Center, and far fewer updates than the
+        // player's own clock.
+        .onChange(of: Int(playback.currentTime)) { _, _ in refreshNowPlaying() }
         .onTapGesture(count: 2) {
             NSApp.keyWindow?.toggleFullScreen(nil)
         }
@@ -851,7 +867,7 @@ struct PlayerView: View {
                 loadVideo(item.url, playlist: playlistStore.items, shouldStartPlayback: true)
             }
         )) { item in
-            Label(item.displayName, systemImage: playback.currentVideoURL?.absoluteString == item.url.absoluteString ? "play.fill" : "film")
+            playlistRow(item)
                 .tag(item.url.absoluteString)
                 .glazeGlassRow()
         }
@@ -865,6 +881,60 @@ struct PlayerView: View {
                 ContentUnavailableView(L10n.string("playlist.panel.empty"), systemImage: "list.bullet")
             }
         }
+    }
+
+    /// One film in the playlist: the episode first, so `Gundam.0083.E01.mkv` to `E04` do
+    /// not read as four identical names, and the same NEW / part-watched / watched marks
+    /// the phone and the television show.
+    private func playlistRow(_ item: MediaPlaylistItem) -> some View {
+        let isCurrent = playback.currentVideoURL?.absoluteString == item.url.absoluteString
+        let watch = playlistPositions.state(for: .localFile(item.url))
+        let title = MediaTitleParser.parse(item.url.lastPathComponent).listTitle
+
+        return HStack(spacing: 8) {
+            Image(systemName: isCurrent ? "play.fill" : "film")
+                .foregroundStyle(isCurrent ? GlazeGlass.amber : (watch == .watched ? .secondary : .primary))
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .foregroundStyle(isCurrent ? GlazeGlass.amber : (watch == .watched ? .secondary : .primary))
+                        .lineLimit(1)
+                    if watch == .new, !isCurrent {
+                        Text(L10n.string("ios.watch.new_badge"))
+                            .font(.system(size: 9, weight: .heavy))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(GlazeGlass.amber, in: Capsule())
+                    }
+                }
+                if case .inProgress(let fraction) = watch, fraction > 0 {
+                    ProgressView(value: fraction)
+                        .tint(GlazeGlass.amber)
+                        .frame(maxWidth: 160)
+                        .controlSize(.mini)
+                }
+            }
+            Spacer(minLength: 0)
+            if watch == .watched, !isCurrent {
+                Image(systemName: "checkmark").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .contextMenu {
+            Button(L10n.string(watch == .watched ? "ios.watch.mark_unwatched" : "ios.watch.mark_watched")) {
+                if watch == .watched {
+                    playlistPositions.markUnwatched(.localFile(item.url))
+                } else {
+                    playlistPositions.markWatched(.localFile(item.url))
+                }
+                playlistRevision += 1
+            }
+        }
+        // Re-read when a film changes — so the one just finished drops its NEW badge —
+        // and when a film is marked by hand. One identity: a second `.id` would replace
+        // the first rather than add to it.
+        .id("\(item.id)#\(playback.currentVideoURL?.absoluteString ?? "")#\(playlistRevision)")
     }
 
     private var mediaPanel: some View {
@@ -906,13 +976,25 @@ struct PlayerView: View {
             }
             .glazeGlassRow()
 
+            // What the film already says about itself, when anything does. Shown before
+            // the search, because the first question is "is this identified?" and the
+            // second is "if not, identify it".
+            if let known = metadata.known {
+                Section {
+                    knownWorkRows(known)
+                } header: {
+                    Text(L10n.string("metadata.panel.known")).textCase(nil)
+                }
+                .glazeGlassRow()
+            }
+
             // Only for a file on this Mac: the sidecars are written next to the video,
             // and a streamed resource has no folder to write into.
             if let videoURL = playback.currentVideoURL, videoURL.isFileURL {
                 Section {
                     metadataSection(for: videoURL)
                 } header: {
-                    GlazeHelpLabel("metadata.panel.section", help: "help.metadata.key")
+                    GlazeHelpLabel("metadata.panel.search_section", help: "help.metadata.key")
                         .textCase(nil)
                 }
                 .glazeGlassRow()
@@ -1153,6 +1235,54 @@ struct PlayerView: View {
         activePanel = .subtitles
     }
 
+    @ViewBuilder
+    private func knownWorkRows(_ known: MediaNFO) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            if let posterURL = metadata.knownPosterURL,
+               let image = NSImage(contentsOf: posterURL) {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 60, height: 90)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(known.title ?? L10n.string("metadata.panel.known_untitled"))
+                    .font(.headline)
+                // The name it was released under, when the shelf shows a translated
+                // one. It is usually the half a filename was built from.
+                if let original = known.originalTitle, original != known.title {
+                    Text(original).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Text(knownSummaryLine(known))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+
+        if let plot = known.plot, !plot.isEmpty {
+            Text(plot).font(.callout).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Year, rating and genres on one line — each only when it is actually recorded,
+    /// so a sparse `.nfo` does not print a row of dashes.
+    private func knownSummaryLine(_ known: MediaNFO) -> String {
+        var parts: [String] = []
+        if let year = known.year { parts.append(String(year)) }
+        if let episode = known.episodeLabelForPanel { parts.append(episode) }
+        if let rating = known.rating, rating > 0 {
+            parts.append(String(format: "★ %.1f", rating))
+        }
+        if let runtime = known.runtimeMinutes, runtime > 0 {
+            parts.append(String(format: L10n.string("metadata.panel.known_runtime_format"), runtime))
+        }
+        if !known.genres.isEmpty { parts.append(known.genres.prefix(3).joined(separator: " · ")) }
+        return parts.isEmpty ? L10n.string("metadata.panel.known_sparse") : parts.joined(separator: "  ·  ")
+    }
+
     /// Looking a film up and writing what came back beside it.
     ///
     /// The candidates are shown rather than the top hit taken automatically. Release
@@ -1352,7 +1482,7 @@ struct PlayerView: View {
         }
     }
 
-    private enum PlayerPanel: Hashable {
+    private enum PlayerPanel: String, Hashable {
         case subtitles, playlist, media
     }
 
@@ -1414,6 +1544,82 @@ struct PlayerView: View {
         String(format: L10n.string("playlist.panel.count_format"), playlistStore.items.count)
     }
 
+    // MARK: - Keyboard
+
+    private func installKeyboardShortcuts() {
+        guard keyMonitor == nil else { return }
+        // AppKit calls local monitors on the main thread. The event is read into plain
+        // values there, so nothing non-Sendable has to cross into the actor.
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let key = KeyEventSnapshot(event)
+            let handled = MainActor.assumeIsolated { handleKey(key) }
+            return handled ? nil : event
+        }
+    }
+
+    private func registerMediaKeys() {
+        nowPlaying.register(.init(
+            togglePlayPause: { playback.togglePlayback(); revealControls() },
+            play: { if !playback.isPlaying { playback.togglePlayback() } },
+            pause: { if playback.isPlaying { playback.togglePlayback() } },
+            next: { playNextPlaylistItem() },
+            previous: { playPreviousPlaylistItem() },
+            seek: { playback.seek(to: $0) }
+        ))
+    }
+
+    /// Kept in step with the clock so Control Center's scrubber and the media keys follow
+    /// the film on screen.
+    private func refreshNowPlaying() {
+        guard let url = playback.currentVideoURL else { return }
+        nowPlaying.update(
+            title: MediaTitleParser.parse(url.lastPathComponent).listTitle,
+            elapsed: playback.currentTime,
+            duration: playback.duration,
+            isPlaying: playback.isPlaying
+        )
+    }
+
+    private func removeKeyboardShortcuts() {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
+    }
+
+    /// - Returns: true when the key was a shortcut and has been used up.
+    private func handleKey(_ key: KeyEventSnapshot) -> Bool {
+        let shortcuts = PlayerShortcuts.shared
+        guard !shortcuts.isRecording else { return false }
+        // Typing into a field — a TMDB search, a subtitle offset — is typing, not
+        // playback. The arrows move the caret there, as they should.
+        guard !key.isTyping else { return false }
+        // Only the window the film is in. The settings window and sheets keep their keys.
+        guard key.isInMainWindowWithoutSheet else { return false }
+        guard let action = shortcuts.action(for: key.combo) else { return false }
+
+        perform(action)
+        return true
+    }
+
+    private func perform(_ action: PlayerAction) {
+        switch action {
+        case .playPause:
+            playback.togglePlayback()
+        case .skipBackward:
+            playback.skip(by: -10)
+        case .skipForward:
+            playback.skip(by: 10)
+        case .volumeUp:
+            playback.setVolume(playback.volume + PlayerShortcuts.volumeStep)
+        case .volumeDown:
+            playback.setVolume(playback.volume - PlayerShortcuts.volumeStep)
+        case .previousItem:
+            playPreviousPlaylistItem()
+        case .nextItem:
+            playNextPlaylistItem()
+        }
+        revealControls()
+    }
+
     private var currentPlaylistIndex: Int? {
         guard let currentVideoURL = playback.currentVideoURL else { return nil }
         return playlistStore.items.firstIndex { $0.url.path == currentVideoURL.path }
@@ -1426,8 +1632,18 @@ struct PlayerView: View {
         return currentPlaylistIndex < playlistStore.items.count - 1
     }
 
+    /// Restart the film first, and only go back a file from its opening seconds — the rule
+    /// the phone and the television use, so the three behave as one product. The Mac used
+    /// to jump to the previous file from anywhere, including minute forty.
     private func playPreviousPlaylistItem() {
-        guard let index = currentPlaylistIndex, index > 0 else { return }
+        if playback.currentTime > PlaybackQueue.restartThreshold {
+            playback.seek(to: 0)
+            return
+        }
+        guard let index = currentPlaylistIndex, index > 0 else {
+            playback.seek(to: 0)
+            return
+        }
         loadVideo(playlistStore.items[index - 1].url, playlist: playlistStore.items, shouldStartPlayback: true)
     }
 

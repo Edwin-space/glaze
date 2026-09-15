@@ -35,6 +35,12 @@ final class TVPlaybackModel {
     private var observer: PlayerObserver?
 
     private let positions = PlaybackPositionStore()
+
+    /// Called once when a film plays to its end — the same signal the phone uses, so a
+    /// folder of episodes carries on to the next one here too.
+    var onFinished: (() -> Void)?
+    /// A stop by hand, or a film being swapped out, is never "finished".
+    private var hasReportedFinish = false
     /// Applied once the stream reports a length; asking to seek before then is ignored.
     private var pendingSeek: TimeInterval?
     /// The subtitle the folder listing found beside the film, still to be selected.
@@ -61,6 +67,11 @@ final class TVPlaybackModel {
         for option in MediaCachingPolicy.mediaOptions(for: resource.playbackURL) {
             media?.addOption(option)
         }
+
+        hasReportedFinish = false
+        // A late `.stopped` from the film being left must not read as this one ending.
+        currentTime = 0
+        duration = 0
 
         preferredSubtitleLanguage = preferredSubtitleLanguageCode.flatMap(SubtitleLanguageCode.normalized)
         shouldAutomaticallySelectSubtitles = automaticallySelectSubtitles
@@ -122,6 +133,7 @@ final class TVPlaybackModel {
     }
 
     func stop() {
+        hasReportedFinish = true
         player.stop()
         isPlaying = false
     }
@@ -158,7 +170,18 @@ final class TVPlaybackModel {
     fileprivate func update(state: VLCMediaPlayerState) {
         isPlaying = player.isPlaying
         hasFailed = state == .error
+
+        // VLCKit 4 has no distinct "ended": a film that ran out is just `.stopped`.
+        // Where the clock had got to is what separates that from a stop by hand.
+        if state == .stopped, !hasReportedFinish, duration > 0,
+           currentTime >= duration - Self.endTolerance {
+            hasReportedFinish = true
+            onFinished?()
+        }
     }
+
+    /// The last time update before stopping lands a second or two short of the end.
+    private static let endTolerance: TimeInterval = 3
 
     fileprivate func updateTime() {
         currentTime = TimeInterval(player.time.intValue) / 1000

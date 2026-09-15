@@ -19,6 +19,10 @@ struct IOSPlayerView: View {
     /// picker — listing a folder is a network round trip.
     var subtitleCandidates: (@Sendable () async -> [IOSSubtitleCandidate])?
     var upNext: IOSUpNext?
+    /// The films around this one — the rest of the folder, in order. With it, the
+    /// player can go back and forward and show what else is there; without it, it plays
+    /// one film and stops, which is what it always did.
+    var queue: PlaybackQueue?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(IOSUserPreferences.self) private var preferences
@@ -28,6 +32,15 @@ struct IOSPlayerView: View {
     @State private var isLocked = false
     @State private var showsSettings = false
     @State private var hideTask: Task<Void, Never>?
+    /// Whether the viewer asked for landscape, as opposed to having turned the phone.
+    @State private var isHoldingLandscape = false
+    /// The queue as it moves. Copied from `queue` once, because the view's own
+    /// parameter cannot change while the film plays.
+    @State private var playlist: PlaybackQueue?
+    /// What is on screen now. Starts as the film this view was opened with and changes
+    /// when the viewer moves through the folder.
+    @State private var nowPlaying: PlaybackQueueItem?
+    @State private var showsPlaylist = false
 
     @State private var isScrubbing = false
     @State private var scrubTime: TimeInterval = 0
@@ -38,7 +51,24 @@ struct IOSPlayerView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            IOSVideoSurface(player: model.player).ignoresSafeArea()
+            // VLC draws into a UIKit view of its own making, and that view swallowed
+            // every touch that reached it. While the controls were on screen they
+            // covered it and nothing looked wrong; once they hid, the film itself was
+            // the only thing under the finger and tapping did nothing at all — there
+            // was no way back to the controls short of closing the film.
+            //
+            // The picture is not a control, so it does not take touches. They belong
+            // to the transparent layer below, which is SwiftUI's and spans the whole
+            // screen including under the notch and the home indicator.
+            IOSVideoSurface(player: model.player)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+            Color.clear
+                .contentShape(Rectangle())
+                .ignoresSafeArea()
+                .onTapGesture { isLocked ? revealLock() : revealControls() }
+                .gesture(playbackGesture)
 
             if model.hasFailed {
                 failure
@@ -58,19 +88,37 @@ struct IOSPlayerView: View {
         }
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
-        .contentShape(Rectangle())
-        .onTapGesture { isLocked ? revealLock() : revealControls() }
-        .gesture(playbackGesture)
         // Someone who has asked for less movement should not have the chrome slide
         // in and out over the film.
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: showsControls)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: isLocked)
+        // Pausing suppresses the hide; playing again has to start it.
+        .onChange(of: model.isPlaying) { _, playing in
+            if playing { scheduleHide() } else { hideTask?.cancel() }
+        }
+        .sheet(isPresented: $showsPlaylist) {
+            if let playlist {
+                IOSPlaylistSheet(
+                    queue: playlist,
+                    positions: PlaybackPositionStore(),
+                    onChoose: { id in
+                        showsPlaylist = false
+                        jump(to: id)
+                    }
+                )
+                .presentationDetents([PresentationDetent.medium, .large])
+            }
+        }
         .sheet(isPresented: $showsSettings) {
             IOSPlayerSettingsView(model: model, subtitleCandidates: subtitleCandidates)
                 .environment(preferences)
                 .presentationDetents([.medium, .large])
         }
         .onAppear {
+            let first = PlaybackQueueItem(resource: resource, title: title)
+            nowPlaying = first
+            playlist = queue.map { PlaybackQueue(items: $0.items, current: first) }
+            wireQueue()
             model.start(
                 resource,
                 title: title,
@@ -83,6 +131,7 @@ struct IOSPlayerView: View {
         .onDisappear {
             hideTask?.cancel()
             model.stop()
+            if isHoldingLandscape { IOSScreenOrientation.release() }
         }
     }
 
@@ -109,31 +158,53 @@ struct IOSPlayerView: View {
         )
     }
 
+    /// Controls on one line, the title on its own beneath.
+    ///
+    /// The title used to sit between the close button and the rest, and with seven
+    /// controls on a 402pt screen it was down to a single character — "엉" for
+    /// 엉뚱한 영화, which tells the viewer nothing. A film's name is not a control and
+    /// does not have to share the row with them.
     private var topBar: some View {
-        HStack(spacing: IOSTheme.Spacing.medium) {
-            circleButton("chevron.down", label: L10n.string("ios.player.a11y.close")) { dismiss() }
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.small) {
+            HStack(spacing: IOSTheme.Spacing.tight) {
+                circleButton("chevron.down", label: L10n.string("ios.player.a11y.close")) { dismiss() }
 
-            Text(title)
+                Spacer(minLength: 0)
+
+                circleButton("lock.open", label: L10n.string("ios.player.a11y.lock")) {
+                    isLocked = true
+                    showsControls = false
+                }
+                circleButton(
+                    model.isFillingScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
+                    label: L10n.string(model.isFillingScreen ? "ios.player.a11y.fit" : "ios.player.a11y.fill")
+                ) {
+                    model.setFillingScreen(!model.isFillingScreen)
+                    revealControls()
+                }
+                circleButton(
+                    orientationSymbol,
+                    label: L10n.string(isHoldingLandscape ? "ios.player.a11y.portrait" : "ios.player.a11y.landscape")
+                ) {
+                    toggleLandscape()
+                    revealControls()
+                }
+                rateMenu
+                if playlist?.isNavigable == true {
+                    circleButton("list.bullet", label: L10n.string("ios.player.playlist")) {
+                        showsPlaylist = true
+                    }
+                }
+                circleButton("captions.bubble", label: L10n.string("ios.player.settings")) {
+                    showsSettings = true
+                }
+            }
+
+            Text(nowPlaying?.title ?? title)
                 .font(.subheadline.weight(.medium))
                 .lineLimit(1)
-
-            Spacer(minLength: 0)
-
-            circleButton("lock.open", label: L10n.string("ios.player.a11y.lock")) {
-                isLocked = true
-                showsControls = false
-            }
-            circleButton(
-                model.isFillingScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
-                label: L10n.string(model.isFillingScreen ? "ios.player.a11y.fit" : "ios.player.a11y.fill")
-            ) {
-                model.setFillingScreen(!model.isFillingScreen)
-                revealControls()
-            }
-            rateMenu
-            circleButton("captions.bubble", label: L10n.string("ios.player.settings")) {
-                showsSettings = true
-            }
+                .truncationMode(.middle)
+                .padding(.horizontal, IOSTheme.Spacing.tight)
         }
         .padding(.horizontal, IOSTheme.Spacing.medium)
         .padding(.top, IOSTheme.Spacing.small)
@@ -151,7 +222,8 @@ struct IOSPlayerView: View {
                 .font(.caption.weight(.semibold).monospacedDigit())
                 .frame(minWidth: 34)
                 .padding(.vertical, IOSTheme.Spacing.tight)
-                .background(.black.opacity(0.45), in: Capsule())
+                .padding(.horizontal, IOSTheme.Spacing.small)
+                .glazeTransportDisc(Capsule())
                 .touchTarget()
         }
         .accessibilityLabel(L10n.string("ios.player.rate"))
@@ -169,25 +241,55 @@ struct IOSPlayerView: View {
     private var transport: some View {
         // Wider than any gap on the scale, deliberately: the three transport
         // controls are hit in the dark and must not be neighbours.
-        HStack(spacing: 44) {
+        HStack(spacing: hasQueue ? 20 : 44) {
+            // Outside the skips, the order every player uses — and the order the
+            // approved Mac transport uses, so the two read as one product.
+            if hasQueue {
+                Button { goBack(); revealControls() } label: {
+                    transportGlyph("backward.end.fill", diameter: 44, glyph: 18)
+                }
+                .accessibilityLabel(L10n.string("ios.player.a11y.previous"))
+            }
+
             Button { model.skip(by: -IOSPlaybackModel.skipInterval); revealControls() } label: {
-                Image(systemName: "gobackward.10").font(.title).touchTarget()
+                transportGlyph("gobackward.10", diameter: 52, glyph: 24)
             }
             .accessibilityLabel(L10n.string("ios.player.a11y.back"))
 
             Button { model.togglePlayback(); revealControls() } label: {
-                Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 44))
-                    .touchTarget()
+                // One step larger, and only larger: the contract asks for size to mark
+                // the primary control, not a different colour or weight.
+                transportGlyph(model.isPlaying ? "pause.fill" : "play.fill", diameter: 68, glyph: 30)
             }
             .accessibilityLabel(L10n.string(model.isPlaying ? "ios.player.a11y.pause" : "ios.player.a11y.play"))
 
             Button { model.skip(by: IOSPlaybackModel.skipInterval); revealControls() } label: {
-                Image(systemName: "goforward.10").font(.title).touchTarget()
+                transportGlyph("goforward.10", diameter: 52, glyph: 24)
             }
             .accessibilityLabel(L10n.string("ios.player.a11y.forward"))
+
+            if hasQueue {
+                Button { goForward(); revealControls() } label: {
+                    transportGlyph("forward.end.fill", diameter: 44, glyph: 18)
+                }
+                // Dimmed rather than hidden at the last film, so the row does not
+                // shift under a thumb that was about to press it.
+                .disabled(playlist?.next == nil)
+                .opacity(playlist?.next == nil ? 0.4 : 1)
+                .accessibilityLabel(L10n.string("ios.player.a11y.next"))
+            }
         }
         .padding(.bottom, IOSTheme.Spacing.large)
+    }
+
+    /// The three transport controls were bare glyphs relying on the gradient behind
+    /// them, which the acceptance criteria rule out: they have to stay identifiable
+    /// over a bright frame. Discs, separate, never a shared capsule.
+    private func transportGlyph(_ symbol: String, diameter: CGFloat, glyph: CGFloat) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: glyph, weight: .medium))
+            .frame(width: diameter, height: diameter)
+            .glazeTransportDisc()
     }
 
     private var timeline: some View {
@@ -248,7 +350,7 @@ struct IOSPlayerView: View {
             Image(systemName: symbol)
                 .font(.subheadline.weight(.semibold))
                 .frame(width: 34, height: 34)
-                .background(.black.opacity(0.45), in: Circle())
+                .glazeTransportDisc()
                 .touchTarget()
         }
         .buttonStyle(.plain)
@@ -268,7 +370,7 @@ struct IOSPlayerView: View {
                         Image(systemName: "lock.fill")
                             .font(.subheadline.weight(.semibold))
                             .frame(width: 40, height: 40)
-                            .background(.black.opacity(0.55), in: Circle())
+                            .glazeTransportDisc()
                             .touchTarget()
                     }
                     .buttonStyle(.plain)
@@ -304,7 +406,7 @@ struct IOSPlayerView: View {
             .foregroundStyle(.white)
             .padding(.horizontal, IOSTheme.Spacing.large)
             .padding(.vertical, IOSTheme.Spacing.small)
-            .background(.black.opacity(0.6), in: Capsule())
+            .glazeTransportDisc(Capsule())
     }
 
     // MARK: - Gestures
@@ -356,6 +458,90 @@ struct IOSPlayerView: View {
 
     /// Controls appear on a tap and leave again on their own; a film with a bar across
     /// it is not what anyone came to watch.
+    // MARK: - Moving through the folder
+
+    private var hasQueue: Bool { playlist?.isNavigable == true }
+
+    /// The lock screen, AirPods and the end of a film all move through the same queue
+    /// the on-screen buttons do.
+    private func wireQueue() {
+        guard hasQueue else { return }
+        model.onFinished = { goForward() }
+        model.onNextTrack = { goForward() }
+        model.onPreviousTrack = { goBack() }
+    }
+
+    /// At the end of the folder this does nothing — whether the film ended by itself or
+    /// the button was pressed. Wrapping round to the first episode is not what a person
+    /// who just finished the last one wants.
+    private func goForward() {
+        guard var queue = playlist, let next = queue.advance() else { return }
+        playlist = queue
+        play(next)
+    }
+
+    /// Restart the film first, and only go back a file from its opening seconds — what
+    /// every player people use does. Jumping to the last episode from minute forty is
+    /// almost never what was meant.
+    private func goBack() {
+        if model.currentTime > PlaybackQueue.restartThreshold {
+            model.seek(to: 0)
+            return
+        }
+        guard var queue = playlist, let previous = queue.retreat() else {
+            model.seek(to: 0)
+            return
+        }
+        playlist = queue
+        play(previous)
+    }
+
+    private func jump(to id: String) {
+        guard var queue = playlist, id != nowPlaying?.id, let item = queue.jump(to: id) else { return }
+        playlist = queue
+        play(item)
+    }
+
+    /// Swaps the film in place. The player stays on screen — closing and reopening it
+    /// for every episode would flash back to the list and lose the orientation.
+    private func play(_ item: PlaybackQueueItem) {
+        model.stop()
+        nowPlaying = item
+        wireQueue()
+        model.start(
+            item.resource,
+            title: item.title,
+            at: 0,
+            // Only when the viewer asked for subtitles to be picked for them. Passing no
+            // language here would not mean "none" — it falls back to a default.
+            subtitleURL: preferences.automaticallySelectSubtitles
+                ? IOSSubtitleChoice.preferred(
+                    among: item.resource.subtitleResources,
+                    language: preferences.defaultSubtitleLanguageCode
+                )
+                : nil,
+            preferences: preferences
+        )
+    }
+
+    /// Sideways, and stays there. Released when the film closes, so the rest of the
+    /// app is never left locked by a button pressed inside the player.
+    private func toggleLandscape() {
+        if isHoldingLandscape {
+            IOSScreenOrientation.release()
+            isHoldingLandscape = false
+        } else {
+            IOSScreenOrientation.hold(.landscape)
+            isHoldingLandscape = true
+        }
+    }
+
+    /// Shows what the button will do, not what the screen is doing: the icon has to
+    /// stay still while the phone is turned by hand.
+    private var orientationSymbol: String {
+        isHoldingLandscape ? "rectangle.portrait.rotate" : "rectangle.landscape.rotate"
+    }
+
     private func revealControls() {
         showsControls = true
         scheduleHide()
@@ -366,8 +552,13 @@ struct IOSPlayerView: View {
         scheduleHide()
     }
 
+    /// Controls get out of the way of the film — but only while there is a film to be
+    /// in the way of. Paused, they stay: someone who has stopped to read a subtitle,
+    /// find the settings or turn the screen should not have to tap twice to get the
+    /// buttons back to where they were looking.
     private func scheduleHide() {
         hideTask?.cancel()
+        guard model.isPlaying else { return }
         hideTask = Task {
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled else { return }

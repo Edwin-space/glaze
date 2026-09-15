@@ -4,6 +4,61 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>ko</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Video</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.movie</string>
+				<string>public.video</string>
+				<string>org.matroska.mkv</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Comic</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.glaze.cbz</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Book</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.idpf.epub-container</string>
+				<string>com.adobe.pdf</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Subtitles</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.srt</string>
+				<string>public.plain-text</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>Glaze</string>
 	<key>CFBundleIdentifier</key>
@@ -64,6 +119,51 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.movie</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Matroska Video</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.matroska.mkv</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>mkv</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>video/x-matroska</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.zip-archive</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Comic Book Archive</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.glaze.cbz</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>cbz</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/vnd.comicbook+zip</string>
+				</array>
+			</dict>
+		</dict>
 	</array>
 </dict>
 </plist>

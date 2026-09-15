@@ -1,16 +1,32 @@
 import Foundation
+import GlazeBooks
 import GlazeCore
 import Observation
 
 /// A file the viewer put on the phone themselves.
 struct IOSDeviceFile: Identifiable, Equatable {
+    enum Kind: Equatable {
+        case video
+        case book(BookItem.Kind)
+    }
+
     let url: URL
+    let kind: Kind
     let byteCount: Int64
-    /// How many subtitle files sit beside it.
+    /// How many subtitle files sit beside it. Always zero for a book.
     let subtitleCount: Int
 
     var id: String { url.standardizedFileURL.absoluteString }
     var name: String { url.lastPathComponent }
+
+    var symbol: String {
+        switch kind {
+        case .video: "film"
+        case .book(.comic): "book.pages"
+        case .book(.document): "doc.richtext"
+        case .book(.ebook): "text.book.closed"
+        }
+    }
 }
 
 /// What is in the app's own folder, and how to put things there or take them away.
@@ -26,6 +42,9 @@ final class IOSDeviceFilesModel {
 
     var totalByteCount: Int64 { files.reduce(0) { $0 + $1.byteCount } }
     var isEmpty: Bool { files.isEmpty }
+
+    var videos: [IOSDeviceFile] { files.filter { $0.kind == .video } }
+    var bookCount: Int { files.count - videos.count }
 
     var root: URL { IOSLibraryModel.deviceLibraryURL }
 
@@ -96,25 +115,31 @@ final class IOSDeviceFilesModel {
             options: [.skipsHiddenFiles]
         ) else { return [] }
 
-        var videos: [URL] = []
+        var found: [(url: URL, kind: IOSDeviceFile.Kind)] = []
         for case let url as URL in walker {
             guard (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true else { continue }
             guard !url.lastPathComponent.hasPrefix("._") else { continue }
             if MediaFileTypes.isVideo(url) {
-                videos.append(url)
+                found.append((url, .video))
+            } else if let kind = BookFileTypes.kind(of: url) {
+                found.append((url, .book(kind)))
             }
         }
 
-        return videos
-            .map { url in
+        return found
+            .map { entry in
+                let url = entry.url
                 let folder = url.deletingLastPathComponent()
                 let siblings = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
                 let companions = MediaCompanionFinder.find(videoName: url.lastPathComponent, among: siblings)
                 let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
                 return IOSDeviceFile(
                     url: url,
+                    kind: entry.kind,
                     byteCount: Int64(size),
-                    subtitleCount: companions.subtitles.count
+                    // A book has no subtitle sitting beside it; the companion rule is
+                    // only asked about films.
+                    subtitleCount: entry.kind == .video ? companions.subtitles.count : 0
                 )
             }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }

@@ -31,7 +31,9 @@ struct IOSDeviceFilesView: View {
         .refreshable { model.reload() }
         .fileImporter(
             isPresented: $isImporting,
-            allowedContentTypes: [.movie, .video, .mpeg4Movie, .quickTimeMovie, .data],
+            // `.data` is what lets a `.cbz` through: comics have no system type, and a
+            // list without it silently greys them out in the picker.
+            allowedContentTypes: [.movie, .video, .mpeg4Movie, .quickTimeMovie, .pdf, .epub, .zip, .data],
             allowsMultipleSelection: true
         ) { result in
             guard case .success(let urls) = result else { return }
@@ -64,6 +66,9 @@ struct IOSDeviceFilesView: View {
                 Text(L10n.string("ios.device.empty.subtitles"))
                     .font(.footnote)
                     .foregroundStyle(IOSTheme.dim)
+                Text(L10n.string("ios.device.empty.books"))
+                    .font(.footnote)
+                    .foregroundStyle(IOSTheme.dim)
             }
             .padding(.vertical, IOSTheme.Spacing.tight)
         }
@@ -78,7 +83,7 @@ struct IOSDeviceFilesView: View {
             Text(
                 String(
                     format: L10n.string("ios.device.summary_format"),
-                    model.files.count,
+                    model.videos.count,
                     ByteCountFormatter.string(fromByteCount: model.totalByteCount, countStyle: .file)
                 )
             )
@@ -88,20 +93,26 @@ struct IOSDeviceFilesView: View {
     private var files: some View {
         Section(L10n.string("ios.device.files")) {
             ForEach(model.files) { file in
-                VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
-                    Text(file.name).font(.callout).lineLimit(2)
-                    HStack(spacing: IOSTheme.Spacing.tight) {
-                        Text(ByteCountFormatter.string(fromByteCount: file.byteCount, countStyle: .file))
-                        if file.subtitleCount > 0 {
-                            Label(
-                                String(format: L10n.string("ios.device.subtitle_count_format"), file.subtitleCount),
-                                systemImage: "captions.bubble"
-                            )
-                            .foregroundStyle(IOSTheme.amber)
+                HStack(spacing: IOSTheme.Spacing.small) {
+                    Image(systemName: file.symbol)
+                        .font(.callout)
+                        .foregroundStyle(IOSTheme.amber)
+                        .frame(width: 22)
+                    VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
+                        Text(file.name).font(.callout).lineLimit(2)
+                        HStack(spacing: IOSTheme.Spacing.tight) {
+                            Text(ByteCountFormatter.string(fromByteCount: file.byteCount, countStyle: .file))
+                            if file.subtitleCount > 0 {
+                                Label(
+                                    String(format: L10n.string("ios.device.subtitle_count_format"), file.subtitleCount),
+                                    systemImage: "captions.bubble"
+                                )
+                                .foregroundStyle(IOSTheme.amber)
+                            }
                         }
+                        .font(.caption2)
+                        .foregroundStyle(IOSTheme.dim)
                     }
-                    .font(.caption2)
-                    .foregroundStyle(IOSTheme.dim)
                 }
                 .accessibilityElement(children: .combine)
                 .swipeActions {

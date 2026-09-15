@@ -53,13 +53,25 @@ public enum WebDAVError: Error, Sendable, Equatable {
     /// a Synology with a real certificate for `home.example.com` fails on
     /// `https://192.168.0.100:5006/` and nothing about "could not connect" says why.
     case certificateMismatch
+    /// The server signed its own certificate. Carries what it presented so the viewer
+    /// can look at it and decide.
+    case certificateUntrusted(ServerCertificate)
     case network(String)
 }
 
 extension WebDAVError {
     /// Reads a URLSession failure closely enough to say something useful about it.
-    static func transport(_ error: Error) -> WebDAVError {
+    static func transport(_ error: Error, host: String? = nil) -> WebDAVError {
         guard let urlError = error as? URLError else { return .network(error.localizedDescription) }
+
+        // A self-signed certificate is refused before the request is even sent, and
+        // what comes back is a bare cancellation. Without this it reads as "could not
+        // connect", and someone goes looking for a network fault that is not there.
+        if ServerTrust.mayBeHandshake(urlError),
+           let host, let certificate = ServerTrustStore.shared.refused(for: host) {
+            return .certificateUntrusted(certificate)
+        }
+
         switch urlError.code {
         case .serverCertificateHasBadDate,
              .serverCertificateHasUnknownRoot,
@@ -68,7 +80,7 @@ extension WebDAVError {
              .secureConnectionFailed:
             return .certificateMismatch
         default:
-            return .network(urlError.localizedDescription)
+            return .network(ServerTrust.detail(urlError))
         }
     }
 }
@@ -80,7 +92,7 @@ extension WebDAVError {
 public struct WebDAVClient: Sendable {
     private let session: URLSession
 
-    public init(session: URLSession = .shared) {
+    public init(session: URLSession = NetworkSession.trusting) {
         self.session = session
     }
 
@@ -118,7 +130,7 @@ public struct WebDAVClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            throw WebDAVError.transport(error)
+            throw WebDAVError.transport(error, host: url.host)
         }
 
         guard let http = response as? HTTPURLResponse else {
@@ -165,7 +177,7 @@ public struct WebDAVClient: Sendable {
         do {
             (_, response) = try await session.data(for: request)
         } catch {
-            throw WebDAVError.transport(error)
+            throw WebDAVError.transport(error, host: url.host)
         }
 
         guard let http = response as? HTTPURLResponse else {
@@ -200,7 +212,7 @@ public struct WebDAVClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            throw WebDAVError.transport(error)
+            throw WebDAVError.transport(error, host: url.host)
         }
 
         if let http = response as? HTTPURLResponse {

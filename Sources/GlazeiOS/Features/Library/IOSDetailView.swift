@@ -33,7 +33,7 @@ struct IOSDetailView: View {
         .background(IOSTheme.ground)
         .navigationTitle(item.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $isPlaying) {
+        .fullScreenCover(isPresented: $isPlaying, onDismiss: IOSScreenOrientation.release) {
             if let resource = library.resource(for: item) {
                 IOSPlayerView(
                     resource: resource,
@@ -234,15 +234,5 @@ struct IOSUnplayableView: View {
 }
 
 /// Which of the subtitles beside a film to hand the player.
-enum IOSSubtitleChoice {
-    static func preferred(
-        among resources: [NetworkSubtitleResource],
-        language: String?
-    ) -> URL? {
-        guard !resources.isEmpty else { return nil }
-        let wanted = language.flatMap(SubtitleLanguageCode.normalized)
-            ?? SubtitleLanguagePreference.targetLanguageCode
-        return resources.first { $0.languageCode.flatMap(SubtitleLanguageCode.normalized) == wanted }?.url
-            ?? resources.first?.url
-    }
-}
+/// Kept as a name the phone already uses; the rule itself lives in `GlazeCore`.
+typealias IOSSubtitleChoice = SubtitleChoice

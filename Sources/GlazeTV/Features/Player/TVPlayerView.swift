@@ -14,6 +14,9 @@ struct TVPlayerView: View {
     var preferredSubtitleLanguageCode: String = SubtitleLanguagePreference.targetLanguageCode
     var automaticallySelectSubtitles = true
     var preferredSubtitleScale: Float = 100
+    /// The rest of the folder, in order. Gives the television the same previous, next,
+    /// up-next list and carry-on-to-the-next-episode the phone has.
+    var queue: PlaybackQueue?
 
     @Environment(\.dismiss) private var dismiss
     @State private var model = TVPlaybackModel()
@@ -23,13 +26,19 @@ struct TVPlayerView: View {
     @State private var isScrubbing = false
     @State private var hideTask: Task<Void, Never>?
     @FocusState private var focusedControl: FocusTarget?
+    @State private var playlist: PlaybackQueue?
+    @State private var nowPlaying: PlaybackQueueItem?
+    @State private var isShowingPlaylist = false
 
     private enum FocusTarget: Hashable {
         case surface
         case timeline
+        case previous
         case rewind
         case playPause
         case forward
+        case next
+        case playlist
         case subtitles
     }
 
@@ -50,9 +59,27 @@ struct TVPlayerView: View {
                 if isShowingSubtitleSettings {
                     subtitleSettings.transition(.move(edge: .trailing).combined(with: .opacity))
                 }
+
+                if isShowingPlaylist, let playlist {
+                    TVPlaylistPanel(
+                        queue: playlist,
+                        onChoose: { id in
+                            closePlaylist()
+                            jump(to: id)
+                        },
+                        onClose: closePlaylist
+                    )
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
             }
         }
         .onAppear {
+            let first = PlaybackQueueItem(resource: resource, title: title)
+            nowPlaying = first
+            playlist = queue.map { PlaybackQueue(items: $0.items, current: first) }
+            if playlist?.isNavigable == true {
+                model.onFinished = { goForward() }
+            }
             model.start(
                 resource,
                 at: startAt,
@@ -67,11 +94,13 @@ struct TVPlayerView: View {
         }
         .onDisappear {
             hideTask?.cancel()
-            model.rememberPosition(for: resource)
+            model.rememberPosition(for: nowPlaying?.resource ?? resource)
             model.stop()
         }
         .onExitCommand {
-            if isShowingSubtitleSettings {
+            if isShowingPlaylist {
+                closePlaylist()
+            } else if isShowingSubtitleSettings {
                 closeSubtitleSettings()
             } else {
                 dismiss()
@@ -90,6 +119,7 @@ struct TVPlayerView: View {
         }
         .animation(.easeInOut(duration: 0.22), value: areControlsVisible)
         .animation(.easeInOut(duration: 0.22), value: isShowingSubtitleSettings)
+        .animation(.easeInOut(duration: 0.22), value: isShowingPlaylist)
     }
 
     /// When controls are hidden, the whole picture receives the first remote action.
@@ -130,7 +160,7 @@ struct TVPlayerView: View {
             .overlay(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(title)
+                        Text(nowPlaying?.title ?? title)
                             .font(.system(size: 36, weight: .semibold))
                             .lineLimit(1)
                         if let selectedSubtitleStatus {
@@ -180,6 +210,19 @@ struct TVPlayerView: View {
 
     private var transport: some View {
         HStack(spacing: 20) {
+            // Outside the skips, the order every player uses and the order the phone and
+            // the Mac use, so the three read as one product.
+            if hasQueue {
+                transportButton(
+                    systemName: "backward.end.fill",
+                    accessibilityLabel: L10n.string("ios.player.a11y.previous"),
+                    focus: .previous
+                ) {
+                    goBack()
+                    reveal(focus: .previous)
+                }
+            }
+
             transportButton(
                 systemName: "gobackward.10",
                 accessibilityLabel: L10n.string("tv.player.rewind_10"),
@@ -207,13 +250,43 @@ struct TVPlayerView: View {
                 reveal(focus: .forward)
             }
 
+            if hasQueue {
+                transportButton(
+                    systemName: "forward.end.fill",
+                    accessibilityLabel: L10n.string("ios.player.a11y.next"),
+                    focus: .next
+                ) {
+                    goForward()
+                    reveal(focus: .next)
+                }
+                // Kept in place at the last episode so focus does not jump around.
+                .disabled(playlist?.next == nil)
+            }
+
             Spacer()
+
+            if hasQueue {
+                Button {
+                    openPlaylist()
+                } label: {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 66, height: 66)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.circle)
+                .tint(.white.opacity(0.16))
+                .focused($focusedControl, equals: .playlist)
+                .accessibilityLabel(L10n.string("ios.player.playlist"))
+            }
 
             Button {
                 openSubtitleSettings()
             } label: {
                 Image(systemName: "captions.bubble")
                     .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(model.selectedSubtitleTrackID == nil ? Color.white : Color.black)
                     .frame(width: 66, height: 66)
             }
             .buttonStyle(.bordered)
@@ -234,6 +307,10 @@ struct TVPlayerView: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: emphasized ? 33 : 29, weight: .semibold))
+                // Set outright. A bordered button draws its label in the tint, so the
+                // amber play button was an amber glyph on an amber disc — a blank
+                // circle — and the rest were grey on grey, unreadable from a sofa.
+                .foregroundStyle(emphasized ? Color.black : Color.white)
                 .frame(width: emphasized ? 76 : 64, height: emphasized ? 76 : 64)
         }
         .buttonStyle(.bordered)
@@ -287,6 +364,70 @@ struct TVPlayerView: View {
     private func toggle() {
         model.togglePlayPause()
         reveal(focus: .playPause)
+    }
+
+    // MARK: - Moving through the folder
+
+    private var hasQueue: Bool { playlist?.isNavigable == true }
+
+    /// At the end of the folder this does nothing, whether the film ended by itself or
+    /// the button was pressed.
+    private func goForward() {
+        guard var queue = playlist, let next = queue.advance() else { return }
+        playlist = queue
+        play(next)
+    }
+
+    /// Restart first; only from the opening seconds does "previous" mean the file before.
+    private func goBack() {
+        if model.currentTime > PlaybackQueue.restartThreshold {
+            model.seek(to: 0)
+            return
+        }
+        guard var queue = playlist, let previous = queue.retreat() else {
+            model.seek(to: 0)
+            return
+        }
+        playlist = queue
+        play(previous)
+    }
+
+    private func jump(to id: String) {
+        guard var queue = playlist, id != nowPlaying?.id, let item = queue.jump(to: id) else { return }
+        playlist = queue
+        play(item)
+    }
+
+    /// Swaps the film in place, remembering where the one being left had got to — the
+    /// shelf and the NEW marks read that. Without it an episode that played to the end
+    /// and rolled on by itself would still read as new.
+    private func play(_ item: PlaybackQueueItem) {
+        if let leaving = nowPlaying { model.rememberPosition(for: leaving.resource) }
+        model.stop()
+        nowPlaying = item
+        model.onFinished = { goForward() }
+        model.start(
+            item.resource,
+            at: 0,
+            subtitleURL: automaticallySelectSubtitles
+                ? SubtitleChoice.preferred(among: item.resource.subtitleResources, language: preferredSubtitleLanguageCode)
+                : nil,
+            preferredSubtitleLanguageCode: preferredSubtitleLanguageCode,
+            automaticallySelectSubtitles: automaticallySelectSubtitles,
+            preferredSubtitleScale: preferredSubtitleScale
+        )
+        scrubTime = 0
+    }
+
+    private func openPlaylist() {
+        hideTask?.cancel()
+        areControlsVisible = true
+        isShowingPlaylist = true
+    }
+
+    private func closePlaylist() {
+        isShowingPlaylist = false
+        reveal(focus: .playlist)
     }
 
     private func reveal(focus: FocusTarget) {

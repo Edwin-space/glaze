@@ -12,6 +12,14 @@ struct TVHomeView: View {
     let library: TVLibraryModel
     @Bindable var preferences: TVUserPreferences
     let onOpenSources: () -> Void
+    /// Tries the server again — after accepting a certificate, the same connection
+    /// that just failed is the one that should now succeed.
+    var onRetry: () -> Void = {}
+    /// Whether a server is open for folder browsing. A media server whose films sit
+    /// deeper than the shelves' catalogue reaches leaves the shelves empty while the
+    /// server itself is perfectly usable — the home screen must not say "connect".
+    var isBrowsable = false
+    var onOpenFolders: () -> Void = {}
     let onSelect: (TVLibrarySelection) -> Void
 
     @Environment(TVArtworkLoader.self) private var artwork
@@ -275,9 +283,26 @@ struct TVHomeView: View {
 
             Spacer()
 
-            if case .failed = library.phase {
-                Button(L10n.string("tv.home.connect"), action: onOpenSources)
+            if isBrowsable, library.library.movies.isEmpty, library.library.series.isEmpty,
+               !library.isLoading {
+                Button(L10n.string("tv.folders.open"), action: onOpenFolders)
                     .buttonStyle(.bordered)
+            }
+
+            if case .failed = library.phase {
+                // A refused certificate has a real answer; offer that rather than
+                // sending the viewer back to a screen that will fail the same way.
+                switch library.trustPrompt {
+                case .trustCertificate(let certificate):
+                    Button(L10n.string("network.trust.accept")) {
+                        ServerTrustStore.shared.accept(certificate)
+                        onRetry()
+                    }
+                    .buttonStyle(.bordered)
+                case .useCertifiedName, .none:
+                    Button(L10n.string("tv.home.connect"), action: onOpenSources)
+                        .buttonStyle(.bordered)
+                }
             }
         }
         .padding(28)
@@ -287,12 +312,23 @@ struct TVHomeView: View {
     }
 
     private var statusDetail: String {
-        switch library.phase {
+        if isBrowsable, library.library.movies.isEmpty, library.library.series.isEmpty, !library.isLoading {
+            return L10n.string("tv.folders.browse_instead")
+        }
+        return switch library.phase {
         case .loading(let foldersRead):
             foldersRead == 0
                 ? L10n.string("tv.home.library.loading")
                 : String(format: L10n.string("tv.home.library.scanning_format"), foldersRead)
-        case .failed(let message): message
+        case .failed(let message):
+            switch library.trustPrompt {
+            case .useCertifiedName(let name, _):
+                String(format: L10n.string("network.name.detail"), name)
+            case .trustCertificate(let certificate):
+                "\(L10n.string("network.trust.detail"))\n\(certificate.fingerprint)"
+            case .none:
+                message
+            }
         case .ready: L10n.string("tv.home.library.empty")
         case .idle: L10n.string("tv.home.connect.detail")
         }

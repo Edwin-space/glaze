@@ -12,6 +12,7 @@ struct GlazeSettingsView: View {
         case translation
         case network
         case metadata
+        case keyboard
 
         var id: Self { self }
 
@@ -21,6 +22,7 @@ struct GlazeSettingsView: View {
             case .translation: "settings.tab.translation"
             case .network: "settings.tab.network"
             case .metadata: "settings.tab.metadata"
+            case .keyboard: "settings.tab.keyboard"
             }
         }
 
@@ -30,6 +32,7 @@ struct GlazeSettingsView: View {
             case .translation: "character.bubble"
             case .network: "externaldrive.connected.to.line.below"
             case .metadata: "film"
+            case .keyboard: "keyboard"
             }
         }
     }
@@ -103,6 +106,10 @@ struct GlazeSettingsView: View {
         case .translation: translationSettings
         case .network: networkSettings
         case .metadata: metadataSettings
+        case .keyboard:
+            SettingsPage(titleKey: "settings.tab.keyboard", descriptionKey: "settings.keyboard.description") {
+                ShortcutSettingsContent()
+            }
         }
     }
 
@@ -470,7 +477,7 @@ private struct SettingsPage<Content: View>: View {
     }
 }
 
-private struct SettingsCard<Content: View>: View {
+struct SettingsCard<Content: View>: View {
     let titleKey: String
     let content: Content
 
@@ -644,6 +651,10 @@ private struct WebDAVConnectionEditorView: View {
     @State private var username: String
     @State private var password = ""
     @State private var testState: ConnectionTestState = .idle
+    /// What to offer someone whose server refused the connection. The Mac used to
+    /// report "the certificate is not trusted" and stop there, which is a dead end on
+    /// the platform this product is mainly used on.
+    @State private var trust: ServerTrustPrompt?
 
     init(
         connection: WebDAVConnection? = nil,
@@ -687,6 +698,11 @@ private struct WebDAVConnectionEditorView: View {
                 }
             }
             .formStyle(.grouped)
+            .sheet(
+                isPresented: Binding(get: { trust != nil }, set: { if !$0 { trust = nil } })
+            ) {
+                trustSheet
+            }
             .navigationTitle(L10n.string(name.isEmpty ? "webdav.add" : "webdav.edit"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -751,8 +767,67 @@ private struct WebDAVConnectionEditorView: View {
                 testState = .success
             } catch {
                 testState = .failure(webDAVMessage(for: error))
+                trust = ServerTrustPrompt.forHost(resolvedURL?.host ?? "", error: error)
             }
         }
+    }
+
+    /// Takes the name off the certificate and tries that instead. No override: with the
+    /// right address the certificate verifies normally.
+    private func useCertifiedName(_ name: String, instead of: String) {
+        address = address.replacingOccurrences(of: of, with: name)
+        trust = nil
+        test()
+    }
+
+    private func trustAndRetry(_ certificate: ServerCertificate) {
+        ServerTrustStore.shared.accept(certificate)
+        trust = nil
+        test()
+    }
+
+    @ViewBuilder
+    private var trustSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            switch trust {
+            case .useCertifiedName(let name, let certificate):
+                Text(L10n.string("network.name.title")).font(.title2.weight(.semibold))
+                Text(String(format: L10n.string("network.name.detail"), name))
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button(L10n.string("common.close")) { trust = nil }
+                    Spacer()
+                    Button(String(format: L10n.string("network.name.use"), name)) {
+                        useCertifiedName(name, instead: certificate.host)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            case .trustCertificate(let certificate):
+                Text(L10n.string("network.trust.title")).font(.title2.weight(.semibold))
+                Text(L10n.string("network.trust.detail"))
+                    .fixedSize(horizontal: false, vertical: true)
+                GroupBox(L10n.string("network.trust.fingerprint")) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(certificate.host)
+                        Text(certificate.fingerprint)
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
+                }
+                HStack {
+                    Button(L10n.string("common.close")) { trust = nil }
+                    Spacer()
+                    Button(L10n.string("network.trust.accept")) { trustAndRetry(certificate) }
+                        .keyboardShortcut(.defaultAction)
+                }
+            case nil:
+                EmptyView()
+            }
+        }
+        .padding(22)
+        .frame(width: 460)
     }
 
     private func save() {
@@ -777,6 +852,7 @@ private func webDAVMessage(for error: Error) -> String {
     case .notFound: L10n.string("webdav.error.not_found")
     case .notWebDAV: L10n.string("webdav.error.not_webdav")
     case .certificateMismatch: L10n.string("webdav.error.certificate")
+    case .certificateUntrusted: L10n.string("webdav.error.certificate_untrusted")
     case .network: L10n.string("webdav.error.network")
     }
 }

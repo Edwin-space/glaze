@@ -55,7 +55,7 @@ struct IOSSeriesView: View {
         .glazeListBackground()
         .navigationTitle(series.title)
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(item: $playing) { request in
+        .fullScreenCover(item: $playing, onDismiss: IOSScreenOrientation.release) { request in
             player(for: request)
         }
     }

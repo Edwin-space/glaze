@@ -46,9 +46,15 @@ public enum MediaPlaylistBuilder {
             return []
         }
 
+        // The folder's own order, with the opened film wherever it falls in it. This used
+        // to lift the opened film to the top — so opening episode two gave "2, 1, 3, 4",
+        // "next" went back to episode one, and episode two had no "previous" at all.
+        // The player finds its place by looking the film up, not by assuming it is first.
         let siblingVideos = videoFiles(in: url.deletingLastPathComponent())
-        let orderedVideos = [url] + siblingVideos.filter { $0.standardizedFileURL != url.standardizedFileURL }
-        return orderedVideos.map(MediaPlaylistItem.init(url:))
+        guard siblingVideos.contains(where: { $0.standardizedFileURL == url.standardizedFileURL }) else {
+            return ([url] + siblingVideos).map(MediaPlaylistItem.init(url:))
+        }
+        return siblingVideos.map(MediaPlaylistItem.init(url:))
     }
 
     public static func isVideoFile(_ url: URL) -> Bool {

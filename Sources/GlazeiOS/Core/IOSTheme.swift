@@ -1,3 +1,4 @@
+import GlazeCore
 import SwiftUI
 
 /// The Mac's amber on near-black, sized for a phone held at arm's length rather than
@@ -37,6 +38,21 @@ enum IOSTheme {
     /// The player's chrome was 34pt, which is a miss in a dark room with one hand.
     /// Glyphs can stay small; the thing that takes the tap cannot.
     static let minimumTouchTarget: CGFloat = 44
+
+    /// Chrome that sits over video.
+    ///
+    /// The approved player contract asks for clear glass or a translucent material on
+    /// each control, never merged into one bar (`docs/17`). The Mac keeps that in
+    /// `GlazeGlass.Depth.transport`; the phone had drifted to a flat black disc, which
+    /// blots out the frame it is sitting on instead of letting the picture read
+    /// through. These are the phone's numbers for the same idea — a little heavier
+    /// than the Mac's, because a thumb-sized glyph in daylight has less room to be
+    /// subtle than a pointer-sized one indoors.
+    enum Transport {
+        static let fill = Color.black.opacity(0.22)
+        static let edge = Color.white.opacity(0.14)
+        static let material: Material = .ultraThinMaterial
+    }
 
     /// A stable colour per title, for the many films that have no artwork yet.
     static func signature(for title: String) -> LinearGradient {
@@ -81,6 +97,9 @@ struct IOSListRow: View {
     let symbol: String
     let title: String
     let detail: String?
+    /// For a film: whether it is new, part-watched or watched. Nil for anything that is
+    /// not played — a folder, a book.
+    var watch: WatchState?
     /// Read out in place of the two labels, when they only make sense together.
     var accessibilityDescription: String?
 
@@ -88,24 +107,74 @@ struct IOSListRow: View {
         HStack(spacing: IOSTheme.Spacing.medium) {
             Image(systemName: symbol)
                 .font(.title3)
-                .foregroundStyle(IOSTheme.amber)
+                .foregroundStyle(watch == .watched ? IOSTheme.dim : IOSTheme.amber)
                 .frame(width: 30)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
-                Text(title)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                HStack(spacing: IOSTheme.Spacing.tight) {
+                    Text(title)
+                        // Watched films step back rather than disappear: they are still
+                        // there to rewatch, just no longer what the eye should land on.
+                        .foregroundStyle(watch == .watched ? AnyShapeStyle(IOSTheme.dim) : AnyShapeStyle(.primary))
+                        .lineLimit(1)
+                    if watch == .new {
+                        IOSNewBadge()
+                    }
+                }
                 if let detail {
                     Text(detail)
                         .font(.caption)
                         .foregroundStyle(IOSTheme.dim)
                         .lineLimit(2)
                 }
+                if case .inProgress(let fraction) = watch, fraction > 0 {
+                    ProgressView(value: fraction)
+                        .tint(IOSTheme.amber)
+                        .frame(maxWidth: 160)
+                        .padding(.top, IOSTheme.Spacing.hair)
+                }
+            }
+
+            if watch == .watched {
+                Spacer(minLength: 0)
+                Image(systemName: "checkmark")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(IOSTheme.dim)
+                    .accessibilityHidden(true)
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityDescription ?? [title, detail].compactMap { $0 }.joined(separator: ", "))
+        .accessibilityLabel(spokenLabel)
+    }
+
+    private var spokenLabel: String {
+        var parts = [accessibilityDescription ?? [title, detail].compactMap { $0 }.joined(separator: ", ")]
+        switch watch {
+        case .new: parts.append(L10n.string("ios.watch.new"))
+        case .watched: parts.append(L10n.string("ios.watch.watched"))
+        case .inProgress(let fraction):
+            parts.append(String(format: L10n.string("ios.watch.progress_format"), Int(fraction * 100)))
+        case nil: break
+        }
+        return parts.joined(separator: ", ")
+    }
+}
+
+/// "NEW", beside a film nobody has started.
+///
+/// In a folder of forty episodes the unwatched ones are what a person scans for, and a
+/// small mark beside the name is how every player people already use says so.
+struct IOSNewBadge: View {
+    var body: some View {
+        Text(L10n.string("ios.watch.new_badge"))
+            .font(.system(size: 9, weight: .heavy))
+            .tracking(0.4)
+            .foregroundStyle(.black)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(IOSTheme.amber, in: Capsule())
+            .accessibilityHidden(true)
     }
 }
 
@@ -141,5 +210,17 @@ extension View {
 
     func glazeListBackground() -> some View {
         scrollContentBackground(.hidden)
+    }
+}
+
+
+extension View {
+    /// One control over the film: material, a light darkening for glyph contrast, and
+    /// a hairline so the edge reads against a bright frame. Never a capsule holding
+    /// several — the contract is explicit that the discs stay separate.
+    func glazeTransportDisc(_ shape: some Shape = Circle()) -> some View {
+        background(IOSTheme.Transport.material, in: shape)
+            .background(IOSTheme.Transport.fill, in: shape)
+            .overlay { shape.stroke(IOSTheme.Transport.edge, lineWidth: 0.5) }
     }
 }

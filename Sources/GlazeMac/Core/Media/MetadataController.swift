@@ -26,6 +26,16 @@ final class MetadataController {
         case failed(String)
     }
 
+    /// What is already recorded about this film, read from the `.nfo` beside it.
+    ///
+    /// The panel used to offer a blank TMDB search for every film, including the ones
+    /// that already had a title, a synopsis and a poster sitting in the same folder —
+    /// written by Glaze itself, or by whatever built the library. Someone opening
+    /// "정보" to check a resolution was shown none of it and had no way to tell whether
+    /// the film was identified at all.
+    private(set) var known: MediaNFO?
+    private(set) var knownPosterURL: URL?
+
     private(set) var phase: Phase = .idle
     var searchTitle = ""
     var searchYear = ""
@@ -47,6 +57,25 @@ final class MetadataController {
         searchYear = parsed.year.map(String.init) ?? ""
         clearDraft()
         phase = .idle
+        readWhatIsAlreadyThere(besideVideoAt: videoURL)
+    }
+
+    /// Reads the sidecars the film already has. Silent when there are none: a film with
+    /// no `.nfo` is the ordinary case, not a problem to report.
+    func readWhatIsAlreadyThere(besideVideoAt videoURL: URL) {
+        known = nil
+        knownPosterURL = nil
+        guard videoURL.isFileURL else { return }
+
+        let folder = videoURL.deletingLastPathComponent()
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        let companions = MediaCompanionFinder.find(videoName: videoURL.lastPathComponent, among: names)
+
+        if let nfo = companions.nfo,
+           let data = try? RelatedFileAccess.read(folder.appendingPathComponent(nfo), relatedTo: videoURL) {
+            known = MediaNFOParser.parse(data)
+        }
+        knownPosterURL = companions.poster.map(folder.appendingPathComponent)
     }
 
     func reset() {
@@ -133,6 +162,8 @@ final class MetadataController {
         do {
             let written = try sidecarWriter.write(match, poster: poster, besideVideoAt: videoURL)
             phase = .written(written)
+            // The panel above this one is showing what the film used to claim.
+            readWhatIsAlreadyThere(besideVideoAt: videoURL)
         } catch {
             phase = .needsFolderAccess(match)
         }
@@ -166,4 +197,13 @@ final class MetadataController {
 
 private extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
+extension MediaNFO {
+    /// `S02E07` when the `.nfo` describes an episode. Nil for a film, so the summary
+    /// line does not carry an empty slot for every film ever made.
+    var episodeLabelForPanel: String? {
+        guard let season, let episode else { return nil }
+        return String(format: "S%02dE%02d", season, episode)
+    }
 }

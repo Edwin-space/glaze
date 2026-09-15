@@ -72,6 +72,7 @@ public enum MediaCompanionFinder {
     /// screenshot that happens to share the name.
     private static func preferredPoster(from images: [String]) -> String? {
         images.first { stem(of: $0).hasSuffix("-poster") }
+            ?? images.first { stem(of: $0).hasSuffix("-cover") }
             ?? images.first { stem(of: $0).hasSuffix("-thumb") }
             ?? images.first
     }

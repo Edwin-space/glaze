@@ -42,6 +42,17 @@ final class IOSPlaybackModel {
     let player = VLCMediaPlayer()
 
     private let positions = PlaybackPositionStore()
+
+    /// Called once when the film plays to its end — not when it is stopped by hand, and
+    /// not when it fails. The view decides whether that means the next file.
+    var onFinished: (() -> Void)?
+    /// Wired to the lock screen's and Control Center's track buttons, and to AirPods.
+    /// Nil hides those buttons, which is right for a film with nothing around it.
+    var onNextTrack: (() -> Void)?
+    var onPreviousTrack: (() -> Void)?
+    /// Guards `onFinished` so a stopped player that keeps reporting `.stopped` does not
+    /// skip through a whole folder.
+    private var hasReportedFinish = false
     private var resource: NetworkMediaResource?
     private var title = ""
     private var pendingResume: TimeInterval?
@@ -78,6 +89,11 @@ final class IOSPlaybackModel {
         hasChosenSubtitle = false
         hasFailed = false
         isBuffering = true
+        hasReportedFinish = false
+        // A late `.stopped` from the film being left must not read as this one ending.
+        // With no duration yet, the end check cannot pass.
+        currentTime = 0
+        duration = 0
 
         let media = VLCMedia(url: resource.playbackURL)
         for option in MediaCachingPolicy.mediaOptions(for: resource.playbackURL) {
@@ -148,6 +164,9 @@ final class IOSPlaybackModel {
     }
 
     func stop() {
+        // Stopped by hand is never "finished": the next film must not start by itself
+        // because someone closed this one near its end.
+        hasReportedFinish = true
         rememberPosition()
         player.stop()
         player.delegate = nil
@@ -214,8 +233,22 @@ final class IOSPlaybackModel {
         default:
             break
         }
+        let lastTime = currentTime
         readState()
+
+        // VLCKit 4 has no distinct "ended": a film that ran out is simply `.stopped`.
+        // What separates it from a stop by hand is where the clock had got to, read
+        // before `readState` resets it to zero.
+        if state == .stopped, !hasReportedFinish, duration > 0,
+           lastTime >= duration - Self.endTolerance {
+            hasReportedFinish = true
+            onFinished?()
+        }
     }
+
+    /// How close to the end still counts as the end. The last poll before stopping
+    /// lands a second or two short, and a film that stops there has still finished.
+    private static let endTolerance: TimeInterval = 3
 
     private func readState() {
         isPlaying = player.isPlaying
@@ -299,6 +332,16 @@ final class IOSPlaybackModel {
         centre.skipForwardCommand.isEnabled = true
         centre.skipBackwardCommand.isEnabled = true
         centre.changePlaybackPositionCommand.isEnabled = true
+        centre.nextTrackCommand.isEnabled = onNextTrack != nil
+        centre.previousTrackCommand.isEnabled = onPreviousTrack != nil
+        centre.nextTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.onNextTrack?() }
+            return .success
+        }
+        centre.previousTrackCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.onPreviousTrack?() }
+            return .success
+        }
         centre.skipForwardCommand.preferredIntervals = [NSNumber(value: Self.skipInterval)]
         centre.skipBackwardCommand.preferredIntervals = [NSNumber(value: Self.skipInterval)]
 
@@ -341,7 +384,8 @@ final class IOSPlaybackModel {
         for command in [
             centre.playCommand, centre.pauseCommand, centre.togglePlayPauseCommand,
             centre.skipForwardCommand, centre.skipBackwardCommand,
-            centre.changePlaybackPositionCommand
+            centre.changePlaybackPositionCommand,
+            centre.nextTrackCommand, centre.previousTrackCommand
         ] {
             command.removeTarget(nil)
         }

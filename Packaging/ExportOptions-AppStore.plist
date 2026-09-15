@@ -12,5 +12,10 @@
 	<string>upload</string>
 	<key>uploadSymbols</key>
 	<true/>
+	<!-- Xcode bumps the build number by itself unless told not to, which is how
+	     macOS ended up at (6) while project.yml still said 3. The number the
+	     repository states should be the number that ships. -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
 </dict>
 </plist>

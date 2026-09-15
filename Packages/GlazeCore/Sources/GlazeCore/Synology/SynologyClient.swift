@@ -66,6 +66,9 @@ public enum SynologyError: Error, Equatable, Sendable {
     case notSynology
     /// iOS refuses plain HTTP to an address outside the local network.
     case insecureConnectionBlocked
+    /// The server signed its own certificate. Carries what it presented so the viewer
+    /// can look at it and decide.
+    case certificateUntrusted(ServerCertificate)
     case api(code: Int)
     case transport(String)
 }
@@ -73,7 +76,7 @@ public enum SynologyError: Error, Equatable, Sendable {
 public struct SynologyClient: Sendable {
     private let session: URLSession
 
-    public init(session: URLSession = .shared) {
+    public init(session: URLSession = NetworkSession.trusting) {
         self.session = session
     }
 
@@ -213,14 +216,29 @@ public struct SynologyClient: Sendable {
     private func load(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
             return try await session.data(for: request)
-        } catch let error as URLError {
+        } catch let urlError as URLError {
+            let error = urlError
             // Anything outside the local network has to be reached over HTTPS; iOS
             // refuses the plain-HTTP address DSM offers by default, and the error it
             // gives says nothing a person could act on.
             if error.code == .appTransportSecurityRequiresSecureConnection {
                 throw SynologyError.insecureConnectionBlocked
             }
-            throw SynologyError.transport(error.localizedDescription)
+            // A NAS out of the box signs its own certificate, and the connection is
+            // refused before any of DSM's own errors can happen. Saying "could not
+            // connect" here would send someone hunting for a network fault that is
+            // not there.
+            //
+            // Only for failures that could be the handshake, though. Reporting every
+            // timeout on the host as a certificate problem is how "trust and connect"
+            // ends up doing nothing visible: it succeeds, the next failure is
+            // something else entirely, and the same sheet comes back.
+            if ServerTrust.mayBeHandshake(urlError),
+               let host = request.url?.host,
+               let certificate = ServerTrustStore.shared.refused(for: host) {
+                throw SynologyError.certificateUntrusted(certificate)
+            }
+            throw SynologyError.transport(ServerTrust.detail(urlError))
         } catch {
             throw SynologyError.transport(error.localizedDescription)
         }

@@ -10,7 +10,12 @@ struct IOSLibraryView: View {
     let library: IOSLibraryModel
     let onOpenSources: () -> Void
     let onSelect: (IOSLibrarySelection) -> Void
+    /// Reads the current source again. Files arrive while the app is not looking —
+    /// through the Files app, over a cable, from another app's share sheet — and
+    /// without this the shelf kept showing what it found at launch.
+    let onRefresh: () async -> Void
 
+    @Environment(LibraryFavoriteStore.self) private var favorites
     @State private var positions = PlaybackPositionStore()
     @State private var query = ""
 
@@ -26,6 +31,17 @@ struct IOSLibraryView: View {
                 } else {
                     if !resumable.isEmpty {
                         section(L10n.string("tv.home.continue"), items: resumable, showsProgress: true)
+                    }
+                    // Above everything else, because the point of pinning something is
+                    // not having to look for it.
+                    if !favoriteSeries.isEmpty {
+                        seriesSection(L10n.string("favorite.section"), shows: favoriteSeries)
+                    }
+                    if !favoriteMovies.isEmpty {
+                        section(
+                            favoriteSeries.isEmpty ? L10n.string("favorite.section") : L10n.string("favorite.films"),
+                            items: favoriteMovies
+                        )
                     }
                     if !library.library.series.isEmpty {
                         seriesSection(L10n.string("tv.home.series"), shows: library.library.series)
@@ -46,6 +62,7 @@ struct IOSLibraryView: View {
             placement: .navigationBarDrawer(displayMode: .automatic),
             prompt: L10n.string("ios.library.search")
         )
+        .refreshable { await onRefresh() }
     }
 
     // MARK: - Search
@@ -107,6 +124,9 @@ struct IOSLibraryView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        favoriteButton(kind: .film, id: item.id, name: item.displayTitle)
+                    }
                 }
             }
         }
@@ -128,8 +148,39 @@ struct IOSLibraryView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        favoriteButton(kind: .series, id: show.id, name: show.title)
+                    }
                 }
             }
+        }
+    }
+
+    // MARK: - Favourites
+
+    /// Resolved against what the current scan found rather than stored whole: a film
+    /// deleted from the NAS should leave the shelf, not sit there opening onto nothing.
+    private var favoriteMovies: [MediaLibraryItem] {
+        let pinned = Set(favorites.itemIDs(inSource: library.favoriteSourceKey, kind: .film))
+        guard !pinned.isEmpty else { return [] }
+        return library.library.movies.filter { pinned.contains($0.id) }
+    }
+
+    private var favoriteSeries: [MediaLibrarySeries] {
+        let pinned = Set(favorites.itemIDs(inSource: library.favoriteSourceKey, kind: .series))
+        guard !pinned.isEmpty else { return [] }
+        return library.library.series.filter { pinned.contains($0.id) }
+    }
+
+    private func favoriteButton(kind: LibraryFavorite.Kind, id: String, name: String) -> some View {
+        let isFavorite = favorites.contains(sourceKey: library.favoriteSourceKey, kind: kind, itemID: id)
+        return Button {
+            favorites.toggle(sourceKey: library.favoriteSourceKey, kind: kind, itemID: id, name: name)
+        } label: {
+            Label(
+                L10n.string(isFavorite ? "favorite.remove" : "favorite.add"),
+                systemImage: isFavorite ? "star.slash" : "star"
+            )
         }
     }
 
@@ -167,7 +218,11 @@ struct IOSLibraryView: View {
                 ? L10n.string("tv.home.library.loading")
                 : String(format: L10n.string("tv.home.library.scanning_format"), read)
         case .failed(let message): message
-        case .ready: L10n.string("tv.home.library.empty")
+        // The device folder is the one a person can do something about, so it says
+        // what to do rather than only that nothing was found.
+        case .ready: library.source == .device
+            ? L10n.string("ios.library.device_empty")
+            : L10n.string("tv.home.library.empty")
         case .idle: L10n.string("tv.home.connect.detail")
         }
     }

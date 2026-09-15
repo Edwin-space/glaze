@@ -82,4 +82,22 @@ struct LocalLibraryLoaderTests {
             .load(root: root)
         #expect(library.movies.count < 12)
     }
+
+    /// The failure this guards against: an app's Documents folder sits under a
+    /// container id iOS may change, so an absolute path buried that id in every
+    /// remembered page and every favourite, and reinstalling lost the lot.
+    @Test("A file is named by where it sits, not by the whole path")
+    func namesFilesRelativeToTheFolder() {
+        let root = URL(fileURLWithPath: "/Containers/ABC-123/Documents")
+        let file = root.appendingPathComponent("만화/원피스 01권.cbz")
+        #expect(LocalFolderWalker.identifier(for: file, root: root) == "만화/원피스 01권.cbz")
+    }
+
+    @Test("A file outside the folder keeps its own path")
+    func fallsBackToTheWholePath() {
+        let root = URL(fileURLWithPath: "/Containers/ABC-123/Documents")
+        let file = URL(fileURLWithPath: "/elsewhere/film.mkv")
+        #expect(LocalFolderWalker.identifier(for: file, root: root) == "/elsewhere/film.mkv")
+    }
+
 }

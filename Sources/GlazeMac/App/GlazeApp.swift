@@ -34,6 +34,18 @@ struct GlazeApp: App {
                 }
                 .keyboardShortcut("o")
             }
+
+            // The inspector had no home in the menu bar at all: its three panels were
+            // reachable only by opening a toolbar menu and picking from it, and two of
+            // them were a second level down. On macOS an inspector belongs in View,
+            // with a shortcut, and its absence is also why nothing could be reached
+            // from the keyboard.
+            CommandGroup(after: .toolbar) {
+                Divider()
+                panelCommand("subtitle.panel.toggle", panel: "subtitles", key: "1")
+                panelCommand("playlist.panel.toggle", panel: "playlist", key: "2")
+                panelCommand("media.panel.toggle", panel: "media", key: "3")
+            }
         }
 
         // Reachable with ⌘, whether or not a video is open — the subtitle inspector
@@ -46,6 +58,13 @@ struct GlazeApp: App {
             MacLicensesView()
         }
         .defaultSize(width: 820, height: 560)
+    }
+
+    private func panelCommand(_ titleKey: String, panel: String, key: KeyEquivalent) -> some View {
+        Button(L10n.string(titleKey)) {
+            NotificationCenter.default.post(name: .showPanelCommand, object: panel)
+        }
+        .keyboardShortcut(key)
     }
 
     static let licensesWindowID = "licenses"

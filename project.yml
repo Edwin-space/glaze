@@ -37,7 +37,7 @@ targets:
         PRODUCT_NAME: Glaze
         PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "3"
+        CURRENT_PROJECT_VERSION: "10"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Packaging/Info.plist
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -76,7 +76,7 @@ targets:
         PRODUCT_NAME: Glaze
         PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "3"
+        CURRENT_PROJECT_VERSION: "10"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Packaging/InfoTV.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -100,6 +100,10 @@ targets:
     dependencies:
       - package: GlazeCore
         product: GlazeCore
+      # The bookshelf, and nothing else links it. The Apple TV and the Mac have no
+      # reader (docs/32), so they do not carry the zip and EPUB code behind one.
+      - package: GlazeCore
+        product: GlazeBooks
       - package: VLCKit
         product: VLCKit
     settings:
@@ -107,7 +111,7 @@ targets:
         PRODUCT_NAME: Glaze
         PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "3"
+        CURRENT_PROJECT_VERSION: "10"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Packaging/InfoiOS.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

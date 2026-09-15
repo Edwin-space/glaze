@@ -187,7 +187,7 @@ public actor PairingReceiver {
         for pointer in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let interface = pointer.pointee
             guard interface.ifa_addr.pointee.sa_family == UInt8(AF_INET) else { continue }
-            let name = String(cString: interface.ifa_name)
+            let name = String(validatingCString: interface.ifa_name) ?? ""
             var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
             guard getnameinfo(
                 interface.ifa_addr,
@@ -195,8 +195,11 @@ public actor PairingReceiver {
                 &host, socklen_t(host.count),
                 nil, 0, NI_NUMERICHOST
             ) == 0 else { continue }
-            let address = String(cString: host)
-            if address != "127.0.0.1" { addresses[name] = address }
+            // `getnameinfo` writes a null-terminated string into a fixed buffer, so the
+            // trailing zeros have to come off before it is read as text.
+            let address = host.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+            let text = String(decoding: address, as: UTF8.self)
+            if !name.isEmpty, text != "127.0.0.1" { addresses[name] = text }
         }
 
         return addresses["en0"] ?? addresses["en1"] ?? addresses.values.sorted().first

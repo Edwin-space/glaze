@@ -28,6 +28,10 @@ final class TVLibraryModel {
 
     private(set) var library = MediaLibrary()
     private(set) var phase: Phase = .idle
+    /// Which host the current load is talking to, so a refused certificate can be
+    /// looked up when it fails.
+    private var host = ""
+    private(set) var trustPrompt: ServerTrustPrompt?
     private(set) var source: Source = .none
 
     /// How to actually play each item. Kept beside the library rather than inside it
@@ -82,6 +86,7 @@ final class TVLibraryModel {
         loadTask?.cancel()
         phase = .loading(foldersRead: 0)
         source = .synology(connectionName: name)
+        host = session.baseURL.host ?? ""
 
         loadTask = Task { [weak self] in
             do {
@@ -95,7 +100,7 @@ final class TVLibraryModel {
                 adoptSynology(library, session: session)
             } catch {
                 guard let self, !Task.isCancelled else { return }
-                phase = .failed(Self.message(for: error))
+                note(error)
             }
         }
     }
@@ -129,6 +134,7 @@ final class TVLibraryModel {
         loadTask?.cancel()
         phase = .loading(foldersRead: 0)
         source = .webDAV(connectionName: connection.name)
+        host = connection.rootURL.host ?? ""
 
         loadTask = Task { [weak self] in
             let credentials = password.map { (username: connection.username, password: $0) }
@@ -144,7 +150,7 @@ final class TVLibraryModel {
                 adopt(library, connection: connection, password: password)
             } catch {
                 guard let self, !Task.isCancelled else { return }
-                phase = .failed(Self.message(for: error))
+                note(error)
             }
         }
     }
@@ -201,11 +207,17 @@ final class TVLibraryModel {
     }
 
     /// Lets a failed sign-in show up where every other library failure does.
-    func reportFailure(_ error: Error) {
+    func reportFailure(_ error: Error) { note(error) }
+
+    /// A failure, and — when the server refused the handshake — what can be done about
+    /// it. The television used to print "the certificate is not trusted" and leave the
+    /// viewer with a remote control and no next step.
+    private func note(_ error: Error) {
         phase = .failed(Self.message(for: error))
+        trustPrompt = ServerTrustPrompt.forHost(host, error: error)
     }
 
-    private static func message(for error: Error) -> String {
+    static func message(for error: Error) -> String {
         switch error {
         case WebDAVError.unauthorized: L10n.string("webdav.error.unauthorized")
         case WebDAVError.notFound: L10n.string("webdav.error.not_found")

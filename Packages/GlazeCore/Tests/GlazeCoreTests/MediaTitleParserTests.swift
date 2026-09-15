@@ -252,3 +252,41 @@ struct DIDLResourceDetailTests {
         #expect(MediaTitleParser.parse("Dune.Part.Two.2024.2160p.BluRay.x265").alternateTitles.isEmpty)
     }
 }
+
+/// Every source but one handed the parser a filename with its extension still on,
+/// and the extension only disappeared as a side effect of truncating at the year.
+/// A film with no year in its name kept it and was listed as "엉뚱한 영화 mkv".
+@Suite
+struct MediaTitleParserExtensionTests {
+    @Test("A container extension is not part of the title")
+    func dropsTheExtension() {
+        #expect(MediaTitleParser.parse("엉뚱한 영화.mkv").title == "엉뚱한 영화")
+        #expect(MediaTitleParser.parse("The Holdovers.mp4").title == "The Holdovers")
+        #expect(MediaTitleParser.parse("Dune.2021.1080p.mkv").title == "Dune")
+    }
+
+    @Test("Only a container this app plays is treated as an extension")
+    func keepsWhatIsNotAnExtension() {
+        #expect(MediaTitleParser.parse("Se7en").title == "Se7en")
+        // Only the last one, and only because it is a container: what is left is
+        // handed to the ordinary rules, where dots become spaces as they always did.
+        #expect(MediaTitleParser.parse("영화.avi.mkv").title == "영화 avi")
+        #expect(MediaTitleParser.parse("기록.pdf").title == "기록 pdf")
+    }
+}
+
+/// Four episodes of one show all used to read "Gundam 0083" in a folder list, and
+/// nothing in the list or the playlist told them apart.
+@Suite
+struct ListTitleTests {
+    @Test("An episode keeps its number in a list, ahead of the show's name")
+    func episodeFirst() {
+        #expect(MediaTitleParser.parse("Gundam.0083.E01.mkv").listTitle == "E01 · Gundam 0083")
+        #expect(MediaTitleParser.parse("Gundam.0083.S01E02.mkv").listTitle == "S01E02 · Gundam 0083")
+    }
+
+    @Test("A film is just its title")
+    func filmUnchanged() {
+        #expect(MediaTitleParser.parse("Dune.2021.1080p.mkv").listTitle == "Dune")
+    }
+}

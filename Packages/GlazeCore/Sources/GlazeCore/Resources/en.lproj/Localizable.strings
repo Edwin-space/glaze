@@ -268,6 +268,11 @@
 "tv.home.folders" = "Folders";
 "tv.home.videos" = "Videos";
 
+"metadata.panel.known" = "The work";
+"metadata.panel.known_untitled" = "Untitled";
+"metadata.panel.known_sparse" = "Read from the .nfo beside the film";
+"metadata.panel.known_runtime_format" = "%d min";
+"metadata.panel.search_section" = "Look it up on TMDB";
 "metadata.panel.section" = "Film information";
 "metadata.panel.action" = "Look up this film";
 "metadata.panel.searching" = "Searching";
@@ -280,6 +285,25 @@
 "metadata.error.network" = "Could not fetch film information.";
 "metadata.error.write_failed" = "Could not save beside the video. Check the folder permission.";
 "metadata.attribution" = "This product uses the TMDB API but is not endorsed or certified by TMDB.";
+"settings.tab.keyboard" = "Keyboard";
+"settings.keyboard.description" = "Shortcuts used during playback. Change any of them to the key you prefer.";
+"shortcut.group.playback" = "Playback";
+"shortcut.group.volume" = "Volume";
+"shortcut.group.playlist" = "Playlist";
+"shortcut.action.playPause" = "Play / Pause";
+"shortcut.action.skipBackward" = "Back 10 seconds";
+"shortcut.action.skipForward" = "Forward 10 seconds";
+"shortcut.action.volumeUp" = "Volume up";
+"shortcut.action.volumeDown" = "Volume down";
+"shortcut.action.previousItem" = "Previous video";
+"shortcut.action.nextItem" = "Next video";
+"shortcut.press" = "Press a key…";
+"shortcut.none" = "None";
+"shortcut.clear" = "Clear shortcut";
+"shortcut.reset" = "Restore defaults";
+"shortcut.help" = "Click a shortcut, then press the new key. ⎋ cancels. Shortcuts do not fire while you are typing in a field.";
+"shortcut.moved_format" = "%1$@ was moved from “%2$@” to “%3$@”.";
+"shortcut.a11y.change" = "Click to choose a different key";
 "settings.tab.metadata" = "Film information";
 "settings.section.metadata" = "TMDB";
 "metadata.settings.key" = "API key";
@@ -383,6 +407,9 @@
 "tv.settings.setup_again" = "Run initial setup again";
 "tv.settings.setup_again.detail" = "Choose the default subtitle language and media source again.";
 "tv.settings.start" = "Start";
+"tv.folders.open" = "Open in Folders";
+"tv.folders.browse_instead" = "Connected. Nothing was found for the shelves, so open the server from the Folders tab.";
+"tv.folders.no_server" = "Connect a server in Sources first.";
 "tv.sources.detail" = "Connect video-only sources and choose the default library.";
 "tv.home.welcome.title" = "Your videos, in one place";
 "tv.home.welcome.detail" = "Connect a media source to see Continue Watching and recently added videos here.";
@@ -451,6 +478,7 @@
 "library.scan.reason.wellKnown" = "Widely known";
 "metadata.error.no_api_key" = "Enter a TMDB API key first, in Settings › Film details.";
 "common.close" = "Close";
+"common.delete" = "Delete";
 "common.cancel" = "Cancel";
 "library.scan.summary.episodes" = "TV episodes (not yet supported)";
 "webdav.error.certificate" = "The server's certificate does not match this address. Try the domain name on the certificate rather than the NAS's IP address.";
@@ -564,6 +592,17 @@
 
 /* Player, for VoiceOver */
 "ios.player.a11y.close" = "Close player";
+"ios.player.a11y.landscape" = "Watch in landscape";
+"ios.player.a11y.portrait" = "Back to portrait";
+"ios.watch.new_badge" = "NEW";
+"ios.watch.new" = "New";
+"ios.watch.watched" = "Watched";
+"ios.watch.progress_format" = "%d%% watched";
+"ios.player.playlist" = "Up next";
+"ios.player.a11y.previous" = "Previous video";
+"ios.player.a11y.next" = "Next video";
+"ios.watch.mark_watched" = "Mark as watched";
+"ios.watch.mark_unwatched" = "Mark as unwatched";
 "ios.player.a11y.lock" = "Lock screen";
 "ios.player.a11y.unlock" = "Unlock screen";
 "ios.player.a11y.fill" = "Fill screen";
@@ -574,3 +613,152 @@
 "ios.player.a11y.pause" = "Pause";
 "ios.player.a11y.timeline" = "Playback position";
 "ios.a11y.watched_format" = "%d percent watched";
+
+/* Settings on iPhone and iPad */
+"ios.settings.subtitles" = "Subtitles";
+"ios.settings.subtitles.detail" = "Applied to videos you open from now on. While something is playing, the player changes only that video.";
+"ios.settings.playback" = "Playback";
+"ios.settings.playback.detail" = "The speed a video starts at.";
+"ios.metadata.title" = "Film information";
+"ios.metadata.current" = "What is recorded now";
+"ios.metadata.field.title" = "Title";
+"ios.metadata.field.year" = "Year";
+"ios.metadata.field.file" = "File";
+"ios.metadata.field.search" = "Title to look up";
+"ios.metadata.from_nfo" = "Read from the .nfo file beside the film. Looking it up again rewrites that file.";
+"ios.metadata.from_name" = "Guessed from the filename. There is no .nfo file.";
+"ios.metadata.look_up" = "Look it up again";
+"ios.metadata.searching" = "Searching…";
+"ios.metadata.writing" = "Writing…";
+"ios.metadata.results" = "Results";
+"ios.metadata.not_found" = "Nothing matched. Try a different title.";
+"ios.metadata.footer" = "Saves the chosen film's details and poster beside the video as .nfo and -poster.jpg. The Mac and Apple TV read the same files.";
+"ios.metadata.no_key" = "Add a TMDB API key in Settings › Metadata first.";
+"ios.metadata.rate_limited" = "Too many requests to TMDB. Try again shortly.";
+"ios.metadata.write_failed" = "Could not write beside the film.";
+"ios.metadata.written_format" = "Changed to %1$@. Wrote %2$d files.";
+"ios.metadata.confirm.title" = "Replace the information?";
+"ios.metadata.confirm.detail" = "Writes the details and poster for %1$@ (%2$@) beside %3$@. Any existing .nfo is overwritten.";
+"ios.metadata.confirm.apply" = "Replace";
+"ios.settings.cache" = "Storage";
+"ios.settings.cache.size" = "Files the app made";
+"ios.settings.cache.clear" = "Clear temporary files";
+"ios.settings.cache.detail" = "Comics and books unpacked to be read, and the covers drawn from them. Your own files are untouched, and anything cleared is made again next time you open it. Viewing as a list reads no covers, so almost nothing accumulates.";
+"ios.settings.cache.confirm" = "Deletes unpacked books and covers. The files you put on the device are not touched.";
+"ios.settings.metadata" = "Metadata";
+"ios.settings.tmdb_key" = "TMDB API key";
+"ios.settings.tmdb_get" = "Get a key from TMDB";
+"ios.settings.metadata.detail" = "Used when you hold a film to look its title and poster up again. The key stays on this device and is never sent to Glaze. TMDB accounts issue one free.";
+"ios.settings.about" = "About";
+"ios.settings.version" = "Version";
+"ios.settings.privacy" = "Privacy Policy";
+"ios.navigation.settings" = "Settings";
+"ios.server.edit" = "Edit Server";
+"ios.server.edit.password.hint" = "Leave blank to keep the stored password.";
+"ios.server.edit.folder" = "Folder path";
+"ios.server.edit.folder.hint" = "The folder to open as your library. Blank reads from the top.";
+"common.save" = "Save";
+
+/* Bookshelf */
+"book.volume_format" = "Vol. %d";
+"book.direction.ltr" = "Left to right";
+"book.direction.rtl" = "Right to left (manga)";
+
+/* Bookshelf */
+"book.shelf.title" = "Books";
+"book.shelf.reading" = "Reading";
+"book.shelf.collections" = "Collections";
+"book.shelf.books" = "Single volumes";
+"book.shelf.progress_format" = "· %d%% read";
+"book.shelf.search" = "Search books";
+"book.shelf.search.empty" = "No book by that name.";
+"book.shelf.empty.title" = "Nothing on the shelf yet";
+"book.shelf.empty.detail" = "Put files in “On My iPhone → Glaze” in the Files app, or copy them over a cable in the Finder, and they appear here.";
+"book.shelf.empty.formats" = "PDF, EPUB and CBZ comics can be read. CBR (RAR) is not supported.";
+"book.shelf.forget" = "Start over";
+"book.shelf.count_format" = "%d books";
+"book.volume_count_format" = "%d volumes";
+"book.page_count_format" = "%d pages";
+"book.kind.comic" = "Comic";
+"book.kind.document" = "PDF";
+"book.a11y.read_format" = "%d percent read";
+
+/* Reading */
+"book.reader.failed" = "This book could not be opened.";
+"book.reader.page_format" = "%1$d / %2$d";
+"book.reader.page" = "Page";
+"book.reader.direction" = "Reading direction";
+"book.reader.double" = "Two pages";
+"book.reader.restart" = "Start over";
+"book.reader.options" = "Reading options";
+
+/* Favourites */
+"favorite.section" = "Favourites";
+"favorite.films" = "Favourite films";
+"favorite.add" = "Add to favourites";
+"favorite.remove" = "Remove from favourites";
+
+"ios.settings.reading" = "Reading";
+"ios.settings.reading.detail" = "Applied to books you open from now on. A single book's direction can be changed while reading it.";
+"ios.device.empty.books" = "PDFs, EPUBs and CBZ comics show up on the bookshelf.";
+"book.direction.vertical" = "Vertical scroll (webtoon)";
+"book.reader.measuring" = "Measuring pages";
+"book.reader.measuring_format" = "Measuring pages %1$d / %2$d";
+"book.reader.double.detail" = "Two pages appear side by side when the device is turned sideways.";
+"book.direction.ltr.short" = "L → R";
+"book.direction.rtl.short" = "R → L";
+"book.direction.vertical.short" = "Vertical";
+"book.reader.chapter_format" = "%1$d / %2$d";
+"book.reader.theme" = "Paper";
+"book.reader.text_smaller" = "Smaller text";
+"book.reader.text_larger" = "Larger text";
+"book.theme.dark" = "Dark";
+"book.theme.sepia" = "Sepia";
+"book.theme.light" = "Light";
+"book.kind.ebook" = "EPUB";
+"ios.settings.text_size" = "Text size";
+"ios.device.folder.films" = "Video";
+"ios.device.folder.books" = "Books";
+"ios.device.guide" = "Glaze — put your files here
+
+  Video  →  mkv, mp4, m4v, mov, avi, webm, ts …
+           Subtitles (.srt) and posters (-poster.jpg) named after the film are picked up automatically.
+
+  Books  →  pdf, epub, cbz, zip, 7z (CBR is not supported)
+
+These two folders are a suggestion, not a rule. A file is sorted by what it is, wherever you put it.
+Pull down to refresh in the app afterwards. You can delete this note.
+";
+"webdav.error.certificate_untrusted" = "This server signs its own certificate. Check it and trust it to connect.";
+"synology.error.certificate_untrusted" = "This NAS signs its own certificate. That is Synology's default.";
+"network.name.title" = "Use the server's name";
+"network.name.detail" = "This server has a properly issued certificate for %@. The address you typed cannot be checked against it, so the connection is refused. Nothing is wrong with the server — use its name instead.";
+"network.name.use" = "Connect to %@";
+"network.trust.title" = "Trust this server?";
+"network.trust.detail" = "The system cannot vouch for this certificate. That is normal for a NAS that signed its own. Check the fingerprint below against your NAS.";
+"network.trust.fingerprint" = "Certificate fingerprint (SHA-256)";
+"network.trust.accept" = "Trust and connect";
+"network.local_network.hint" = "If nothing connects, check Settings › Glaze › Local Network is on. With it off, Glaze cannot reach a NAS on the same network.";
+"ios.library.device_empty" = "No video on this device yet. Put files in “On My iPhone → Glaze” in the Files app, then pull down to refresh.";
+"book.reader.unpacking" = "Unpacking";
+"book.reader.unpacking_format" = "Unpacking %1$d / %2$d";
+"synology.error.transport_format" = "Could not reach the NAS — %@";
+"webdav.folder.title" = "Media folder";
+"webdav.folder.detail" = "Pick the folder your films are in. Choosing the top level reads the whole disk, which is slow.";
+"webdav.folder.choose_here" = "Use this folder";
+"webdav.folder.root" = "Top level";
+"webdav.folder.up" = "Up";
+"webdav.folder.reading" = "Reading folders";
+"webdav.folder.empty" = "No folders inside.";
+"webdav.folder.none" = "Not chosen";
+"ios.local.title" = "Local";
+"ios.local.folder" = "Folder";
+"ios.local.film_count_format" = "%d videos";
+"ios.local.book_count_format" = "%d books";
+"ios.local.empty" = "No video in this folder. Put files in “On My iPhone → Glaze” in the Files app, then pull down to refresh.";
+"ios.browse.layout" = "View as";
+"ios.browse.layout.icons" = "Icons";
+"ios.browse.layout.list" = "List";
+"ios.browse.layout.gallery" = "Gallery";
+"ios.network.folder_empty" = "Nothing to play or read in this folder.";
+"ios.network.title" = "Network";

@@ -10,6 +10,19 @@ import Foundation
 ///
 /// Everything after the year is release metadata, which is the seam this splits on.
 public struct ParsedMediaTitle: Equatable, Sendable {
+    /// `S01E02`, `E05`, or nil for a film — the same shape `MediaLibraryItem` uses.
+    public var episodeLabel: String? {
+        guard let season else { return episode.map { String(format: "E%02d", $0) } }
+        guard let episode else { return String(format: "S%02d", season) }
+        return String(format: "S%02dE%02d", season, episode)
+    }
+
+    /// What a list of sibling files should call this one: the episode first, since in a
+    /// folder of one show it is the only part that differs.
+    public var listTitle: String {
+        episodeLabel.map { "\($0) · \(title)" } ?? title
+    }
+
     /// What to show large.
     public let title: String
     public let year: Int?
@@ -49,8 +62,23 @@ public struct ParsedMediaTitle: Equatable, Sendable {
 }
 
 public enum MediaTitleParser {
+    /// Drops a trailing `.mkv` and its kind.
+    ///
+    /// Only the extension of a container this app plays, so a film genuinely called
+    /// `Se7en.1995` keeps its ending and `기생충.2019` is not mistaken for a file named
+    /// after a year. Callers used to be expected to do this themselves and all but one
+    /// of them did not, so a film with no year in its name — `엉뚱한 영화.mkv` — was
+    /// listed as "엉뚱한 영화 mkv". Films whose names carry a year hid the bug: the
+    /// truncation at the year threw the extension away as a side effect.
+    private static func stripContainerExtension(_ raw: String) -> String {
+        guard let dot = raw.lastIndex(of: "."), dot != raw.startIndex else { return raw }
+        let ending = String(raw[raw.index(after: dot)...]).lowercased()
+        guard MediaFileTypes.video.contains(ending) else { return raw }
+        return String(raw[raw.startIndex..<dot])
+    }
+
     public static func parse(_ raw: String) -> ParsedMediaTitle {
-        let cleaned = stripSitePrefix(raw)
+        let cleaned = stripSitePrefix(stripContainerExtension(raw))
         let badges = badges(in: cleaned)
         let (season, episode) = episodeNumbers(in: cleaned)
 
@@ -69,7 +97,7 @@ public enum MediaTitleParser {
 
         // A show numbered `라이어니스- 특수 작전팀 2` carries its season in its name.
         // Only for something already known to be an episode: `Toy Story 5` is a film.
-        var finalTitle = title.isEmpty ? raw : title
+        var finalTitle = title.isEmpty ? cleaned : title
         var finalSeason = season
         if season == nil, episode != nil,
            let trailing = trailingSeasonNumber(in: finalTitle) {

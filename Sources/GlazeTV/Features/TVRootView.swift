@@ -8,6 +8,7 @@ struct TVRootView: View {
     @State private var artwork = TVArtworkLoader()
     @State private var connections = TVWebDAVConnections()
     @State private var synologyConnections = SynologyConnectionStore()
+    @State private var browser = TVNetworkBrowser()
 
     var body: some View {
         Group {
@@ -17,6 +18,7 @@ struct TVRootView: View {
                     library: library,
                     connections: connections,
                     synologyConnections: synologyConnections,
+                    browser: browser,
                     preferences: preferences
                 )
             } else {
@@ -29,7 +31,8 @@ struct TVRootView: View {
                             connections: connections,
                             synologyConnections: synologyConnections,
                             library: library,
-                            artwork: artwork
+                            artwork: artwork,
+                            browser: browser
                         )
                         preferences.finishOnboarding(serverID: nil)
                     }
@@ -52,6 +55,7 @@ private struct TVAppShell: View {
     let library: TVLibraryModel
     let connections: TVWebDAVConnections
     let synologyConnections: SynologyConnectionStore
+    let browser: TVNetworkBrowser
     @Bindable var preferences: TVUserPreferences
 
     @Environment(TVArtworkLoader.self) private var artwork
@@ -60,6 +64,11 @@ private struct TVAppShell: View {
     /// A NAS whose library folder has not been chosen yet.
     @State private var folderChoice: WebDAVConnection?
     @State private var isPairing = false
+    @State private var folderPath = NavigationPath()
+    /// A film chosen in the folder browser, on its way to the player.
+    @State private var browsing: TVBrowsedFilm?
+    /// Bumped when that player closes so the folder list redraws its watched marks.
+    @State private var watchRevision = 0
 
     var body: some View {
         TabView(selection: $selection) {
@@ -68,6 +77,9 @@ private struct TVAppShell: View {
                     library: library,
                     preferences: preferences,
                     onOpenSources: { selection = .sources },
+                    onRetry: { Task { await loadPreferredSource() } },
+                    isBrowsable: browser.isConnected,
+                    onOpenFolders: { selection = .folders },
                     onSelect: { route = $0 }
                 )
             }
@@ -105,8 +117,41 @@ private struct TVAppShell: View {
                             useWebDAV(saved)
                             selection = .home
                         }
+                    },
+                    onUseDLNA: { server in
+                        browser.use(dlna: server)
+                        selection = .folders
                     }
                 )
+            }
+
+            // Folder browsing: one request for the folder in front of you, however
+            // many thousands of films sit below it. The shelves are built by reading
+            // the whole tree, which is right for a library someone arranged and wrong
+            // for finding one file on a NAS.
+            Tab(L10n.string("ios.local.folder"), systemImage: "folder.fill", value: TVTab.folders) {
+                NavigationStack(path: $folderPath) {
+                    Group {
+                        if browser.isConnected {
+                            TVNetworkBrowserView(
+                                browser: browser,
+                                folder: TVNetworkFolder(path: browser.rootPath, name: ""),
+                                onPlay: { browsing = TVBrowsedFilm(queue: $0) },
+                                watchRevision: watchRevision
+                            )
+                        } else {
+                            TVFolderBrowsingUnavailable(onOpenSources: { selection = .sources })
+                        }
+                    }
+                    .navigationDestination(for: TVNetworkFolder.self) { folder in
+                        TVNetworkBrowserView(
+                            browser: browser,
+                            folder: folder,
+                            onPlay: { browsing = TVBrowsedFilm(queue: $0) },
+                            watchRevision: watchRevision
+                        )
+                    }
+                }
             }
 
             Tab(L10n.string("settings.title"), systemImage: "gearshape.fill", value: TVTab.settings) {
@@ -121,6 +166,10 @@ private struct TVAppShell: View {
         .task(id: preferences.preferredServerID) {
             await loadPreferredSource()
         }
+        // As soon as a server is chosen or restored, not when its catalogue is done.
+        .onChange(of: media.selectedServer?.id) { _, _ in
+            adoptDLNAIfNeeded()
+        }
         .onChange(of: media.homeNodes.count) { _, _ in
             adoptDLNAIfNeeded()
         }
@@ -131,7 +180,8 @@ private struct TVAppShell: View {
                     connections: connections,
                     synologyConnections: synologyConnections,
                     library: library,
-                    artwork: artwork
+                    artwork: artwork,
+                    browser: browser
                 )
                 selection = .home
             }
@@ -146,6 +196,25 @@ private struct TVAppShell: View {
                 connections.save(updated, password: nil)
                 useWebDAV(updated)
                 selection = .home
+            }
+        }
+        .fullScreenCover(item: $browsing, onDismiss: { watchRevision += 1 }) { film in
+            if let current = film.queue.current {
+                TVPlayerView(
+                    resource: current.resource,
+                    title: current.title,
+                    startAt: PlaybackPositionStore().position(for: .network(current.resource)) ?? 0,
+                    externalSubtitleURL: preferences.automaticallySelectSubtitles
+                        ? SubtitleChoice.preferred(
+                            among: current.resource.subtitleResources,
+                            language: preferences.defaultSubtitleLanguageCode
+                        )
+                        : nil,
+                    preferredSubtitleLanguageCode: preferences.defaultSubtitleLanguageCode,
+                    automaticallySelectSubtitles: preferences.automaticallySelectSubtitles,
+                    preferredSubtitleScale: preferences.subtitleScale,
+                    queue: film.queue
+                )
             }
         }
         .fullScreenCover(item: $route) { selection in
@@ -199,14 +268,42 @@ private struct TVAppShell: View {
         let password = connections.password(for: connection)
         artwork.use(username: connection.username, password: password)
         library.load(connection, password: password)
+        browser.use(webDAV: connection, password: password)
     }
 
     private func adoptDLNAIfNeeded() {
-        guard connections.connections.isEmpty, !media.homeNodes.isEmpty else { return }
-        library.adopt(
-            dlnaNodes: media.homeNodes,
-            serverName: media.selectedServer?.friendlyName ?? ""
-        )
+        guard connections.connections.isEmpty, let server = media.selectedServer else { return }
+        // Before anything else, and without waiting for the shelves. This used to sit
+        // behind the guard on `homeNodes` below, so a server whose films were deeper
+        // than the catalogue reaches — every Synology browsed by folder — left the
+        // folder tab empty as well as the shelves.
+        browser.use(dlna: server)
+
+        guard !media.homeNodes.isEmpty else { return }
+        library.adopt(dlnaNodes: media.homeNodes, serverName: server.friendlyName)
+    }
+}
+
+/// A film picked out of the folder browser, wrapped so it can drive a cover.
+private struct TVBrowsedFilm: Identifiable {
+    let queue: PlaybackQueue
+    var id: String { queue.current?.id ?? "" }
+}
+
+/// Said plainly rather than showing an empty list: there is no server yet.
+private struct TVFolderBrowsingUnavailable: View {
+    let onOpenSources: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text(L10n.string("tv.folders.no_server"))
+                .font(.system(size: 44, weight: .bold))
+            Button(L10n.string("tv.navigation.sources"), action: onOpenSources)
+                .buttonStyle(.card)
+        }
+        .padding(84)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(TVTheme.ground.ignoresSafeArea())
     }
 }
 
@@ -215,6 +312,7 @@ private enum TVTab: Hashable {
     case movies
     case series
     case sources
+    case folders
     case settings
     case search
 }
@@ -240,7 +338,8 @@ enum TVPairingAdoption {
         connections: TVWebDAVConnections,
         synologyConnections: SynologyConnectionStore,
         library: TVLibraryModel,
-        artwork: TVArtworkLoader
+        artwork: TVArtworkLoader,
+        browser: TVNetworkBrowser
     ) {
         switch payload.server {
         case .webDAV(let rootURL, let username, let password, let libraryPath):
@@ -249,6 +348,7 @@ enum TVPairingAdoption {
             connections.save(connection, password: password)
             artwork.use(username: username, password: password)
             library.load(connection, password: password)
+            browser.use(webDAV: connection, password: password)
 
         case .synology(let baseURL, let account, let password, let libraryPath):
             let connection = SynologyConnection(
@@ -270,6 +370,11 @@ enum TVPairingAdoption {
                         name: payload.name,
                         session: session,
                         path: libraryPath ?? "/"
+                    )
+                    browser.use(
+                        synology: payload.name,
+                        session: session,
+                        rootPath: libraryPath ?? ""
                     )
                 } catch {
                     library.reportFailure(error)

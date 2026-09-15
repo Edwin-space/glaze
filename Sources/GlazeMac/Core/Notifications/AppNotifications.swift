@@ -2,6 +2,8 @@ import Foundation
 
 extension Notification.Name {
     static let openVideoCommand = Notification.Name("Glaze.openVideoCommand")
+    /// Which inspector panel the View menu asked for, as the panel's raw name.
+    static let showPanelCommand = Notification.Name("Glaze.showPanelCommand")
     static let openMediaURL = Notification.Name("Glaze.openMediaURL")
 }
 

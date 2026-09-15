@@ -268,6 +268,11 @@
 "tv.home.folders" = "폴더";
 "tv.home.videos" = "영상";
 
+"metadata.panel.known" = "작품 정보";
+"metadata.panel.known_untitled" = "제목 없음";
+"metadata.panel.known_sparse" = "영상 옆 .nfo에서 읽었습니다";
+"metadata.panel.known_runtime_format" = "%d분";
+"metadata.panel.search_section" = "TMDB에서 찾기";
 "metadata.panel.section" = "작품 정보";
 "metadata.panel.action" = "작품 정보 가져오기";
 "metadata.panel.searching" = "찾는 중입니다";
@@ -280,6 +285,25 @@
 "metadata.error.network" = "작품 정보를 가져오지 못했습니다.";
 "metadata.error.write_failed" = "영상 옆에 저장하지 못했습니다. 폴더 권한을 확인하세요.";
 "metadata.attribution" = "이 제품은 TMDB API를 사용하지만 TMDB가 보증하거나 인증한 것은 아닙니다.";
+"settings.tab.keyboard" = "키보드";
+"settings.keyboard.description" = "재생 중에 쓰는 단축키입니다. 원하는 키로 바꿀 수 있습니다.";
+"shortcut.group.playback" = "재생";
+"shortcut.group.volume" = "소리";
+"shortcut.group.playlist" = "재생 목록";
+"shortcut.action.playPause" = "재생 / 일시정지";
+"shortcut.action.skipBackward" = "10초 뒤로";
+"shortcut.action.skipForward" = "10초 앞으로";
+"shortcut.action.volumeUp" = "소리 크게";
+"shortcut.action.volumeDown" = "소리 작게";
+"shortcut.action.previousItem" = "이전 영상";
+"shortcut.action.nextItem" = "다음 영상";
+"shortcut.press" = "키를 누르세요…";
+"shortcut.none" = "없음";
+"shortcut.clear" = "단축키 지우기";
+"shortcut.reset" = "기본값으로 되돌리기";
+"shortcut.help" = "버튼을 누른 뒤 원하는 키를 누르세요. ⎋는 취소입니다. 글자를 입력하는 칸에서는 단축키가 동작하지 않습니다.";
+"shortcut.moved_format" = "%1$@는 '%2$@'에서 빼서 '%3$@'에 지정했습니다.";
+"shortcut.a11y.change" = "눌러서 다른 키로 바꿉니다";
 "settings.tab.metadata" = "작품 정보";
 "settings.section.metadata" = "TMDB";
 "metadata.settings.key" = "API 키";
@@ -383,6 +407,9 @@
 "tv.settings.setup_again" = "초기 설정 다시 하기";
 "tv.settings.setup_again.detail" = "기본 자막 언어와 미디어 소스를 다시 선택합니다.";
 "tv.settings.start" = "시작";
+"tv.folders.open" = "폴더에서 열기";
+"tv.folders.browse_instead" = "서버에 연결됐습니다. 선반에 올릴 영상을 찾지 못했으니 폴더 탭에서 직접 열어보세요.";
+"tv.folders.no_server" = "먼저 소스에서 서버를 연결하세요.";
 "tv.sources.detail" = "영상 전용 소스만 연결하고 기본 보관함을 선택합니다.";
 "tv.home.welcome.title" = "내 영상, 한곳에서";
 "tv.home.welcome.detail" = "미디어 소스를 연결하면 이어보기와 최근 추가 영상이 여기에 나타납니다.";
@@ -565,6 +592,17 @@
 
 /* Player, for VoiceOver */
 "ios.player.a11y.close" = "재생 닫기";
+"ios.player.a11y.landscape" = "가로로 보기";
+"ios.player.a11y.portrait" = "세로로 되돌리기";
+"ios.watch.new_badge" = "NEW";
+"ios.watch.new" = "새 영상";
+"ios.watch.watched" = "다 봄";
+"ios.watch.progress_format" = "%d%% 봄";
+"ios.player.playlist" = "재생 목록";
+"ios.player.a11y.previous" = "이전 영상";
+"ios.player.a11y.next" = "다음 영상";
+"ios.watch.mark_watched" = "다 본 것으로 표시";
+"ios.watch.mark_unwatched" = "안 본 것으로 표시";
 "ios.player.a11y.lock" = "화면 잠금";
 "ios.player.a11y.unlock" = "화면 잠금 해제";
 "ios.player.a11y.fill" = "화면 채우기";
@@ -575,3 +613,152 @@
 "ios.player.a11y.pause" = "일시정지";
 "ios.player.a11y.timeline" = "재생 위치";
 "ios.a11y.watched_format" = "%d퍼센트 봤음";
+
+/* Settings on iPhone and iPad */
+"ios.settings.subtitles" = "자막";
+"ios.settings.subtitles.detail" = "새로 재생하는 영상에 적용됩니다. 재생 중에는 플레이어에서 그 영상만 따로 바꿀 수 있습니다.";
+"ios.settings.playback" = "재생";
+"ios.settings.playback.detail" = "영상을 열 때의 기본 속도입니다.";
+"ios.metadata.title" = "영상 정보";
+"ios.metadata.current" = "지금 기록된 정보";
+"ios.metadata.field.title" = "제목";
+"ios.metadata.field.year" = "연도";
+"ios.metadata.field.file" = "파일";
+"ios.metadata.field.search" = "찾을 제목";
+"ios.metadata.from_nfo" = "옆에 있는 .nfo 파일에서 읽었습니다. 아래에서 다시 찾으면 그 파일을 새로 씁니다.";
+"ios.metadata.from_name" = "파일 이름에서 짐작한 것입니다. .nfo 파일이 없습니다.";
+"ios.metadata.look_up" = "정보 다시 찾기";
+"ios.metadata.searching" = "찾는 중…";
+"ios.metadata.writing" = "기록하는 중…";
+"ios.metadata.results" = "검색 결과";
+"ios.metadata.not_found" = "맞는 작품을 찾지 못했습니다. 제목을 바꿔서 다시 찾아보세요.";
+"ios.metadata.footer" = "고른 작품의 정보와 포스터를 영상 파일 옆에 .nfo와 -poster.jpg로 저장합니다. 맥과 애플TV도 같은 파일을 읽습니다.";
+"ios.metadata.no_key" = "설정 › 메타데이터에서 TMDB API 키를 먼저 넣어야 합니다.";
+"ios.metadata.rate_limited" = "TMDB 요청이 너무 잦습니다. 잠시 뒤에 다시 시도하세요.";
+"ios.metadata.write_failed" = "영상 옆에 파일을 쓰지 못했습니다.";
+"ios.metadata.written_format" = "%1$@(으)로 바꿨습니다. 파일 %2$d개를 썼습니다.";
+"ios.metadata.confirm.title" = "이 정보로 바꿀까요?";
+"ios.metadata.confirm.detail" = "%1$@(%2$@)의 정보와 포스터를 %3$@ 옆에 씁니다. 기존 .nfo는 덮어씁니다.";
+"ios.metadata.confirm.apply" = "바꾸기";
+"ios.settings.cache" = "저장 공간";
+"ios.settings.cache.size" = "앱이 만든 임시 파일";
+"ios.settings.cache.clear" = "임시 파일 지우기";
+"ios.settings.cache.detail" = "압축을 푼 만화와 책, 그리고 표지 그림입니다. 원본 파일은 그대로 있고, 지운 뒤 다시 열면 다시 만들어집니다. 목록을 '목록'으로 보면 표지를 읽지 않아 거의 쌓이지 않습니다.";
+"ios.settings.cache.confirm" = "압축을 푼 책과 표지를 지웁니다. 넣어둔 파일은 지워지지 않습니다.";
+"ios.settings.metadata" = "메타데이터";
+"ios.settings.tmdb_key" = "TMDB API 키";
+"ios.settings.tmdb_get" = "TMDB에서 키 발급받기";
+"ios.settings.metadata.detail" = "영상을 길게 눌러 제목과 포스터를 다시 찾을 때 씁니다. 키는 이 기기에만 저장되고, 글레이즈 서버로 보내지 않습니다. TMDB 계정에서 무료로 발급받을 수 있습니다.";
+"ios.settings.about" = "정보";
+"ios.settings.version" = "버전";
+"ios.settings.privacy" = "개인정보 처리방침";
+"ios.navigation.settings" = "설정";
+"ios.server.edit" = "서버 편집";
+"ios.server.edit.password.hint" = "비워 두면 저장된 비밀번호를 그대로 씁니다.";
+"ios.server.edit.folder" = "폴더 경로";
+"ios.server.edit.folder.hint" = "보관함으로 열 폴더입니다. 비워 두면 최상위부터 읽습니다.";
+"common.save" = "저장";
+
+/* 서재 */
+"book.volume_format" = "%d권";
+"book.direction.ltr" = "왼쪽 → 오른쪽";
+"book.direction.rtl" = "오른쪽 → 왼쪽 (만화)";
+
+/* 서재 */
+"book.shelf.title" = "서재";
+"book.shelf.reading" = "읽는 중";
+"book.shelf.collections" = "시리즈";
+"book.shelf.books" = "단행본";
+"book.shelf.progress_format" = "· %d%% 읽음";
+"book.shelf.search" = "책 제목 검색";
+"book.shelf.search.empty" = "찾는 책이 없습니다.";
+"book.shelf.empty.title" = "서재가 비어 있습니다";
+"book.shelf.empty.detail" = "파일 앱에서 '나의 iPhone → Glaze'로 넣거나, 케이블로 연결해 파인더에서 옮기면 여기에 나타납니다.";
+"book.shelf.empty.formats" = "PDF, EPUB, 그리고 CBZ 만화를 읽을 수 있습니다. CBR(RAR)은 지원하지 않습니다.";
+"book.shelf.forget" = "처음부터 다시";
+"book.shelf.count_format" = "%d권";
+"book.volume_count_format" = "전 %d권";
+"book.page_count_format" = "%d쪽";
+"book.kind.comic" = "만화";
+"book.kind.document" = "PDF";
+"book.a11y.read_format" = "%d퍼센트 읽음";
+
+/* 책 읽기 */
+"book.reader.failed" = "이 책을 열지 못했습니다.";
+"book.reader.page_format" = "%1$d / %2$d";
+"book.reader.page" = "페이지";
+"book.reader.direction" = "읽기 방향";
+"book.reader.double" = "두 쪽 보기";
+"book.reader.restart" = "처음부터";
+"book.reader.options" = "읽기 설정";
+
+/* 즐겨찾기 */
+"favorite.section" = "즐겨찾기";
+"favorite.films" = "즐겨찾기 영화";
+"favorite.add" = "즐겨찾기에 추가";
+"favorite.remove" = "즐겨찾기에서 제거";
+
+"ios.settings.reading" = "읽기";
+"ios.settings.reading.detail" = "새로 여는 책에 적용됩니다. 책마다 읽는 방향은 그 책을 보는 중에 따로 바꿀 수 있습니다.";
+"ios.device.empty.books" = "PDF, EPUB, CBZ 만화를 넣으면 서재에 나타납니다.";
+"book.direction.vertical" = "세로 스크롤 (웹툰)";
+"book.reader.measuring" = "쪽 크기를 재는 중";
+"book.reader.measuring_format" = "쪽 크기를 재는 중 %1$d / %2$d";
+"book.reader.double.detail" = "기기를 가로로 눕히면 두 쪽이 나란히 보입니다.";
+"book.direction.ltr.short" = "좌 → 우";
+"book.direction.rtl.short" = "우 → 좌";
+"book.direction.vertical.short" = "세로";
+"book.reader.chapter_format" = "%1$d / %2$d장";
+"book.reader.theme" = "화면";
+"book.reader.text_smaller" = "글자 작게";
+"book.reader.text_larger" = "글자 크게";
+"book.theme.dark" = "어둡게";
+"book.theme.sepia" = "세피아";
+"book.theme.light" = "밝게";
+"book.kind.ebook" = "전자책";
+"ios.settings.text_size" = "글자 크기";
+"ios.device.folder.films" = "영상";
+"ios.device.folder.books" = "서재";
+"ios.device.guide" = "글레이즈 — 파일을 여기에 넣으세요
+
+  영상  →  mkv, mp4, m4v, mov, avi, webm, ts …
+         자막(.srt)과 포스터(-poster.jpg)를 영상과 같은 이름으로 함께 넣으면 그대로 인식합니다.
+
+  서재  →  pdf, epub, cbz, zip, 7z (CBR은 지원하지 않습니다)
+
+두 폴더는 권유일 뿐입니다. 어디에 넣어도 파일 종류대로 알아서 찾아갑니다.
+넣은 뒤 앱에서 아래로 당겨 새로고침하세요. 이 메모는 지우셔도 됩니다.
+";
+"webdav.error.certificate_untrusted" = "이 서버는 스스로 서명한 인증서를 씁니다. 인증서를 확인하고 신뢰하면 접속할 수 있습니다.";
+"synology.error.certificate_untrusted" = "이 NAS는 스스로 서명한 인증서를 씁니다. 시놀로지의 기본 설정입니다.";
+"network.name.title" = "주소를 바꿔야 합니다";
+"network.name.detail" = "이 서버의 인증서는 %@ 앞으로 정식 발급되어 있습니다. 지금 적은 주소로는 그 인증서를 확인할 수 없어 연결이 끊깁니다. 서버에는 아무 문제가 없습니다 — 주소만 이름으로 바꾸면 됩니다.";
+"network.name.use" = "%@(으)로 연결";
+"network.trust.title" = "이 서버를 신뢰할까요?";
+"network.trust.detail" = "시스템이 이 인증서를 확인해 주지 못합니다. NAS가 직접 서명한 인증서라면 정상입니다. 아래 지문이 내 NAS의 것과 같은지 확인하세요.";
+"network.trust.fingerprint" = "인증서 지문 (SHA-256)";
+"network.trust.accept" = "신뢰하고 연결";
+"network.local_network.hint" = "연결되지 않으면 설정 › 글레이즈 › 로컬 네트워크가 켜져 있는지 확인하세요. 꺼져 있으면 같은 네트워크의 NAS를 찾지 못합니다.";
+"ios.library.device_empty" = "이 기기에 영상이 없습니다. 파일 앱의 '나의 iPhone → Glaze'에 넣고 아래로 당겨 새로고침하세요.";
+"book.reader.unpacking" = "압축을 푸는 중";
+"book.reader.unpacking_format" = "압축을 푸는 중 %1$d / %2$d";
+"synology.error.transport_format" = "NAS에 연결하지 못했습니다 — %@";
+"webdav.folder.title" = "미디어 폴더";
+"webdav.folder.detail" = "영화가 들어 있는 폴더를 고르세요. 최상위를 고르면 디스크 전체를 읽어 느려집니다.";
+"webdav.folder.choose_here" = "이 폴더 사용";
+"webdav.folder.root" = "최상위";
+"webdav.folder.up" = "상위 폴더";
+"webdav.folder.reading" = "폴더를 읽는 중";
+"webdav.folder.empty" = "하위 폴더가 없습니다.";
+"webdav.folder.none" = "선택 안 함";
+"ios.local.title" = "로컬";
+"ios.local.folder" = "폴더";
+"ios.local.film_count_format" = "영상 %d개";
+"ios.local.book_count_format" = "책 %d권";
+"ios.local.empty" = "이 폴더에 영상이 없습니다. 파일 앱의 '나의 iPhone → Glaze'에 넣고 아래로 당겨 새로고침하세요.";
+"ios.browse.layout" = "보기 방식";
+"ios.browse.layout.icons" = "아이콘";
+"ios.browse.layout.list" = "목록";
+"ios.browse.layout.gallery" = "갤러리";
+"ios.network.folder_empty" = "이 폴더에 재생하거나 읽을 파일이 없습니다.";
+"ios.network.title" = "네트워크";

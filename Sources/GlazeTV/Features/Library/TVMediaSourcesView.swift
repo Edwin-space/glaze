@@ -10,6 +10,9 @@ struct TVMediaSourcesView: View {
     /// beside the one the rest of the app reads.
     let onOpenPairing: () -> Void
     let onUseWebDAV: (WebDAVConnection) -> Void
+    /// A media server picked by hand. Opened for browsing straight away — not after a
+    /// catalogue of it has been built, which on a real NAS never finished (`docs/42`).
+    var onUseDLNA: (NetworkMediaServer) -> Void = { _ in }
 
     @State private var webdav = TVWebDAVConnections()
     @State private var isAddingWebDAV = false
@@ -101,10 +104,9 @@ struct TVMediaSourcesView: View {
                 VStack(spacing: 14) {
                     ForEach(model.servers) { server in
                         Button {
-                            Task {
-                                await model.select(server)
-                                preferences.preferredServerID = server.id
-                            }
+                            preferences.preferredServerID = server.id
+                            onUseDLNA(server)
+                            Task { await model.select(server) }
                         } label: {
                             HStack(spacing: 22) {
                                 Image(systemName: "externaldrive.connected.to.line.below.fill")
