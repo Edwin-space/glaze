@@ -148,6 +148,25 @@ final class PlaybackController {
         }
     }
 
+    /// Holds the film without touching the transport controls' own state, so
+    /// something else — a translation the viewer asked to wait for — can pause and
+    /// then hand playback back exactly as it found it.
+    func pause() {
+        switch activePlaybackEngine {
+        case .nativeVLC: nativeVLCSession.setPaused(true)
+        case .avkit: player?.pause()
+        case .none: break
+        }
+    }
+
+    func play() {
+        switch activePlaybackEngine {
+        case .nativeVLC: nativeVLCSession.setPaused(false)
+        case .avkit: player?.play()
+        case .none: break
+        }
+    }
+
     func seek(to time: TimeInterval) {
         let nextTime = min(max(time, 0), max(displayedDuration, 0))
         switch activePlaybackEngine {

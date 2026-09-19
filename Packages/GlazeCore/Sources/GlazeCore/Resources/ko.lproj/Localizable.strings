@@ -762,3 +762,42 @@
 "ios.browse.layout.gallery" = "갤러리";
 "ios.network.folder_empty" = "이 폴더에 재생하거나 읽을 파일이 없습니다.";
 "ios.network.title" = "네트워크";
+
+/* 자동 번역 제안 — 내 언어의 자막이 없는 영상을 열었을 때 */
+"subtitle.auto_translate.title" = "%@ 자막이 없습니다";
+"subtitle.auto_translate.detail" = "이 영상에는 %1$@ 자막만 있습니다. 이 Mac에서 %2$@로 번역할 수 있습니다.";
+"subtitle.auto_translate.while_watching" = "보면서 번역하기";
+"subtitle.auto_translate.while_watching.detail" = "바로 재생하고, 번역된 줄부터 화면에 올립니다.";
+"subtitle.auto_translate.before_watching" = "번역하고 보기";
+"subtitle.auto_translate.before_watching.detail" = "전체를 번역한 뒤에 재생합니다. 영화 한 편이면 몇 분 걸립니다.";
+"subtitle.auto_translate.keep_original" = "원본 자막으로 보기";
+"subtitle.auto_translate.remember" = "이 선택을 기억하고 다시 묻지 않기";
+"subtitle.auto_translate.ask" = "물어보기";
+"subtitle.auto_translate.whileWatching" = "보면서 번역하기";
+"subtitle.auto_translate.beforeWatching" = "번역하고 보기";
+"subtitle.auto_translate.off" = "번역하지 않기";
+"settings.subtitle.auto_translate" = "내 언어 자막이 없을 때";
+"help.subtitle.auto_translate" = "영상에 내가 읽는 언어의 자막이 없고 번역할 수 있는 자막이 있을 때 할 일입니다. 자막 패널의 번역 버튼은 이 설정과 상관없이 언제든 쓸 수 있습니다.";
+
+/* 맥 설정 — 시놀로지 연결 */
+"synology.section.title" = "시놀로지";
+"synology.section.address" = "NAS 주소";
+"synology.field.host_name" = "호스트 이름";
+"synology.field.host_name.hint" = "DSM의 외부 접속 → DDNS에 등록한 호스트 이름만 적으세요. 주소와 포트는 글레이즈가 맞춥니다.";
+"synology.field.domain" = "도메인";
+"synology.field.domain.custom" = "직접 입력";
+"synology.field.name" = "표시 이름";
+"synology.field.name.hint" = "네트워크 미디어 화면의 목록에 이 이름으로 나옵니다.";
+"synology.connecting" = "로그인하는 중…";
+"synology.shares.all" = "모든 공유 폴더";
+"synology.shares.all.detail" = "로그인한 계정이 볼 수 있는 공유 폴더를 모두 보여줍니다.";
+"synology.remove" = "연결 삭제";
+"synology.remove.confirm" = "이 NAS 연결을 삭제할까요?";
+"synology.remove.detail" = "%@ 연결과 저장된 비밀번호를 지웁니다. NAS의 파일은 그대로입니다.";
+"synology.trust.title" = "이 NAS의 인증서를 신뢰할까요?";
+"synology.trust.accept" = "신뢰하고 연결";
+"synology.error.no_saved_password" = "저장된 비밀번호가 없습니다. 설정에서 이 NAS에 다시 로그인하세요.";
+"synology.error.generic" = "NAS에 연결하지 못했습니다.";
+"settings.network.synology.empty" = "시놀로지 NAS 로그인";
+"settings.network.synology.empty_detail" = "DSM 계정으로 로그인하면 NAS에서 따로 켤 것 없이 폴더를 열 수 있습니다.";
+"network.browser.synology_sign_in" = "NAS에 로그인하는 중…";

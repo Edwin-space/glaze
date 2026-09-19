@@ -20,6 +20,12 @@ struct PlayerView: View {
     @State private var activePanel: PlayerPanel?
     @State private var isDropTargeted = false
     @State private var isNetworkBrowserPresented = false
+    /// True while the viewer is being asked whether to translate the subtitle this
+    /// film arrived with.
+    @State private var isAskingAutoTranslation = false
+    /// Set when playback was paused to wait for a translation, so it can be handed
+    /// back afterwards rather than leaving the film stopped.
+    @State private var resumesAfterTranslation = false
     @State private var areControlsVisible = true
     @State private var isSeeking = false
     @State private var hideControlsTask: Task<Void, Never>?
@@ -58,6 +64,21 @@ struct PlayerView: View {
             .translationTask(subtitles.translationConfiguration) { session in
                 guard let input = subtitles.translationInput() else { return }
                 await runTranslation(input: input, engine: AppleTranslationEngine(session: session))
+            }
+            .sheet(isPresented: $isAskingAutoTranslation) { autoTranslationPrompt }
+            // Raised once per film, when it opens with subtitles but none in the
+            // language the viewer reads.
+            .onChange(of: subtitles.pendingAutoDecision) { _, decision in
+                switch decision {
+                case .ask: isAskingAutoTranslation = true
+                case .translate(let timing): beginTranslation(timing: timing)
+                case .doNothing, .none: break
+                }
+            }
+            .onChange(of: subtitles.isTranslating) { _, isTranslating in
+                guard !isTranslating, resumesAfterTranslation else { return }
+                resumesAfterTranslation = false
+                playback.play()
             }
             .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
             .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime), perform: handlePlaybackEnd)
@@ -766,6 +787,38 @@ struct PlayerView: View {
         return seconds >= 60
             ? String(format: "%d:%02d", seconds / 60, seconds % 60)
             : "\(seconds)s"
+    }
+
+    /// The question itself, and what each answer does.
+    @ViewBuilder
+    private var autoTranslationPrompt: some View {
+        if let request = subtitles.pendingTranslationRequest {
+            AutoTranslationPrompt(
+                sourceName: request.source.displayName,
+                targetLanguageName: languageDisplayName(request.targetLanguageCode),
+                onChoose: { timing in beginTranslation(timing: timing) },
+                onDecline: {
+                    isAskingAutoTranslation = false
+                    subtitles.pendingAutoDecision = nil
+                }
+            )
+        }
+    }
+
+    /// Starts a translation for the film on screen. Waiting for the whole file means
+    /// holding the film: playing the first minutes untranslated is not what the
+    /// viewer asked for when they chose to wait.
+    private func beginTranslation(timing: SubtitleTranslationTiming) {
+        isAskingAutoTranslation = false
+        guard let videoURL = playback.currentVideoURL else {
+            subtitles.pendingAutoDecision = nil
+            return
+        }
+        if timing == .beforeWatching, playback.displayedIsPlaying {
+            resumesAfterTranslation = true
+            playback.pause()
+        }
+        subtitles.startTranslating(for: videoURL, timing: timing)
     }
 
     private func languageDisplayName(_ code: String) -> String {
@@ -1514,8 +1567,8 @@ struct PlayerView: View {
             let translations = try await engine.translate(
                 segments: input.segments,
                 targetLanguageCode: input.targetLanguageCode,
-                onProgress: { progress in
-                    subtitles.updateTranslationProgress(progress)
+                onSegment: { index, translation in
+                    subtitles.noteTranslatedSegment(at: index, translation: translation, for: input)
                 }
             )
             subtitles.applyTranslation(translations, for: input)

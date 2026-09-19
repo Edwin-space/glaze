@@ -22,6 +22,7 @@ final class GlazePreferences {
         static let translationOutput = "subtitle.translationOutput"
         static let translationTargetLanguage = "subtitle.translationTargetLanguage"
         static let storageLocation = "subtitle.storageLocation"
+        static let autoTranslation = "subtitle.autoTranslation"
         static let textSize = "subtitle.textSize"
         static let fontSize = "subtitle.fontSize"
         static let position = "subtitle.position"
@@ -55,6 +56,12 @@ final class GlazePreferences {
     /// asking Glaze for Korean, Japanese, or another subtitle language.
     var translationTargetLanguageCode: String {
         didSet { store(translationTargetLanguageCode, Key.translationTargetLanguage) }
+    }
+
+    /// What to do when a film opens with subtitles, but none in the language the
+    /// viewer reads. Asking is the default; the answer is remembered here.
+    var autoTranslation: SubtitleAutoTranslation {
+        didSet { store(autoTranslation.rawValue, Key.autoTranslation) }
     }
 
     /// Where finished subtitles are written. Beside the video by default, which on a
@@ -114,6 +121,7 @@ final class GlazePreferences {
         translationTargetLanguageCode = defaults.string(forKey: Key.translationTargetLanguage)
             ?? SubtitleLanguagePreference.targetLanguageCode
         storageLocation = Self.read(defaults, Key.storageLocation) ?? .default
+        autoTranslation = Self.read(defaults, Key.autoTranslation) ?? .default
         let storedTextSize: SubtitleTextSize = Self.read(defaults, Key.textSize) ?? .default
         textSize = storedTextSize
         fontSize = defaults.object(forKey: Key.fontSize) as? Double ?? storedTextSize.pointSize

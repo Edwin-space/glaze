@@ -23,6 +23,12 @@ final class SubtitleController {
     var isInspectingEmbeddedSubtitles = false
     var subtitlePreparationPlan: SubtitlePreparationPlan?
     var pendingTranslationRequest: SubtitleTranslationRequest?
+    /// Set once per film, when it opens carrying subtitles but none in the language
+    /// the viewer reads. The view acts on it — asking, or starting straight away —
+    /// because only the view knows which file is on screen.
+    var pendingAutoDecision: SubtitleAutoTranslationDecision?
+    /// Whether the viewer is watching while this run works, or waiting for it.
+    private(set) var translationTiming: SubtitleTranslationTiming = .beforeWatching
 
     /// Set when a subtitle sits next to the film but the sandbox will not let Glaze
     /// read it. The panel offers to ask for the folder rather than leaving the viewer
@@ -56,6 +62,10 @@ final class SubtitleController {
     var storageLocation: SubtitleStorageLocation {
         get { preferences.storageLocation }
         set { preferences.storageLocation = newValue }
+    }
+    var autoTranslation: SubtitleAutoTranslation {
+        get { preferences.autoTranslation }
+        set { preferences.autoTranslation = newValue }
     }
     /// The resource currently loaded, so subtitles are keyed on what is playing rather
     /// than on a local path a streamed video does not have.
@@ -109,6 +119,21 @@ final class SubtitleController {
     private var pendingSidecarLoad = false
     /// The embedded track the planner chose, parked until the sidecar gate opens.
     private var pendingEmbeddedSelection: (track: EmbeddedSubtitleTrack, videoURL: URL)?
+    /// True until this film has had its one automatic offer. A subtitle the viewer
+    /// picks by hand afterwards must not restart the question.
+    private var automaticOfferArmed = false
+    /// Translations that have come back so far in the current run, by segment.
+    private var partialTranslations: [String?] = []
+    /// The untranslated cues, so a cancelled run leaves the film as it found it.
+    private var translationSourceCues: [SubtitleCue] = []
+    private var lastPublishedSegment = -1
+    /// Where the film is, so a line swapped in mid-run appears at once instead of at
+    /// the next cue boundary.
+    private var lastCueTime: TimeInterval = 0
+
+    /// How many segments to let pile up before putting them on screen. One redraw per
+    /// sentence would rebuild every cue in the film for each line that came back.
+    private static let livePublishStride = 8
 
     init(preferences: GlazePreferences = .shared) {
         self.preferences = preferences
@@ -141,6 +166,9 @@ final class SubtitleController {
         isInspectingEmbeddedSubtitles = true
         subtitlePreparationPlan = nil
         pendingTranslationRequest = nil
+        pendingAutoDecision = nil
+        automaticOfferArmed = true
+        lastCueTime = 0
         spokenLanguageCode = nil
         pendingSidecarLoad = false
         pendingEmbeddedSelection = nil
@@ -270,9 +298,23 @@ final class SubtitleController {
             targetLanguageCode: target,
             cues: subtitleCues
         )
+        raiseAutomaticDecisionIfArmed()
+    }
+
+    /// The film has just opened with a subtitle that is not in the viewer's language.
+    /// What happens next is the viewer's standing choice, made once and remembered.
+    private func raiseAutomaticDecisionIfArmed() {
+        guard automaticOfferArmed, !isTranslating else { return }
+        automaticOfferArmed = false
+        let decision = SubtitleAutoTranslationDecision.decide(
+            setting: autoTranslation,
+            hasTranslatableSubtitle: pendingTranslationRequest != nil
+        )
+        pendingAutoDecision = decision == .doNothing ? nil : decision
     }
 
     func updateActiveCue(at time: TimeInterval) {
+        lastCueTime = time
         activeSubtitleText = subtitleCues.first { $0.contains(time) }?.text ?? ""
     }
 
@@ -473,11 +515,19 @@ final class SubtitleController {
 
     /// Arms the translation. The actual work starts when `.translationTask` responds
     /// to the configuration change by handing back a session.
-    func startTranslating(for videoURL: URL) {
+    /// - Parameter timing: whether the film plays while this runs. Watching while it
+    ///   works is the point of the whole feature — a two-hour film takes minutes to
+    ///   translate, and nobody wants to sit in front of a progress bar for that.
+    func startTranslating(for videoURL: URL, timing: SubtitleTranslationTiming = .beforeWatching) {
         guard let request = pendingTranslationRequest, !subtitleCues.isEmpty else { return }
 
         translationTask?.cancel()
         translationVideoURL = videoURL
+        translationTiming = timing
+        translationSourceCues = subtitleCues
+        partialTranslations = []
+        lastPublishedSegment = -1
+        pendingAutoDecision = nil
         errorMessage = nil
         translationProgress = 0
         translationStartedAt = Date()
@@ -524,8 +574,8 @@ final class SubtitleController {
                 let translations = try await engine.translate(
                     segments: input.segments,
                     targetLanguageCode: input.targetLanguageCode,
-                    onProgress: { progress in
-                        self.updateTranslationProgress(progress)
+                    onSegment: { index, translation in
+                        self.noteTranslatedSegment(at: index, translation: translation, for: input)
                     }
                 )
                 guard !Task.isCancelled else { return }
@@ -561,9 +611,24 @@ final class SubtitleController {
         translationVideoURL = nil
         isTranslating = false
         translationProgress = 0
+        // A run stopped halfway has left half-translated lines on the film. Put the
+        // subtitle back the way it was rather than leaving two languages mixed.
+        restoreSourceCuesIfPartlyTranslated()
         if status == .translating {
             status = computeStatus(for: detectedSubtitles)
         }
+    }
+
+    private func restoreSourceCuesIfPartlyTranslated() {
+        guard !translationSourceCues.isEmpty, subtitleCues != translationSourceCues else {
+            translationSourceCues = []
+            partialTranslations = []
+            return
+        }
+        subtitleCues = translationSourceCues
+        translationSourceCues = []
+        partialTranslations = []
+        updateActiveCue(at: lastCueTime)
     }
 
     /// Everything the engine needs, in Sendable form — the session itself never
@@ -613,9 +678,32 @@ final class SubtitleController {
         applyTranslation(cues: cues, videoURL: input.videoURL)
     }
 
-    func updateTranslationProgress(_ progress: Double) {
-        guard isTranslating else { return }
-        translationProgress = progress
+    /// One segment has come back from the engine.
+    ///
+    /// Progress follows from the position, and when the viewer chose to watch while
+    /// this runs, the finished lines go on screen here rather than at the end.
+    func noteTranslatedSegment(at index: Int, translation: String?, for input: TranslationInput) {
+        guard isTranslating, translationVideoURL == input.videoURL else { return }
+        if partialTranslations.count != input.segments.count {
+            partialTranslations = Array(repeating: nil, count: input.segments.count)
+        }
+        guard partialTranslations.indices.contains(index) else { return }
+        partialTranslations[index] = translation
+        translationProgress = Double(index + 1) / Double(max(input.segments.count, 1))
+
+        guard translationTiming == .whileWatching else { return }
+        let isLastSegment = index + 1 == input.segments.count
+        guard isLastSegment || index - lastPublishedSegment >= Self.livePublishStride else { return }
+        lastPublishedSegment = index
+        subtitleCues = SubtitleTranslationAssembler.assemble(
+            cues: input.cues,
+            segments: input.segments,
+            translations: partialTranslations,
+            output: input.output,
+            targetLanguageCode: input.targetLanguageCode
+        )
+        // The line on screen was assembled a moment ago from the old cues.
+        updateActiveCue(at: lastCueTime)
     }
 
     func applyTranslation(cues: [SubtitleCue], videoURL: URL) {
@@ -631,6 +719,7 @@ final class SubtitleController {
         }
         isTranslating = false
         translationConfiguration = nil
+        restoreSourceCuesIfPartlyTranslated()
         status = computeStatus(for: detectedSubtitles)
         errorMessage = translationErrorMessage(for: error)
     }
@@ -638,6 +727,9 @@ final class SubtitleController {
     private func finishTranslating(cues: [SubtitleCue], videoURL: URL) {
         isTranslating = false
         translationConfiguration = nil
+        translationSourceCues = []
+        partialTranslations = []
+        lastPublishedSegment = -1
         if let translationStartedAt {
             lastTranslationDuration = Date().timeIntervalSince(translationStartedAt)
         }

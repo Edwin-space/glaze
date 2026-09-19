@@ -762,3 +762,42 @@ Pull down to refresh in the app afterwards. You can delete this note.
 "ios.browse.layout.gallery" = "Gallery";
 "ios.network.folder_empty" = "Nothing to play or read in this folder.";
 "ios.network.title" = "Network";
+
+/* Offered when a film opens with no subtitle in the viewer's language */
+"subtitle.auto_translate.title" = "No %@ subtitles";
+"subtitle.auto_translate.detail" = "This film carries %1$@ subtitles only. Glaze can translate them into %2$@ on this Mac.";
+"subtitle.auto_translate.while_watching" = "Translate while watching";
+"subtitle.auto_translate.while_watching.detail" = "Starts playing now; each line appears as it is translated.";
+"subtitle.auto_translate.before_watching" = "Translate, then watch";
+"subtitle.auto_translate.before_watching.detail" = "Translates the whole film first. A feature takes a few minutes.";
+"subtitle.auto_translate.keep_original" = "Watch with the original";
+"subtitle.auto_translate.remember" = "Remember this and stop asking";
+"subtitle.auto_translate.ask" = "Ask";
+"subtitle.auto_translate.whileWatching" = "Translate while watching";
+"subtitle.auto_translate.beforeWatching" = "Translate, then watch";
+"subtitle.auto_translate.off" = "Do not translate";
+"settings.subtitle.auto_translate" = "When there are no subtitles in my language";
+"help.subtitle.auto_translate" = "What to do when a film has no subtitle in the language you read but does carry one that can be translated. The Translate button in the subtitle panel works whatever this is set to.";
+
+/* Mac settings — Synology connections */
+"synology.section.title" = "Synology";
+"synology.section.address" = "NAS Address";
+"synology.field.host_name" = "Host name";
+"synology.field.host_name.hint" = "Type only the host name you registered under External Access → DDNS in DSM. Glaze fills in the address and port.";
+"synology.field.domain" = "Domain";
+"synology.field.domain.custom" = "Type the address";
+"synology.field.name" = "Display name";
+"synology.field.name.hint" = "The name this NAS is listed under in Network Media.";
+"synology.connecting" = "Signing in…";
+"synology.shares.all" = "All shared folders";
+"synology.shares.all.detail" = "Shows every shared folder this account can see.";
+"synology.remove" = "Remove Connection";
+"synology.remove.confirm" = "Remove this NAS connection?";
+"synology.remove.detail" = "Removes the connection to %@ and its saved password. Files on the NAS are untouched.";
+"synology.trust.title" = "Trust this NAS's certificate?";
+"synology.trust.accept" = "Trust and Connect";
+"synology.error.no_saved_password" = "No password is saved. Sign in to this NAS again in Settings.";
+"synology.error.generic" = "Could not reach the NAS.";
+"settings.network.synology.empty" = "Sign in to a Synology NAS";
+"settings.network.synology.empty_detail" = "Signing in with a DSM account opens its folders with nothing to switch on in the NAS.";
+"network.browser.synology_sign_in" = "Signing in to the NAS…";

@@ -33,6 +33,36 @@ public enum SynologyAddress {
         return components.url
     }
 
+    /// The domains Synology's own DDNS hands out. Someone who turned DDNS on in DSM
+    /// typed a host name and picked one of these from a menu; asking them to type
+    /// `https://name.synology.me:5001` back afterwards is asking them to repeat work
+    /// the NAS already did — and the port and scheme are where people get it wrong.
+    public static let ddnsDomains = ["synology.me", "myds.me", "diskstation.me", "dscloud.me"]
+
+    public static let defaultDDNSDomain = "synology.me"
+
+    /// Builds the address from the host name someone chose in DSM and the domain it
+    /// sits under. A DDNS name always has a certificate issued to it, so the result
+    /// verifies normally — which is the whole reason for preferring it to an IP.
+    ///
+    /// - Returns: nil when there is no host name to work with.
+    public static func compose(hostName: String, domain: String) -> URL? {
+        let typed = hostName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !typed.isEmpty else { return nil }
+
+        let suffix = domain.trimmingCharacters(in: CharacterSet(charactersIn: " ./")).lowercased()
+        // Someone who pasted a whole address, scheme and all, means it literally —
+        // including plain HTTP to a box on their own network.
+        guard !typed.contains("://"), !suffix.isEmpty else { return normalised(typed) }
+
+        let host = typed.trimmingCharacters(in: CharacterSet(charactersIn: "./")).lowercased()
+        guard !host.isEmpty else { return nil }
+        // Pasting the whole name into the name box is the obvious mistake to make,
+        // and `name.synology.me.synology.me` resolves to nothing.
+        guard !host.hasSuffix(".\(suffix)") else { return normalised(host) }
+        return normalised("\(host).\(suffix)")
+    }
+
     /// Whether iOS will refuse this address for being plain HTTP to the open internet.
     ///
     /// App Transport Security allows cleartext on the local network only. A NAS

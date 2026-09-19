@@ -80,13 +80,19 @@ public enum SubtitleTranslationEngineID: String, Equatable, Sendable, CaseIterab
 public protocol SubtitleTranslationEngine {
     var engineID: SubtitleTranslationEngineID { get }
 
-    /// Translates whole segments, reporting fractional progress as it goes.
+    /// Translates whole segments, handing each one back as it finishes.
+    ///
+    /// Reporting per segment rather than as a fraction is what lets a viewer watch
+    /// while the film is still being translated: the caller can put the lines that
+    /// are ready on screen and work out progress from the position itself.
+    /// - Parameter onSegment: the segment's position and its translation, or `nil`
+    ///   when that segment could not be translated.
     /// - Returns: one translation per segment, in the same order. An entry may be
     ///   `nil` when that segment could not be translated; the caller keeps the source.
     func translate(
         segments: [SubtitleSegment],
         targetLanguageCode: String,
-        onProgress: (Double) -> Void
+        onSegment: (Int, String?) -> Void
     ) async throws -> [String?]
 }
 

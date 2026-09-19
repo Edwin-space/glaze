@@ -23,7 +23,7 @@ struct AppleTranslationEngine: SubtitleTranslationEngine {
     func translate(
         segments: [SubtitleSegment],
         targetLanguageCode: String,
-        onProgress: (Double) -> Void
+        onSegment: (Int, String?) -> Void
     ) async throws -> [String?] {
         guard !segments.isEmpty else { return [] }
 
@@ -38,7 +38,7 @@ struct AppleTranslationEngine: SubtitleTranslationEngine {
             let source = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !source.isEmpty else {
                 results.append(nil)
-                onProgress(Double(position + 1) / Double(segments.count))
+                onSegment(position, nil)
                 continue
             }
 
@@ -59,6 +59,7 @@ struct AppleTranslationEngine: SubtitleTranslationEngine {
                     results.append(response.targetText)
                     successes += 1
                 }
+                onSegment(position, results[position])
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
@@ -66,9 +67,8 @@ struct AppleTranslationEngine: SubtitleTranslationEngine {
                 // failure is worth reporting to the user.
                 results.append(nil)
                 failures += 1
+                onSegment(position, nil)
             }
-
-            onProgress(Double(position + 1) / Double(segments.count))
         }
 
         guard successes > 0 else {

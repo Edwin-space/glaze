@@ -58,6 +58,11 @@ final class NativeVLCPlaybackSession {
         playerView?.setPaused(isPlaying)
     }
 
+    func setPaused(_ paused: Bool) {
+        guard isPlaying == paused else { return }
+        playerView?.setPaused(paused)
+    }
+
     func seek(to time: TimeInterval) {
         playerView?.seek(to: time)
     }

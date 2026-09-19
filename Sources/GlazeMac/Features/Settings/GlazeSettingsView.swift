@@ -268,6 +268,19 @@ struct GlazeSettingsView: View {
                     .labelsHidden()
                     .frame(maxWidth: 240)
                 }
+
+                // The answer to the question the player asks when a film opens with
+                // nothing in the viewer's language. It is set here as well so someone
+                // who chose "stop asking" can find their way back.
+                settingsRow(labelKey: "settings.subtitle.auto_translate") {
+                    Picker("", selection: $preferences.autoTranslation) {
+                        ForEach(SubtitleAutoTranslation.allCases, id: \.self) { choice in
+                            Text(L10n.string(choice.labelKey)).tag(choice)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 240)
+                }
             }
         }
     }
@@ -285,6 +298,8 @@ struct GlazeSettingsView: View {
                     statusKey: "settings.network.automatic"
                 )
             }
+
+            MacSynologyCard()
 
             SettingsCard(titleKey: "webdav.section.title") {
                 if connections.connections.isEmpty {

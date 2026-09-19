@@ -76,7 +76,7 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
     func translate(
         segments: [SubtitleSegment],
         targetLanguageCode: String,
-        onProgress: (Double) -> Void
+        onSegment: (Int, String?) -> Void
     ) async throws -> [String?] {
         guard !segments.isEmpty else { return [] }
         guard SystemLanguageModel.default.isAvailable else {
@@ -105,7 +105,7 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
             let source = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !source.isEmpty else {
                 results.append(nil)
-                onProgress(Double(position + 1) / Double(segments.count))
+                onSegment(position, nil)
                 continue
             }
 
@@ -133,7 +133,7 @@ struct FoundationModelTranslationEngine: SubtitleTranslationEngine {
                 results.append(nil)
             }
 
-            onProgress(Double(position + 1) / Double(segments.count))
+            onSegment(position, results[position])
         }
 
         guard successes > 0 else {
