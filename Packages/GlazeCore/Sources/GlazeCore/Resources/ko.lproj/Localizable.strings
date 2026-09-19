@@ -801,3 +801,13 @@
 "settings.network.synology.empty" = "시놀로지 NAS 로그인";
 "settings.network.synology.empty_detail" = "DSM 계정으로 로그인하면 NAS에서 따로 켤 것 없이 폴더를 열 수 있습니다.";
 "network.browser.synology_sign_in" = "NAS에 로그인하는 중…";
+
+/* DLNA 서버를 주소로 추가하기 */
+"network.manual.title" = "미디어 서버 주소 입력";
+"network.manual.detail" = "DLNA/UPnP 서버의 주소를 적으면 검색 없이 바로 연결합니다. 시놀로지는 NAS의 IP 주소만 적어도 됩니다.";
+"network.manual.field" = "예: 192.168.0.9 또는 192.168.0.9:8200";
+"network.manual.add" = "주소로 추가";
+"network.manual.hint" = "IP 주소만 적으면 서버에 직접 물어보고, 답이 없으면 알려진 포트(8200, 9000 등)를 차례로 확인합니다. 기기 설명 파일 주소(rootDesc.xml)를 그대로 붙여 넣어도 됩니다.";
+"network.manual.discovery_note" = "애플TV는 네트워크 전체에 검색 신호를 보낼 수 없습니다(애플의 멀티캐스트 권한 승인 전). 서버 주소를 직접 입력하면 바로 연결됩니다.";
+"network.manual.error.address" = "주소를 적어주세요.";
+"network.manual.error.not_found" = "이 주소에서 미디어 서버를 찾지 못했습니다. IP와 포트를 확인하고, NAS에서 미디어 서버(DLNA)가 켜져 있는지 보세요.";

@@ -23,6 +23,7 @@ private struct NetworkBrowserItem: Identifiable {
     enum Source {
         case webDAV(WebDAVEntry, parentLevelID: String)
         case dlna(NetworkMediaNode, parentLevelID: String)
+        case synology(NetworkFolderEntry, parentLevelID: String)
     }
 
     let id: String
@@ -47,6 +48,9 @@ struct NetworkMediaBrowserView: View {
     @State private var webDAVFavorites = WebDAVFavoriteStore()
     @State private var webDAVModel = WebDAVBrowserModel()
     @State private var selectedWebDAV: WebDAVConnection?
+    @State private var synologyConnections = SynologyConnectionStore()
+    @State private var synologyModel = MacSynologyBrowserModel()
+    @State private var selectedSynology: SynologyConnection?
     @State private var scanTarget: WebDAVConnection?
     @State private var gallerySelectionID: String?
 
@@ -135,9 +139,24 @@ struct NetworkMediaBrowserView: View {
                             isSelected: selectedWebDAV == nil && model.selectedServer?.id == server.id
                         ) {
                             selectedWebDAV = nil
+                            selectedSynology = nil
+                            synologyModel.disconnect()
                             gallerySelectionID = nil
                             Task { await model.select(server) }
                         }
+                    }
+                }
+            }
+
+            if !synologyConnections.connections.isEmpty {
+                Section(L10n.string("synology.section.title")) {
+                    ForEach(synologyConnections.connections) { connection in
+                        sidebarButton(
+                            title: connection.name,
+                            subtitle: connection.baseURL.host,
+                            symbol: "externaldrive.badge.person.crop",
+                            isSelected: selectedSynology?.id == connection.id
+                        ) { open(connection) }
                     }
                 }
             }
@@ -264,7 +283,7 @@ struct NetworkMediaBrowserView: View {
     private var pathBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
-                Image(systemName: selectedWebDAV == nil ? "play.tv" : "externaldrive")
+                Image(systemName: hasNASSelected ? "externaldrive" : "play.tv")
                     .foregroundStyle(.secondary)
                 ForEach(browserLevels) { level in
                     Image(systemName: "chevron.right")
@@ -481,6 +500,15 @@ struct NetworkMediaBrowserView: View {
     }
 
     private var browserLevels: [NetworkBrowserLevel] {
+        if selectedSynology != nil {
+            return synologyModel.levels.map { level in
+                NetworkBrowserLevel(
+                    id: level.id,
+                    title: level.title,
+                    items: level.entries.compactMap { makeItem($0, parentLevelID: level.id) }
+                )
+            }
+        }
         if selectedWebDAV != nil {
             return webDAVModel.levels.map { level in
                 NetworkBrowserLevel(
@@ -507,12 +535,17 @@ struct NetworkMediaBrowserView: View {
         let connectionIDs = Set(webDAVConnections.connections.map(\.id))
         return webDAVFavorites.favorites.filter { connectionIDs.contains($0.connectionID) }
     }
-    private var hasSelectedSource: Bool { selectedWebDAV != nil || model.selectedServer != nil }
+    private var hasNASSelected: Bool { selectedWebDAV != nil || selectedSynology != nil }
+    private var hasSelectedSource: Bool {
+        selectedWebDAV != nil || selectedSynology != nil || model.selectedServer != nil
+    }
     private var isLoading: Bool {
-        selectedWebDAV != nil ? webDAVModel.phase == .loading : model.phase == .browsing
+        if selectedSynology != nil { return synologyModel.phase == .loading }
+        return selectedWebDAV != nil ? webDAVModel.phase == .loading : model.phase == .browsing
     }
     private var currentErrorMessage: String? {
-        selectedWebDAV != nil ? webDAVModel.errorMessage : model.errorMessage
+        if selectedSynology != nil { return synologyModel.errorMessage }
+        return selectedWebDAV != nil ? webDAVModel.errorMessage : model.errorMessage
     }
     private var isCurrentWebDAVFolderFavorite: Bool {
         guard let selectedWebDAV, let level = webDAVModel.levels.last else { return false }
@@ -525,13 +558,25 @@ struct NetworkMediaBrowserView: View {
 
     private func open(_ connection: WebDAVConnection) {
         selectedWebDAV = connection
+        selectedSynology = nil
         gallerySelectionID = nil
         Task { await webDAVModel.open(connection) }
+    }
+
+    /// Signing in happens on selection rather than when the connection was saved: a
+    /// DSM session lives only as long as the app holds it.
+    private func open(_ connection: SynologyConnection) {
+        selectedSynology = connection
+        selectedWebDAV = nil
+        gallerySelectionID = nil
+        let password = synologyConnections.password(for: connection)
+        Task { await synologyModel.open(connection, password: password) }
     }
 
     private func open(_ favorite: WebDAVFavorite) {
         guard let connection = connection(for: favorite.connectionID) else { return }
         selectedWebDAV = connection
+        selectedSynology = nil
         gallerySelectionID = nil
         Task { await webDAVModel.open(connection, at: favorite.url, title: favorite.name) }
     }
@@ -545,6 +590,14 @@ struct NetworkMediaBrowserView: View {
                 Task { await webDAVModel.open(entry) }
             } else {
                 openWebDAVVideo(entry)
+            }
+        case .synology(let entry, let parentLevelID):
+            if entry.isFolder {
+                synologyModel.navigate(to: parentLevelID)
+                Task { await synologyModel.open(entry) }
+            } else if let resource = synologyModel.resource(for: entry) {
+                onOpen(resource, .nas)
+                dismiss()
             }
         case .dlna(let node, let parentLevelID):
             switch node.kind {
@@ -562,7 +615,14 @@ struct NetworkMediaBrowserView: View {
 
     private func navigateBack() {
         gallerySelectionID = nil
-        if selectedWebDAV != nil {
+        if selectedSynology != nil {
+            if synologyModel.canNavigateBack {
+                synologyModel.navigateBack()
+            } else {
+                selectedSynology = nil
+                synologyModel.disconnect()
+            }
+        } else if selectedWebDAV != nil {
             if webDAVModel.canNavigateBack { webDAVModel.navigateBack() } else { selectedWebDAV = nil }
         } else if model.selectedServer != nil {
             model.navigateBack()
@@ -571,11 +631,19 @@ struct NetworkMediaBrowserView: View {
 
     private func navigate(to levelID: String) {
         gallerySelectionID = nil
-        if selectedWebDAV != nil { webDAVModel.navigate(to: levelID) } else { model.navigate(to: levelID) }
+        if selectedSynology != nil {
+            synologyModel.navigate(to: levelID)
+        } else if selectedWebDAV != nil {
+            webDAVModel.navigate(to: levelID)
+        } else {
+            model.navigate(to: levelID)
+        }
     }
 
     private func refreshCurrentLocation() {
-        if selectedWebDAV != nil {
+        if selectedSynology != nil {
+            Task { await synologyModel.reloadCurrent() }
+        } else if selectedWebDAV != nil {
             Task { await webDAVModel.reloadCurrent() }
         } else {
             Task { await model.retryCurrentLocation() }
@@ -596,6 +664,22 @@ struct NetworkMediaBrowserView: View {
             isFolder: entry.isDirectory,
             detail: entry.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) },
             source: .webDAV(entry, parentLevelID: parentLevelID)
+        )
+    }
+
+    /// Books and anything else the reader found are left out: this browser opens
+    /// films, and the Mac has no shelf to send a `.cbz` to.
+    private func makeItem(_ entry: NetworkFolderEntry, parentLevelID: String) -> NetworkBrowserItem? {
+        switch entry.kind {
+        case .file: return nil
+        case .folder, .film: break
+        }
+        return NetworkBrowserItem(
+            id: entry.path,
+            name: entry.displayName,
+            isFolder: entry.isFolder,
+            detail: entry.byteCount.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) },
+            source: .synology(entry, parentLevelID: parentLevelID)
         )
     }
 

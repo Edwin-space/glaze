@@ -46,6 +46,32 @@ public final class NetworkMediaBrowserModel {
         selectedServer != nil
     }
 
+    /// Adds a server the viewer found by typing its address, and keeps it at the top:
+    /// a server someone named is more wanted than one that answered a broadcast.
+    public func add(_ server: NetworkMediaServer) {
+        servers.removeAll { $0.id == server.id }
+        servers.insert(server, at: 0)
+        errorMessage = nil
+    }
+
+    /// Re-reads the servers that were typed in on an earlier run.
+    ///
+    /// Their descriptions are read again rather than trusted: a NAS that restarted
+    /// can answer on a different control address, and a stale one fails at the moment
+    /// someone tries to watch something.
+    public func restore(
+        saved: [SavedMediaServer],
+        locator: UPnPServerLocator = UPnPServerLocator()
+    ) async {
+        for entry in saved {
+            guard servers.contains(where: { $0.id == entry.id }) == false else { continue }
+            guard let server = try? await locator.locate(entry.descriptionURL.absoluteString) else {
+                continue
+            }
+            add(server)
+        }
+    }
+
     public func discoverIfNeeded() async {
         guard servers.isEmpty, phase == .idle else { return }
         await discover()
@@ -58,7 +84,12 @@ public final class NetworkMediaBrowserModel {
         levels = []
         homeNodes = []
         do {
-            servers = try await discoveryService.discoverServers()
+            let found = try await discoveryService.discoverServers()
+            // A server someone typed in is not re-found by a broadcast that reaches
+            // nothing, and dropping it here is how the address they entered
+            // disappeared the next time the screen refreshed.
+            let typed = servers.filter { entry in !found.contains { $0.id == entry.id } }
+            servers = typed + found
         } catch is CancellationError {
             return
         } catch {

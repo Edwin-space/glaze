@@ -39,7 +39,24 @@ public actor UPnPMediaServerDiscoveryService: NetworkMediaServerDiscovering {
         let packets = try await Task.detached(priority: .userInitiated) {
             try SSDPSocketSearch.search(responseWait: responseWait)
         }.value
+        return try await servers(fromSSDP: packets)
+    }
 
+    /// Asks one host directly, rather than shouting at the whole network.
+    ///
+    /// The multicast search needs an entitlement Apple grants by application, which
+    /// is why nothing is ever found on an Apple TV or an iPhone (`docs/34`). A
+    /// unicast M-SEARCH to a NAS someone typed in needs no such permission, and most
+    /// servers answer it exactly as they answer the broadcast.
+    public func askServer(host: String, port: Int = 1900) async throws -> [NetworkMediaServer] {
+        let responseWait = responseWait
+        let packets = try await Task.detached(priority: .userInitiated) {
+            try SSDPSocketSearch.search(responseWait: responseWait, host: host, port: UInt16(port))
+        }.value
+        return try await servers(fromSSDP: packets)
+    }
+
+    private func servers(fromSSDP packets: [Data]) async throws -> [NetworkMediaServer] {
         let responses = Dictionary(
             packets.compactMap(UPnPSSDP.parseResponse).map { ($0.uniqueServiceName, $0) },
             uniquingKeysWith: { first, _ in first }
@@ -71,7 +88,13 @@ public actor UPnPMediaServerDiscoveryService: NetworkMediaServerDiscovering {
 }
 
 private enum SSDPSocketSearch {
-    static func search(responseWait: TimeInterval) throws -> [Data] {
+    /// - Parameter host: where to send the search. The multicast group by default;
+    ///   one server's own address when the network will not carry multicast.
+    static func search(
+        responseWait: TimeInterval,
+        host: String = "239.255.255.250",
+        port: UInt16 = 1900
+    ) throws -> [Data] {
         let socketDescriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
         guard socketDescriptor >= 0 else {
             throw UPnPMediaServerDiscoveryService.DiscoveryError.socketCreationFailed(errno)
@@ -95,10 +118,11 @@ private enum SSDPSocketSearch {
         var destination = sockaddr_in()
         destination.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         destination.sin_family = sa_family_t(AF_INET)
-        destination.sin_port = in_port_t(1900).bigEndian
-        guard inet_pton(AF_INET, "239.255.255.250", &destination.sin_addr) == 1 else {
+        destination.sin_port = in_port_t(port).bigEndian
+        guard let address = Self.address(of: host) else {
             throw UPnPMediaServerDiscoveryService.DiscoveryError.sendFailed(errno)
         }
+        destination.sin_addr = address
 
         let request = UPnPSSDP.mediaServerSearchRequest(maxWaitSeconds: Int(responseWait.rounded(.up)))
         let sentCount = request.withUnsafeBytes { bytes in
@@ -138,5 +162,29 @@ private enum SSDPSocketSearch {
         }
 
         return packets
+    }
+
+    /// People type `nas.local` as readily as `192.168.0.9`, and only one of those is
+    /// something `inet_pton` understands.
+    private static func address(of host: String) -> in_addr? {
+        var parsed = in_addr()
+        if inet_pton(AF_INET, host, &parsed) == 1 { return parsed }
+
+        var hints = addrinfo(
+            ai_flags: 0,
+            ai_family: AF_INET,
+            ai_socktype: SOCK_DGRAM,
+            ai_protocol: IPPROTO_UDP,
+            ai_addrlen: 0,
+            ai_canonname: nil,
+            ai_addr: nil,
+            ai_next: nil
+        )
+        var results: UnsafeMutablePointer<addrinfo>?
+        guard getaddrinfo(host, nil, &hints, &results) == 0, let first = results else { return nil }
+        defer { freeaddrinfo(results) }
+        return first.pointee.ai_addr?.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+            $0.pointee.sin_addr
+        }
     }
 }

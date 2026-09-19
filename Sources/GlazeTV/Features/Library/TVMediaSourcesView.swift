@@ -14,8 +14,12 @@ struct TVMediaSourcesView: View {
     /// catalogue of it has been built, which on a real NAS never finished (`docs/42`).
     var onUseDLNA: (NetworkMediaServer) -> Void = { _ in }
 
+    /// Servers typed in by hand, kept across launches.
+    let savedServers: SavedMediaServerStore
+
     @State private var webdav = TVWebDAVConnections()
     @State private var isAddingWebDAV = false
+    @State private var isAddingServer = false
 
     var body: some View {
         ScrollView {
@@ -31,6 +35,15 @@ struct TVMediaSourcesView: View {
         }
         .background(TVTheme.ground)
         .task { await model.discoverIfNeeded() }
+        .fullScreenCover(isPresented: $isAddingServer) {
+            TVAddMediaServerView { server in
+                model.add(server)
+                savedServers.save(SavedMediaServer(server))
+                preferences.preferredServerID = server.id
+                onUseDLNA(server)
+                Task { await model.select(server) }
+            }
+        }
         .fullScreenCover(isPresented: $isAddingWebDAV) {
             TVWebDAVSetupView { connection, password in
                 webdav.save(connection, password: password)
@@ -76,6 +89,9 @@ struct TVMediaSourcesView: View {
                 Text(L10n.string("settings.network.discovery.title"))
                     .font(.system(size: 31, weight: .semibold))
                 Spacer()
+                Button { isAddingServer = true } label: {
+                    Label(L10n.string("network.manual.add"), systemImage: "plus")
+                }
                 Button {
                     Task {
                         await model.discover()
@@ -95,11 +111,18 @@ struct TVMediaSourcesView: View {
                     detail: L10n.string("settings.network.dlna.detail")
                 )
             } else if model.servers.isEmpty {
+                // An Apple TV cannot send the multicast search without Apple's
+                // entitlement (`docs/34`), so "nothing found" here is the normal
+                // result even when the NAS is running perfectly. Saying only "no
+                // servers" sent people looking for a fault in the NAS.
                 sourceStatus(
                     symbol: "externaldrive.badge.questionmark",
                     title: L10n.string("network.browser.empty"),
-                    detail: L10n.string("network.browser.empty_hint")
+                    detail: model.errorMessage ?? L10n.string("network.manual.discovery_note")
                 )
+                Button { isAddingServer = true } label: {
+                    Label(L10n.string("network.manual.add"), systemImage: "plus")
+                }
             } else {
                 VStack(spacing: 14) {
                     ForEach(model.servers) { server in

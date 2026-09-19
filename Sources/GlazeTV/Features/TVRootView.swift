@@ -9,6 +9,7 @@ struct TVRootView: View {
     @State private var connections = TVWebDAVConnections()
     @State private var synologyConnections = SynologyConnectionStore()
     @State private var browser = TVNetworkBrowser()
+    @State private var savedServers = SavedMediaServerStore()
 
     var body: some View {
         Group {
@@ -19,6 +20,7 @@ struct TVRootView: View {
                     connections: connections,
                     synologyConnections: synologyConnections,
                     browser: browser,
+                    savedServers: savedServers,
                     preferences: preferences
                 )
             } else {
@@ -56,6 +58,7 @@ private struct TVAppShell: View {
     let connections: TVWebDAVConnections
     let synologyConnections: SynologyConnectionStore
     let browser: TVNetworkBrowser
+    let savedServers: SavedMediaServerStore
     @Bindable var preferences: TVUserPreferences
 
     @Environment(TVArtworkLoader.self) private var artwork
@@ -121,7 +124,8 @@ private struct TVAppShell: View {
                     onUseDLNA: { server in
                         browser.use(dlna: server)
                         selection = .folders
-                    }
+                    },
+                    savedServers: savedServers
                 )
             }
 
@@ -235,12 +239,33 @@ private struct TVAppShell: View {
         }
     }
 
-    /// A NAS the viewer typed in wins over a DLNA server that merely answered a
-    /// broadcast: it is the one that can carry posters and subtitles.
+    /// Opens whichever source the viewer last chose.
+    ///
+    /// This used to open the first WebDAV NAS it found and stop there, so a DLNA
+    /// server picked on the sources screen was ignored for as long as any NAS was
+    /// saved — which is why DLNA looked as though it only worked *alongside* WebDAV.
+    /// A choice is a choice: the media server the viewer picked wins, and picking a
+    /// NAS afterwards hands it back.
     private func loadPreferredSource() async {
         // A NAS added on the previous screen was saved through that screen's own copy
         // of the store; this one has to look again before deciding there is none.
         connections.reload()
+
+        // Servers typed in by hand come back first, and without any search. On an
+        // Apple TV the search finds nothing at all (`docs/34`), so waiting for it
+        // before restoring them would leave the viewer with an empty app.
+        savedServers.reload()
+        await media.restore(saved: savedServers.servers)
+
+        if let preferredID = preferences.preferredServerID {
+            if let known = media.servers.first(where: { $0.id == preferredID }) {
+                await media.select(known)
+            } else {
+                _ = await media.restorePreferredServer(id: preferredID)
+            }
+            adoptDLNAIfNeeded()
+            return
+        }
 
         if let connection = connections.connections.first {
             // Asked once, on the first run with this NAS. Scanning a whole share is
@@ -253,8 +278,11 @@ private struct TVAppShell: View {
             return
         }
 
-        if let preferredID = preferences.preferredServerID {
-            _ = await media.restorePreferredServer(id: preferredID)
+        if let typed = media.servers.first(where: { server in
+            savedServers.servers.contains { $0.id == server.id }
+        }) {
+            // Nobody types an address and then wants something else opened.
+            await media.select(typed)
         } else {
             await media.discoverIfNeeded()
         }
@@ -265,6 +293,8 @@ private struct TVAppShell: View {
     /// the connection at the moment the library adopts it — not once at launch, when
     /// there may not be one yet.
     private func useWebDAV(_ connection: WebDAVConnection) {
+        // Choosing a NAS is choosing it over the media server that was open before.
+        preferences.preferredServerID = nil
         let password = connections.password(for: connection)
         artwork.use(username: connection.username, password: password)
         library.load(connection, password: password)
@@ -272,7 +302,10 @@ private struct TVAppShell: View {
     }
 
     private func adoptDLNAIfNeeded() {
-        guard connections.connections.isEmpty, let server = media.selectedServer else { return }
+        // Whether a WebDAV NAS is also saved is beside the point: the viewer chose
+        // this server, and refusing to open it because something else exists is how
+        // a DLNA server picked on the sources screen did nothing at all.
+        guard let server = media.selectedServer else { return }
         // Before anything else, and without waiting for the shelves. This used to sit
         // behind the guard on `homeNodes` below, so a server whose films were deeper
         // than the catalogue reaches — every Synology browsed by folder — left the
