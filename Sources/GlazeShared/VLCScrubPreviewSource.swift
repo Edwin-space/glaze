@@ -26,9 +26,11 @@ final class VLCScrubPreviewSource: ScrubPreviewSource {
         let url = url
         let width = width
         return await withCheckedContinuation { continuation in
+            // The thumbnailer is one-shot: its settings are read when the fetch starts
+            // and ignored afterwards, so each frame gets its own. Built on the main
+            // thread, which is where VLCKit expects its objects to be made; the answer
+            // comes back on a thread of VLCKit's choosing.
             Task { @MainActor in
-                // The thumbnailer is one-shot: its settings are read when the fetch
-                // starts and ignored afterwards, so each frame gets its own.
                 guard let grab = ThumbnailGrab(url: url, time: time, width: width, finish: { data in
                     continuation.resume(returning: data)
                 }) else {
@@ -44,11 +46,15 @@ final class VLCScrubPreviewSource: ScrubPreviewSource {
 /// One frame, from opening the media to handing back the bytes.
 ///
 /// Holds itself alive until the thumbnailer answers: VLCKit keeps only a weak
-/// reference to its delegate, and a grab that went out of scope reported nothing at all.
-/// VLCKit calls its delegate on the thread it was started from, which is the main
-/// actor here; the conformance says so rather than hopping again inside each callback.
-@MainActor
-private final class ThumbnailGrab: NSObject, @preconcurrency VLCMediaThumbnailerDelegate {
+/// reference to its delegate, and a grab that went out of scope reported nothing.
+///
+/// Deliberately **not** main-actor isolated. VLCKit runs the thumbnailer on a thread
+/// of its own and calls the delegate from there; declaring the callback as main-actor
+/// work and then letting it arrive on that thread trapped the process outright
+/// (`_dispatch_assert_queue_fail`), which is what crashed the phone the moment
+/// someone dragged along the timeline. The little state there is is behind a lock.
+private final class ThumbnailGrab: NSObject, VLCMediaThumbnailerDelegate, @unchecked Sendable {
+    private let lock = NSLock()
     private var thumbnailer: VLCMediaThumbnailer?
     private var finish: ((Data?) -> Void)?
     private var keptAlive: ThumbnailGrab?
@@ -65,7 +71,10 @@ private final class ThumbnailGrab: NSObject, @preconcurrency VLCMediaThumbnailer
     }
 
     func start() {
+        lock.lock()
         keptAlive = self
+        let thumbnailer = thumbnailer
+        lock.unlock()
         thumbnailer?.fetchThumbnail()
     }
 
@@ -77,11 +86,14 @@ private final class ThumbnailGrab: NSObject, @preconcurrency VLCMediaThumbnailer
         complete(with: nil)
     }
 
+    /// Answers once, whichever way the thumbnailer ended, and lets go of itself.
     private func complete(with data: Data?) {
-        guard let finish else { return }
+        lock.lock()
+        let finish = finish
         self.finish = nil
-        finish(data)
         keptAlive = nil
+        lock.unlock()
+        finish?(data)
     }
 
     private static func jpeg(from image: CGImage) -> Data? {
@@ -89,7 +101,11 @@ private final class ThumbnailGrab: NSObject, @preconcurrency VLCMediaThumbnailer
         guard let destination = CGImageDestinationCreateWithData(
             buffer, UTType.jpeg.identifier as CFString, 1, nil
         ) else { return nil }
-        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.7] as CFDictionary)
+        CGImageDestinationAddImage(
+            destination,
+            image,
+            [kCGImageDestinationLossyCompressionQuality: 0.7] as CFDictionary
+        )
         guard CGImageDestinationFinalize(destination) else { return nil }
         return buffer as Data
     }

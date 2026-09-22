@@ -47,6 +47,8 @@ struct IOSPlayerView: View {
     @State private var gesture = PlayerGestureState()
     /// The still shown above the timeline while a thumb drags along it.
     @State private var preview = ScrubPreviewLoader(source: nil)
+    /// Clears the double-tap mark once it has been seen.
+    @State private var hudTask: Task<Void, Never>?
 
     private var displayedTime: TimeInterval { isScrubbing ? scrubTime : model.currentTime }
 
@@ -66,11 +68,7 @@ struct IOSPlayerView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            Color.clear
-                .contentShape(Rectangle())
-                .ignoresSafeArea()
-                .onTapGesture { isLocked ? revealLock() : toggleControls() }
-                .gesture(playbackGesture)
+            touchLayer
 
             if model.hasFailed {
                 failure
@@ -87,6 +85,7 @@ struct IOSPlayerView: View {
             if let hud = gesture.hud {
                 gestureHUD(hud)
             }
+
         }
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
@@ -143,6 +142,16 @@ struct IOSPlayerView: View {
     // MARK: - Controls
 
     private var controls: some View {
+        ZStack {
+            // Under the buttons and over the film. While the chrome is up it covers
+            // the picture, so a tap on its empty half reached nothing at all — which
+            // is why tapping again did not put it away.
+            touchLayer
+            controlStack
+        }
+    }
+
+    private var controlStack: some View {
         VStack(spacing: 0) {
             topBar
             Spacer()
@@ -300,16 +309,15 @@ struct IOSPlayerView: View {
     private var timeline: some View {
         VStack(spacing: IOSTheme.Spacing.hair) {
             scrubPreview
-            Slider(
+            IOSTimelineBar(
+                duration: max(model.duration, 0),
                 value: Binding(
                     get: { displayedTime },
                     set: { scrubTime = $0 }
                 ),
-                in: 0...max(model.duration, 1),
-                onEditingChanged: { editing in
-                    if editing {
+                onScrubbingChanged: { scrubbing in
+                    if scrubbing {
                         isScrubbing = true
-                        scrubTime = model.currentTime
                         hideTask?.cancel()
                     } else {
                         isScrubbing = false
@@ -318,7 +326,6 @@ struct IOSPlayerView: View {
                     }
                 }
             )
-            .tint(IOSTheme.amber)
             .disabled(model.duration <= 0)
             .onChange(of: scrubTime) { _, time in
                 guard isScrubbing else { return }
@@ -463,13 +470,55 @@ struct IOSPlayerView: View {
 
     // MARK: - Gestures
 
+    /// Everything a finger can do to the picture: a tap to show or put away the
+    /// controls, a double tap on either side to jump ten seconds, and a drag to
+    /// scrub, or to move brightness and volume.
+    private var touchLayer: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .ignoresSafeArea()
+            // Declared before the single tap so that one waits to see whether a
+            // second is coming — which is how every video app behaves.
+            .onTapGesture(count: 2, coordinateSpace: .local) { location in
+                guard !isLocked else { return }
+                skip(tappedAt: location)
+            }
+            .onTapGesture { isLocked ? revealLock() : toggleControls() }
+            .gesture(playbackGesture)
+    }
+
+    /// Ten seconds back or forward depending on which half was tapped, without
+    /// bringing the controls up for it.
+    private func skip(tappedAt location: CGPoint) {
+        let isForward = location.x > UIScreen.main.bounds.width / 2
+        let interval = isForward ? IOSPlaybackModel.skipInterval : -IOSPlaybackModel.skipInterval
+        model.skip(by: interval)
+        gesture.hud = .init(
+            symbol: isForward ? "goforward.10" : "gobackward.10",
+            text: Self.timecode(max(model.currentTime + interval, 0))
+        )
+        // The mark answers the tap; it is not a state, so it goes on its own.
+        hudTask?.cancel()
+        hudTask = Task {
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            gesture.hud = nil
+        }
+    }
+
     /// Drag sideways to scrub, up and down for brightness on the left of the screen and
     /// volume on the right — what every video app on this platform does, and what
     /// people try first.
-    /// How far a finger travels for the full range of brightness or volume. A phone
-    /// screen is around 800pt tall, so this is most of it: fine control matters more
-    /// than reaching the ends quickly, and the ends are one long drag away regardless.
-    private static let verticalGestureTravel: CGFloat = 600
+    /// How far a finger travels for the full range of brightness or volume — more
+    /// than a phone screen is tall. Both ends are still reachable in one drag from
+    /// the middle, and nothing else about a film needs a whole screen of travel, so
+    /// the scale is better spent on control than on speed.
+    private static let verticalGestureTravel: CGFloat = 1_000
+
+    /// Movement before either one starts to shift, on top of the 12pt the gesture
+    /// itself waits for. Someone dragging sideways to scrub drifts vertically while
+    /// they do it, and without this the volume moved every time.
+    private static let verticalGestureDeadZone: CGFloat = 16
 
     private var playbackGesture: some Gesture {
         DragGesture(minimumDistance: 12)
@@ -496,7 +545,9 @@ struct IOSPlayerView: View {
                     // most of the screen. Each event used to add a step to whatever
                     // the level already was, so holding still at the bottom of a drag
                     // kept driving it — a flick took the volume from half to full.
-                    let travel = Double(-value.translation.height / Self.verticalGestureTravel)
+                    let height = value.translation.height
+                    let beyondDeadZone = max(abs(height) - Self.verticalGestureDeadZone, 0)
+                    let travel = Double(-(height < 0 ? -beyondDeadZone : beyondDeadZone) / Self.verticalGestureTravel)
                     if value.startLocation.x < UIScreen.main.bounds.width / 2 {
                         gesture.setBrightness(travel)
                     } else {
