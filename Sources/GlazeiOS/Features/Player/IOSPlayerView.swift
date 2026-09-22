@@ -45,6 +45,8 @@ struct IOSPlayerView: View {
     @State private var isScrubbing = false
     @State private var scrubTime: TimeInterval = 0
     @State private var gesture = PlayerGestureState()
+    /// The still shown above the timeline while a thumb drags along it.
+    @State private var preview = ScrubPreviewLoader(source: nil)
 
     private var displayedTime: TimeInterval { isScrubbing ? scrubTime : model.currentTime }
 
@@ -67,7 +69,7 @@ struct IOSPlayerView: View {
             Color.clear
                 .contentShape(Rectangle())
                 .ignoresSafeArea()
-                .onTapGesture { isLocked ? revealLock() : revealControls() }
+                .onTapGesture { isLocked ? revealLock() : toggleControls() }
                 .gesture(playbackGesture)
 
             if model.hasFailed {
@@ -127,6 +129,9 @@ struct IOSPlayerView: View {
                 preferences: preferences
             )
             revealControls()
+            preview = ScrubPreviewLoader(
+                source: VLCScrubPreviewSource(url: resource.playbackURL)
+            )
         }
         .onDisappear {
             hideTask?.cancel()
@@ -294,6 +299,7 @@ struct IOSPlayerView: View {
 
     private var timeline: some View {
         VStack(spacing: IOSTheme.Spacing.hair) {
+            scrubPreview
             Slider(
                 value: Binding(
                     get: { displayedTime },
@@ -314,6 +320,13 @@ struct IOSPlayerView: View {
             )
             .tint(IOSTheme.amber)
             .disabled(model.duration <= 0)
+            .onChange(of: scrubTime) { _, time in
+                guard isScrubbing else { return }
+                preview.request(time)
+            }
+            .onChange(of: isScrubbing) { _, scrubbing in
+                if scrubbing { preview.request(scrubTime) } else { preview.clear() }
+            }
             .accessibilityLabel(L10n.string("ios.player.a11y.timeline"))
             .accessibilityValue(Self.timecode(displayedTime))
 
@@ -336,6 +349,45 @@ struct IOSPlayerView: View {
             }
             .font(.caption2.monospacedDigit())
             .foregroundStyle(.white.opacity(0.75))
+        }
+    }
+
+    /// The frame under the thumb, above the timeline.
+    ///
+    /// Held in place rather than following the thumb along the bar: on a phone the
+    /// thumb is on the bar, and a picture that tracked it would spend half the film
+    /// under the hand holding the phone.
+    @ViewBuilder
+    private var scrubPreview: some View {
+        if isScrubbing, preview.isAvailable {
+            ZStack {
+                RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous)
+                    .fill(.black.opacity(0.6))
+                if let frame = preview.frame, let image = UIImage(data: frame) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous))
+                } else {
+                    ProgressView().controlSize(.small).tint(.white)
+                }
+            }
+            .frame(width: 176, height: 99)
+            .overlay(alignment: .bottom) {
+                Text(Self.timecode(scrubTime))
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .padding(.horizontal, IOSTheme.Spacing.small)
+                    .padding(.vertical, 2)
+                    .background(.black.opacity(0.55), in: Capsule())
+                    .padding(.bottom, IOSTheme.Spacing.tight)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous)
+                    .stroke(.white.opacity(0.18))
+            )
+            .padding(.bottom, IOSTheme.Spacing.small)
+            .transition(.opacity)
+            .accessibilityHidden(true)
         }
     }
 
@@ -414,6 +466,11 @@ struct IOSPlayerView: View {
     /// Drag sideways to scrub, up and down for brightness on the left of the screen and
     /// volume on the right — what every video app on this platform does, and what
     /// people try first.
+    /// How far a finger travels for the full range of brightness or volume. A phone
+    /// screen is around 800pt tall, so this is most of it: fine control matters more
+    /// than reaching the ends quickly, and the ends are one long drag away regardless.
+    private static let verticalGestureTravel: CGFloat = 600
+
     private var playbackGesture: some Gesture {
         DragGesture(minimumDistance: 12)
             .onChanged { value in
@@ -435,11 +492,15 @@ struct IOSPlayerView: View {
                         text: Self.timecode(scrubTime)
                     )
                 case .vertical:
-                    let delta = Double(-value.translation.height / 260)
+                    // Measured from where the finger went down, against a travel of
+                    // most of the screen. Each event used to add a step to whatever
+                    // the level already was, so holding still at the bottom of a drag
+                    // kept driving it — a flick took the volume from half to full.
+                    let travel = Double(-value.translation.height / Self.verticalGestureTravel)
                     if value.startLocation.x < UIScreen.main.bounds.width / 2 {
-                        gesture.applyBrightness(delta)
+                        gesture.setBrightness(travel)
                     } else {
-                        gesture.applyVolume(delta)
+                        gesture.setVolume(travel)
                     }
                 }
             }
@@ -547,6 +608,21 @@ struct IOSPlayerView: View {
         scheduleHide()
     }
 
+    /// A tap on the film puts the controls away again.
+    ///
+    /// Tapping while they were up used to only restart the five-second timer, so the
+    /// bar someone was trying to dismiss sat there for another five seconds. The rule
+    /// itself is `PlayerChromeIntent`, shared and tested.
+    private func toggleControls() {
+        apply(PlayerChromeIntent.forTap(visible: showsControls, isPlaying: model.isPlaying))
+    }
+
+    private func apply(_ intent: PlayerChromeIntent) {
+        hideTask?.cancel()
+        showsControls = intent.showsControls
+        if intent.startsHideTimer { scheduleHide() }
+    }
+
     private func revealLock() {
         showsControls = true
         scheduleHide()
@@ -597,6 +673,10 @@ final class PlayerGestureState {
     var hud: HUD?
     var anchor: TimeInterval = 0
     private var lockedAxis: Axis?
+    /// Where brightness and volume stood when the finger went down. Without these the
+    /// adjustment compounds: every event reads the level it set a moment ago.
+    private var brightnessAnchor: Double?
+    private var volumeAnchor: Float?
 
     func axis(for translation: CGSize) -> Axis {
         if let lockedAxis { return lockedAxis }
@@ -605,19 +685,30 @@ final class PlayerGestureState {
         return axis
     }
 
-    func applyBrightness(_ delta: Double) {
-        let level = min(max(UIScreen.main.brightness + delta * 0.06, 0), 1)
-        UIScreen.main.brightness = level
-        hud = HUD(symbol: "sun.max.fill", text: "\(Int(level * 100))%")
+    /// - Parameter travel: how far up the screen the finger has come, as a fraction
+    ///   of the full range. Applied to where the level started, not to where it is.
+    func setBrightness(_ travel: Double) {
+        let start = brightnessAnchor ?? Double(UIScreen.main.brightness)
+        brightnessAnchor = start
+        let level = min(max(start + travel, 0), 1)
+        UIScreen.main.brightness = CGFloat(level)
+        hud = HUD(symbol: "sun.max.fill", text: "\(Int((level * 100).rounded()))%")
     }
 
-    func applyVolume(_ delta: Double) {
-        let level = SystemVolume.adjust(by: Float(delta) * 0.06)
-        hud = HUD(symbol: level > 0 ? "speaker.wave.2.fill" : "speaker.slash.fill", text: "\(Int(level * 100))%")
+    func setVolume(_ travel: Double) {
+        let start = volumeAnchor ?? SystemVolume.level
+        volumeAnchor = start
+        let level = SystemVolume.set(min(max(start + Float(travel), 0), 1))
+        hud = HUD(
+            symbol: level > 0 ? "speaker.wave.2.fill" : "speaker.slash.fill",
+            text: "\(Int((level * 100).rounded()))%"
+        )
     }
 
     func end() {
         lockedAxis = nil
+        brightnessAnchor = nil
+        volumeAnchor = nil
         hud = nil
     }
 }

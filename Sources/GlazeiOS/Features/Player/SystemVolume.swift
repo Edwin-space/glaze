@@ -25,15 +25,22 @@ enum SystemVolume {
         return host.subviews.compactMap { $0 as? UISlider }.first
     }
 
+    /// What the system is playing at now, 0...1.
+    static var level: Float { AVAudioSession.sharedInstance().outputVolume }
+
+    /// Moves the volume to a level, rather than by a step.
+    ///
+    /// A swipe reads as a position on the screen, and stepping from wherever the
+    /// volume happens to be compounds: each event moves the level the next one starts
+    /// from, so a short flick ran to the end of the scale.
     /// - Returns: the resulting volume, 0...1.
     @discardableResult
-    static func adjust(by delta: Float) -> Float {
-        let current = AVAudioSession.sharedInstance().outputVolume
-        guard let slider = slider() else { return current }
-        let level = min(max(current + delta, 0), 1)
-        slider.value = level
+    static func set(_ level: Float) -> Float {
+        let wanted = min(max(level, 0), 1)
+        guard let slider = slider() else { return self.level }
+        slider.value = wanted
         // Setting `value` alone moves the knob without telling the system.
         slider.sendActions(for: .valueChanged)
-        return level
+        return wanted
     }
 }

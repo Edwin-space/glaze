@@ -29,6 +29,8 @@ struct TVPlayerView: View {
     @State private var playlist: PlaybackQueue?
     @State private var nowPlaying: PlaybackQueueItem?
     @State private var isShowingPlaylist = false
+    /// The still shown above the bar while the remote moves along it.
+    @State private var preview = ScrubPreviewLoader(source: nil)
 
     private enum FocusTarget: Hashable {
         case surface
@@ -89,6 +91,9 @@ struct TVPlayerView: View {
                 preferredSubtitleScale: preferredSubtitleScale
             )
             scrubTime = startAt
+            preview = ScrubPreviewLoader(
+                source: VLCScrubPreviewSource(url: resource.playbackURL, width: 480)
+            )
             focusedControl = .timeline
             scheduleHide()
         }
@@ -182,6 +187,7 @@ struct TVPlayerView: View {
 
     private var timeline: some View {
         VStack(spacing: 8) {
+            scrubPreview
             TVScrubber(
                 value: $scrubTime,
                 range: 0...max(model.duration, 1),
@@ -197,6 +203,13 @@ struct TVPlayerView: View {
             )
             .frame(height: 48)
             .focused($focusedControl, equals: .timeline)
+            .onChange(of: scrubTime) { _, time in
+                guard isScrubbing else { return }
+                preview.request(time)
+            }
+            .onChange(of: isScrubbing) { _, scrubbing in
+                if scrubbing { preview.request(scrubTime) } else { preview.clear() }
+            }
 
             HStack {
                 Text(timecode(scrubTime))
@@ -206,6 +219,58 @@ struct TVPlayerView: View {
             .font(.system(size: 23, weight: .medium, design: .monospaced))
             .foregroundStyle(.white.opacity(0.72))
         }
+    }
+
+    /// The frame the remote is pointing at, above the bar.
+    ///
+    /// Only while the bar has focus and is being moved: a still floating over a film
+    /// nobody is scrubbing is just something in the way.
+    @ViewBuilder
+    private var scrubPreview: some View {
+        if isScrubbing, preview.isAvailable {
+            HStack {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.black.opacity(0.7))
+                    if let frame = preview.frame, let image = UIImage(data: frame) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    } else {
+                        ProgressView().tint(.white)
+                    }
+                }
+                .frame(width: 320, height: 180)
+                .overlay(alignment: .bottom) {
+                    Text(timecode(scrubTime))
+                        .font(.system(size: 21, weight: .semibold, design: .monospaced))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.6), in: Capsule())
+                        .padding(.bottom, 8)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.18))
+                )
+                // Follows the position along the bar, which on a television is far
+                // enough away that a still pinned to one end would not read as
+                // belonging to the place being pointed at.
+                .offset(x: previewOffset)
+                Spacer(minLength: 0)
+            }
+            .frame(height: 188)
+            .accessibilityHidden(true)
+        }
+    }
+
+    /// Where the still sits along the bar, kept clear of both ends.
+    private var previewOffset: CGFloat {
+        let fraction = model.duration > 0 ? scrubTime / model.duration : 0
+        // 1920 wide minus the screen's own margins, less the still's width.
+        let travel: CGFloat = 1_768 - 320
+        return min(max(CGFloat(fraction) * travel, 0), travel)
     }
 
     private var transport: some View {
@@ -405,6 +470,9 @@ struct TVPlayerView: View {
         if let leaving = nowPlaying { model.rememberPosition(for: leaving.resource) }
         model.stop()
         nowPlaying = item
+        preview = ScrubPreviewLoader(
+            source: VLCScrubPreviewSource(url: item.resource.playbackURL, width: 480)
+        )
         model.onFinished = { goForward() }
         model.start(
             item.resource,

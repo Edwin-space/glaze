@@ -35,6 +35,8 @@ struct PlayerView: View {
     @State private var keyMonitor: Any?
     private let playlistPositions = PlaybackPositionStore()
     @State private var nowPlaying = MacNowPlaying()
+    /// Stills for the scrubber, rebuilt whenever a different film is loaded.
+    @State private var scrubPreview = ScrubPreviewLoader(source: nil)
     @State private var playlistRevision = 0
 
     @Environment(\.controlActiveState) private var controlActiveState
@@ -368,7 +370,8 @@ struct PlayerView: View {
             onSeekingChanged: { editing in
                 isSeeking = editing
                 editing ? hideControlsTask?.cancel() : scheduleControlsToHide()
-            }
+            },
+            preview: scrubPreview
         )
     }
 
@@ -1243,6 +1246,10 @@ struct PlayerView: View {
         metadata.prepare(videoURL: originalURL)
         let mediaResource = resource ?? .localFile(originalURL)
         currentMediaResource = mediaResource
+        // Stills come from the film that is playing, so they follow it.
+        scrubPreview = ScrubPreviewLoader(
+            source: FFmpegFrameSource(url: mediaResource.playbackURL)
+        )
         currentLibrarySource = source
         playback.setCurrentResource(mediaResource)
         subtitles.currentResource = mediaResource
