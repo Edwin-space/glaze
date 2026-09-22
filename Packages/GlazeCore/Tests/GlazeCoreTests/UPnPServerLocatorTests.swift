@@ -2,16 +2,18 @@ import Foundation
 import GlazeCore
 import Testing
 
-/// Against a real DLNA server run beside the tests: `scratchpad/dlnaserver.py`.
-/// Skipped when it is not running, so the suite still passes on a machine without it.
-@Suite("Finding a DLNA server by address, without multicast")
-struct UPnPServerLocatorTests {
-    static let testServer = URL(string: "http://127.0.0.1:8201/rootDesc.xml")!
+/// The DLNA server these tests run against: `docs/47` says how it is started.
+///
+/// Kept outside the suites it gates — a suite whose trait reads its own static is a
+/// circular reference — and treated as absent rather than broken when nothing answers,
+/// so a machine without the test server still runs a clean suite.
+enum DLNATestServer {
+    static let descriptionURL = URL(string: "http://127.0.0.1:8201/rootDesc.xml")!
 
-    static var isServerRunning: Bool {
+    static var isRunning: Bool {
         var running = false
         let semaphore = DispatchSemaphore(value: 0)
-        let task = URLSession.shared.dataTask(with: testServer) { _, response, _ in
+        let task = URLSession.shared.dataTask(with: descriptionURL) { _, response, _ in
             running = (response as? HTTPURLResponse)?.statusCode == 200
             semaphore.signal()
         }
@@ -19,26 +21,29 @@ struct UPnPServerLocatorTests {
         _ = semaphore.wait(timeout: .now() + 2)
         return running
     }
+}
 
+@Suite(
+    "Finding a DLNA server by address, without multicast",
+    .enabled(if: DLNATestServer.isRunning)
+)
+struct UPnPServerLocatorTests {
     @Test("A pasted description address is used as it is")
     func locatesFromADescriptionURL() async throws {
-        try await confirmServerIsRunning()
-        let server = try await UPnPServerLocator().locate(Self.testServer.absoluteString)
+        let server = try await UPnPServerLocator().locate(DLNATestServer.descriptionURL.absoluteString)
         #expect(server.friendlyName == "Test DLNA Server")
         #expect(server.contentDirectoryControlURL.path == "/ctl/ContentDir")
     }
 
     @Test("A host and port with no path finds the description anyway")
     func locatesFromHostAndPort() async throws {
-        try await confirmServerIsRunning()
         let server = try await UPnPServerLocator().locate("127.0.0.1:8201")
         #expect(server.friendlyName == "Test DLNA Server")
     }
 
     @Test("The server that was found can be browsed")
     func browsesWhatItFound() async throws {
-        try await confirmServerIsRunning()
-        let server = try await UPnPServerLocator().locate(Self.testServer.absoluteString)
+        let server = try await UPnPServerLocator().locate(DLNATestServer.descriptionURL.absoluteString)
         let nodes = try await UPnPContentDirectoryClient().browse(server: server, objectID: "0")
         #expect(nodes.count == 1)
         #expect(nodes.first?.title == "Video")
@@ -54,11 +59,10 @@ struct UPnPServerLocatorTests {
     /// The path that matters on an Apple TV: one question to one host, no multicast.
     @Test("A unicast search asks the one server and gets its description address")
     func asksOneServerDirectly() async throws {
-        try await confirmServerIsRunning()
         let answered = try await UPnPMediaServerDiscoveryService(responseWait: 2)
             .askServer(host: "127.0.0.1", port: 1901)
         #expect(answered.first?.friendlyName == "Test DLNA Server")
-        #expect(answered.first?.descriptionURL == Self.testServer)
+        #expect(answered.first?.descriptionURL == DLNATestServer.descriptionURL)
     }
 
     @Test("Blank text is not an address")
@@ -67,19 +71,17 @@ struct UPnPServerLocatorTests {
             try await UPnPServerLocator().locate("   ")
         }
     }
-
-    private func confirmServerIsRunning() async throws {
-        try #require(Self.isServerRunning, "the test DLNA server is not running")
-    }
 }
 
-@Suite("Walking a DLNA server folder by folder")
+@Suite(
+    "Walking a DLNA server folder by folder",
+    .enabled(if: DLNATestServer.isRunning)
+)
 struct DLNAFolderReadingTests {
     @Test("The root lists folders, and a folder lists its films")
     func readsFoldersAndFilms() async throws {
-        try #require(UPnPServerLocatorTests.isServerRunning, "the test DLNA server is not running")
         let server = try await UPnPServerLocator()
-            .locate(UPnPServerLocatorTests.testServer.absoluteString)
+            .locate(DLNATestServer.descriptionURL.absoluteString)
         let reader = NetworkFolderReader(
             serverName: server.friendlyName,
             backend: .dlna(server: server),
@@ -103,16 +105,19 @@ struct DLNAFolderReadingTests {
     }
 }
 
-@Suite("Building the shelves from a DLNA server", .serialized)
+@Suite(
+    "Building the shelves from a DLNA server",
+    .serialized,
+    .enabled(if: DLNATestServer.isRunning)
+)
 @MainActor
 struct DLNAHomeCatalogTests {
     /// What the television's Home shelves are built from. A server whose films sit
     /// inside a folder — which is every server — has to be walked, not just listed.
     @Test("Selecting a server catalogues the films inside its folders")
     func catalogsFilmsBelowTheRoot() async throws {
-        try #require(UPnPServerLocatorTests.isServerRunning, "the test DLNA server is not running")
         let server = try await UPnPServerLocator()
-            .locate(UPnPServerLocatorTests.testServer.absoluteString)
+            .locate(DLNATestServer.descriptionURL.absoluteString)
 
         let model = NetworkMediaBrowserModel()
         model.add(server)
