@@ -44,6 +44,8 @@ final class IOSPlaybackModel {
     private let positions = PlaybackPositionStore()
     /// What the rate was before a press-and-hold sped it up.
     private var heldFromRate: Float?
+    /// Watches for the headphones going away.
+    private var routeObserver: (any NSObjectProtocol)?
 
     /// Called once when the film plays to its end — not when it is stopped by hand, and
     /// not when it fails. The view decides whether that means the next file.
@@ -129,8 +131,44 @@ final class IOSPlaybackModel {
         try? AVAudioSession.sharedInstance().setActive(true)
 
         configureRemoteCommands()
+        observeAudioRoute()
         player.play()
         player.rate = rate
+    }
+
+    /// Stops the film when the sound would otherwise move to the phone's own speaker.
+    ///
+    /// Taking an AirPod out is the ordinary case: the film used to carry on playing
+    /// out loud, and by the time it was back in the viewer had missed a scene. The
+    /// rule itself is `AudioRouteChange`, which is shared and tested.
+    private func observeAudioRoute() {
+        guard routeObserver == nil else { return }
+        routeObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { [weak self] notification in
+            let info = notification.userInfo
+            let rawReason = info?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
+            let previous = info?[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription
+            let outputs = previous?.outputs.map(\.portType.rawValue) ?? []
+            let unavailable = AVAudioSession.RouteChangeReason(rawValue: rawReason) == .oldDeviceUnavailable
+            guard AudioRouteChange.shouldPause(
+                reasonIsDeviceUnavailable: unavailable,
+                previousOutputs: outputs
+            ) else { return }
+
+            // Hopped rather than asserted. The notification does arrive on the main
+            // queue, but assuming an actor at a boundary like this is exactly what
+            // trapped the process twice already (`docs/48`), and a runloop of delay
+            // costs nothing here.
+            Task { @MainActor [weak self] in
+                guard let self, player.isPlaying else { return }
+                player.pause()
+                isPlaying = false
+                updateNowPlaying()
+            }
+        }
     }
 
     // MARK: - Transport
@@ -194,6 +232,10 @@ final class IOSPlaybackModel {
         player.delegate = nil
         observer = nil
         releaseRemoteCommands()
+        if let routeObserver {
+            NotificationCenter.default.removeObserver(routeObserver)
+            self.routeObserver = nil
+        }
         try? AVAudioSession.sharedInstance().setActive(false)
     }
 
