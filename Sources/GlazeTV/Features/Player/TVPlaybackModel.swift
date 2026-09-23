@@ -125,6 +125,13 @@ final class TVPlaybackModel {
         }
     }
 
+
+    /// The film's shape, once VLC knows it. Nil until the first frame is decoded.
+    var videoSize: CGSize? {
+        let size = player.videoSize
+        return size.width > 0 && size.height > 0 ? size : nil
+    }
+
     func seek(to seconds: TimeInterval) {
         guard duration > 0 else { return }
         let target = min(max(seconds, 0), duration)

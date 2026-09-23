@@ -42,6 +42,8 @@ final class IOSPlaybackModel {
     let player = VLCMediaPlayer()
 
     private let positions = PlaybackPositionStore()
+    /// What the rate was before a press-and-hold sped it up.
+    private var heldFromRate: Float?
 
     /// Called once when the film plays to its end — not when it is stopped by hand, and
     /// not when it fails. The view decides whether that means the next file.
@@ -149,6 +151,26 @@ final class IOSPlaybackModel {
         player.time = VLCTime(int: Int32(target * 1000))
         currentTime = target
         updateNowPlaying()
+    }
+
+    /// The film's shape, once VLC knows it. Nil until the first frame is decoded.
+    var videoSize: CGSize? {
+        let size = player.videoSize
+        return size.width > 0 && size.height > 0 ? size : nil
+    }
+
+    /// Speeds playback up while a finger is held down, and puts it back afterwards.
+    /// The rate the viewer chose is remembered separately, so letting go returns to
+    /// 1.25× rather than to 1× if that is what they were watching at.
+    func holdRate(_ multiplier: Float) {
+        if heldFromRate == nil { heldFromRate = rate }
+        player.rate = (heldFromRate ?? 1) * multiplier
+    }
+
+    func releaseHeldRate() {
+        guard let heldFromRate else { return }
+        self.heldFromRate = nil
+        player.rate = heldFromRate
     }
 
     func setRate(_ newRate: Float) {

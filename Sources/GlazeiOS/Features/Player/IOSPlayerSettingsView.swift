@@ -176,7 +176,22 @@ struct IOSPlayerSettingsView: View {
                 L10n.string("tv.settings.auto_select_subtitles"),
                 isOn: $preferences.automaticallySelectSubtitles
             )
+
+            Picker(L10n.string("ios.player.hold_speed"), selection: $preferences.holdSpeed) {
+                ForEach(IOSUserPreferences.holdSpeedOptions, id: \.self) { speed in
+                    Text(Self.speedLabel(speed)).tag(speed)
+                }
+            }
+            Text(L10n.string("ios.player.hold_speed.detail"))
+                .font(.caption)
+                .foregroundStyle(IOSTheme.dim)
         }
+    }
+
+    private static func speedLabel(_ speed: Float) -> String {
+        speed == speed.rounded()
+            ? String(format: "%.0f×", speed)
+            : String(format: "%.1f×", speed)
     }
 
     private func row(_ title: String, isSelected: Bool) -> some View {

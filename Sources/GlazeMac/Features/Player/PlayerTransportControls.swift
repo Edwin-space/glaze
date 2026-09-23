@@ -306,7 +306,7 @@ struct PlayerTransportControls: View {
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                if let hoverFraction, let preview, preview.isAvailable {
+                if let hoverFraction, let preview, preview.frame != nil {
                     GeometryReader { geometry in
                         ScrubPreviewCard(
                             frame: preview.frame,
@@ -376,17 +376,12 @@ struct ScrubPreviewCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
-                Rectangle().fill(.black.opacity(0.75))
-                if let frame, let image = NSImage(data: frame) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                } else {
-                    ProgressView().controlSize(.small)
-                }
+            if let frame, let image = NSImage(data: frame) {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 176)
             }
-            .frame(width: 176, height: 99)
 
             Text(timecode)
                 .font(.caption2.monospacedDigit())

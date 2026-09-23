@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import GlazeCore
 import ImageIO
+import Synchronization
 import UniformTypeIdentifiers
 import VLCKit
 
@@ -13,25 +14,41 @@ import VLCKit
 ///
 /// Shared by the phone and the television on purpose: it is the same VLCKit, the same
 /// media, and the same question.
-final class VLCScrubPreviewSource: ScrubPreviewSource {
+final class VLCScrubPreviewSource: ScrubPreviewSource, @unchecked Sendable {
     private let url: URL
     private let width: CGFloat
+    /// The film's shape. Told to us rather than fetched: the player knows it only
+    /// once the film is open, and reaching back for it from here meant hopping onto
+    /// the main actor from a thread that is not on it — which trapped the process.
+    private let shape = Mutex<CGSize?>(nil)
 
     init(url: URL, width: CGFloat = 320) {
         self.url = url
         self.width = width
     }
 
+    /// Called from the player once the film reports its dimensions.
+    func useVideoSize(_ size: CGSize?) {
+        shape.withLock { $0 = size }
+    }
+
     func frame(at time: TimeInterval) async -> Data? {
         let url = url
         let width = width
+        // VLCKit scales the picture into exactly the box it is given, so a box of
+        // the wrong shape squashes the film. Its default is 320×240, which turned
+        // every widescreen frame into 4:3.
+        let height = shape.withLock({ $0 }).map { size -> CGFloat in
+            guard size.width > 0, size.height > 0 else { return width * 9 / 16 }
+            return (width * size.height / size.width).rounded()
+        } ?? width * 9 / 16
         return await withCheckedContinuation { continuation in
             // The thumbnailer is one-shot: its settings are read when the fetch starts
             // and ignored afterwards, so each frame gets its own. Built on the main
             // thread, which is where VLCKit expects its objects to be made; the answer
             // comes back on a thread of VLCKit's choosing.
             Task { @MainActor in
-                guard let grab = ThumbnailGrab(url: url, time: time, width: width, finish: { data in
+                guard let grab = ThumbnailGrab(url: url, time: time, width: width, height: height, finish: { data in
                     continuation.resume(returning: data)
                 }) else {
                     continuation.resume(returning: nil)
@@ -59,14 +76,23 @@ private final class ThumbnailGrab: NSObject, VLCMediaThumbnailerDelegate, @unche
     private var finish: ((Data?) -> Void)?
     private var keptAlive: ThumbnailGrab?
 
-    init?(url: URL, time: TimeInterval, width: CGFloat, finish: @escaping (Data?) -> Void) {
+    init?(
+        url: URL,
+        time: TimeInterval,
+        width: CGFloat,
+        height: CGFloat,
+        finish: @escaping (Data?) -> Void
+    ) {
         guard let media = VLCMedia(url: url) else { return nil }
         self.finish = finish
         super.init()
         let thumbnailer = VLCMediaThumbnailer(media: media, andDelegate: self)
         thumbnailer.snapshotTime = VLCTime(number: NSNumber(value: Int(time * 1_000)))
         thumbnailer.thumbnailWidth = width
-        thumbnailer.thumbnailHeight = 0
+        thumbnailer.thumbnailHeight = height
+        // Software decoding a 4K frame on a phone is the difference between a still
+        // that arrives while the thumb is still on the bar and one that never does.
+        thumbnailer.hardwareDecodingEnabled = true
         self.thumbnailer = thumbnailer
     }
 

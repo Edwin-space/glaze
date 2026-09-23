@@ -47,8 +47,14 @@ struct IOSPlayerView: View {
     @State private var gesture = PlayerGestureState()
     /// The still shown above the timeline while a thumb drags along it.
     @State private var preview = ScrubPreviewLoader(source: nil)
-    /// Clears the double-tap mark once it has been seen.
-    @State private var hudTask: Task<Void, Never>?
+    /// Kept so the film's shape can be handed over once it is known.
+    @State private var previewSource: VLCScrubPreviewSource?
+    /// The side of the picture a double tap landed on, and how much it has added up
+    /// to while the mark is still showing.
+    @State private var skipMark: SkipMark?
+    @State private var skipMarkTask: Task<Void, Never>?
+    /// Set while a finger is held on one side, running the film faster.
+    @State private var heldSide: SkipMark.Side?
 
     private var displayedTime: TimeInterval { isScrubbing ? scrubTime : model.currentTime }
 
@@ -84,6 +90,14 @@ struct IOSPlayerView: View {
 
             if let hud = gesture.hud {
                 gestureHUD(hud)
+            }
+
+            if let skipMark {
+                skipOverlay(skipMark)
+            }
+
+            if heldSide != nil {
+                holdOverlay
             }
 
         }
@@ -128,9 +142,9 @@ struct IOSPlayerView: View {
                 preferences: preferences
             )
             revealControls()
-            preview = ScrubPreviewLoader(
-                source: VLCScrubPreviewSource(url: resource.playbackURL)
-            )
+            let source = VLCScrubPreviewSource(url: resource.playbackURL)
+            previewSource = source
+            preview = ScrubPreviewLoader(source: source)
         }
         .onDisappear {
             hideTask?.cancel()
@@ -332,7 +346,15 @@ struct IOSPlayerView: View {
                 preview.request(time)
             }
             .onChange(of: isScrubbing) { _, scrubbing in
-                if scrubbing { preview.request(scrubTime) } else { preview.clear() }
+                if scrubbing {
+                    // By now the film is open and VLC knows its dimensions, so the
+                    // still is asked for in the right shape rather than squashed
+                    // into VLCKit's 4:3 default.
+                    previewSource?.useVideoSize(model.videoSize)
+                    preview.request(scrubTime)
+                } else {
+                    preview.clear()
+                }
             }
             .accessibilityLabel(L10n.string("ios.player.a11y.timeline"))
             .accessibilityValue(Self.timecode(displayedTime))
@@ -366,20 +388,15 @@ struct IOSPlayerView: View {
     /// under the hand holding the phone.
     @ViewBuilder
     private var scrubPreview: some View {
-        if isScrubbing, preview.isAvailable {
-            ZStack {
-                RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous)
-                    .fill(.black.opacity(0.6))
-                if let frame = preview.frame, let image = UIImage(data: frame) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous))
-                } else {
-                    ProgressView().controlSize(.small).tint(.white)
-                }
-            }
-            .frame(width: 176, height: 99)
+        // Only once there is a frame. A black box with a spinner in it while the
+        // still is being made is worse than the bar on its own — it covers the film
+        // and says nothing.
+        if isScrubbing, let frame = preview.frame, let image = UIImage(data: frame) {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: 176, maxHeight: 108)
+                .clipShape(RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous))
             .overlay(alignment: .bottom) {
                 Text(Self.timecode(scrubTime))
                     .font(.caption2.weight(.semibold).monospacedDigit())
@@ -396,6 +413,68 @@ struct IOSPlayerView: View {
             .transition(.opacity)
             .accessibilityHidden(true)
         }
+    }
+
+    /// Which way a double tap sent the film, and how far.
+    struct SkipMark: Equatable {
+        enum Side { case left, right }
+        let side: Side
+        let seconds: Int
+    }
+
+    /// The mark for a double tap, over the half that was tapped.
+    ///
+    /// A panel in the middle of the picture is exactly where the viewer is looking,
+    /// so this sits on its own side and leaves the film alone.
+    private func skipOverlay(_ mark: SkipMark) -> some View {
+        HStack(spacing: 0) {
+            if mark.side == .right { Spacer(minLength: 0) }
+            VStack(spacing: IOSTheme.Spacing.tight) {
+                Image(systemName: mark.side == .right ? "forward.fill" : "backward.fill")
+                    .font(.system(size: 30, weight: .semibold))
+                Text(String(format: L10n.string("ios.player.skip_seconds_format"), mark.seconds))
+                    .font(.footnote.weight(.semibold).monospacedDigit())
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.black.opacity(0.28))
+            .clipShape(
+                .rect(
+                    topLeadingRadius: mark.side == .right ? 220 : 0,
+                    bottomLeadingRadius: mark.side == .right ? 220 : 0,
+                    bottomTrailingRadius: mark.side == .right ? 0 : 220,
+                    topTrailingRadius: mark.side == .right ? 0 : 220
+                )
+            )
+            .frame(width: UIScreen.main.bounds.width * 0.42)
+            if mark.side == .left { Spacer(minLength: 0) }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .transition(.opacity)
+        .accessibilityHidden(true)
+    }
+
+    /// Shown while a side is held down and the film is running faster.
+    private var holdOverlay: some View {
+        VStack {
+            HStack(spacing: IOSTheme.Spacing.tight) {
+                Image(systemName: "forward.fill")
+                Text(String(format: L10n.string("ios.player.hold_speed_format"), Self.rateLabel(preferences.holdSpeed)))
+                    .font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, IOSTheme.Spacing.medium)
+            .padding(.vertical, IOSTheme.Spacing.tight)
+            .background(.black.opacity(0.55), in: Capsule())
+            // Below the title row, over the film. High enough to read at a glance,
+            // low enough not to sit on the buttons when the controls are up.
+            .padding(.top, 150)
+            Spacer()
+        }
+        .allowsHitTesting(false)
+        .transition(.opacity)
+        .accessibilityHidden(true)
     }
 
     /// The glyph stays small — a bar across a film should be quiet — but the target
@@ -474,35 +553,63 @@ struct IOSPlayerView: View {
     /// controls, a double tap on either side to jump ten seconds, and a drag to
     /// scrub, or to move brightness and volume.
     private var touchLayer: some View {
-        Color.clear
-            .contentShape(Rectangle())
-            .ignoresSafeArea()
-            // Declared before the single tap so that one waits to see whether a
-            // second is coming — which is how every video app behaves.
-            .onTapGesture(count: 2, coordinateSpace: .local) { location in
-                guard !isLocked else { return }
-                skip(tappedAt: location)
+        GeometryReader { geometry in
+            Color.clear
+                .contentShape(Rectangle())
+                // Declared before the single tap so that one waits to see whether a
+                // second is coming — which is how every video app behaves.
+                .onTapGesture(count: 2, coordinateSpace: .local) { location in
+                    guard !isLocked else { return }
+                    skip(tappedAt: location, in: geometry.size)
+                }
+                .onTapGesture { isLocked ? revealLock() : toggleControls() }
+                .gesture(playbackGesture)
+                // Hold a side down and the film runs faster for as long as it is
+                // held. A press is only a press until it moves, so this sits
+                // alongside the drag rather than in front of it.
+                .simultaneousGesture(holdGesture(in: geometry.size))
+        }
+        .ignoresSafeArea()
+    }
+
+    /// Press and hold either side to run the film at the viewer's chosen multiple.
+    private func holdGesture(in size: CGSize) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.45)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
+            .onChanged { value in
+                guard !isLocked, case .second(true, let drag?) = value else { return }
+                guard heldSide == nil else { return }
+                let side: SkipMark.Side = drag.startLocation.x > size.width / 2 ? .right : .left
+                heldSide = side
+                model.holdRate(preferences.holdSpeed)
             }
-            .onTapGesture { isLocked ? revealLock() : toggleControls() }
-            .gesture(playbackGesture)
+            .onEnded { _ in releaseHold() }
+    }
+
+    private func releaseHold() {
+        guard heldSide != nil else { return }
+        heldSide = nil
+        model.releaseHeldRate()
     }
 
     /// Ten seconds back or forward depending on which half was tapped, without
     /// bringing the controls up for it.
-    private func skip(tappedAt location: CGPoint) {
-        let isForward = location.x > UIScreen.main.bounds.width / 2
-        let interval = isForward ? IOSPlaybackModel.skipInterval : -IOSPlaybackModel.skipInterval
+    ///
+    /// The mark appears on the side that was tapped, not in the middle of the film.
+    /// A panel over the centre of the picture is exactly where the viewer is looking.
+    private func skip(tappedAt location: CGPoint, in size: CGSize) {
+        let side: SkipMark.Side = location.x > size.width / 2 ? .right : .left
+        let interval = side == .right ? IOSPlaybackModel.skipInterval : -IOSPlaybackModel.skipInterval
         model.skip(by: interval)
-        gesture.hud = .init(
-            symbol: isForward ? "goforward.10" : "gobackward.10",
-            text: Self.timecode(max(model.currentTime + interval, 0))
-        )
-        // The mark answers the tap; it is not a state, so it goes on its own.
-        hudTask?.cancel()
-        hudTask = Task {
-            try? await Task.sleep(for: .milliseconds(700))
+
+        // Tapping again before the mark fades adds to it, the way it does elsewhere.
+        let repeated = skipMark?.side == side ? (skipMark?.seconds ?? 0) : 0
+        skipMark = SkipMark(side: side, seconds: repeated + Int(IOSPlaybackModel.skipInterval))
+        skipMarkTask?.cancel()
+        skipMarkTask = Task {
+            try? await Task.sleep(for: .milliseconds(800))
             guard !Task.isCancelled else { return }
-            gesture.hud = nil
+            skipMark = nil
         }
     }
 
@@ -536,10 +643,6 @@ struct IOSPlayerView: View {
                     let span = max(model.duration, 60)
                     let seconds = gesture.anchor + Double(value.translation.width / 320) * min(span, 600)
                     scrubTime = min(max(seconds, 0), max(model.duration, 1))
-                    gesture.hud = .init(
-                        symbol: value.translation.width < 0 ? "backward.fill" : "forward.fill",
-                        text: Self.timecode(scrubTime)
-                    )
                 case .vertical:
                     // Measured from where the finger went down, against a travel of
                     // most of the screen. Each event used to add a step to whatever

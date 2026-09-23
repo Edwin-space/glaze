@@ -31,6 +31,8 @@ struct TVPlayerView: View {
     @State private var isShowingPlaylist = false
     /// The still shown above the bar while the remote moves along it.
     @State private var preview = ScrubPreviewLoader(source: nil)
+    /// Kept so the film's shape can be handed over once it is known.
+    @State private var previewSource: VLCScrubPreviewSource?
 
     private enum FocusTarget: Hashable {
         case surface
@@ -91,9 +93,9 @@ struct TVPlayerView: View {
                 preferredSubtitleScale: preferredSubtitleScale
             )
             scrubTime = startAt
-            preview = ScrubPreviewLoader(
-                source: VLCScrubPreviewSource(url: resource.playbackURL, width: 480)
-            )
+            let source = VLCScrubPreviewSource(url: resource.playbackURL, width: 480)
+            previewSource = source
+            preview = ScrubPreviewLoader(source: source)
             focusedControl = .timeline
             scheduleHide()
         }
@@ -208,7 +210,12 @@ struct TVPlayerView: View {
                 preview.request(time)
             }
             .onChange(of: isScrubbing) { _, scrubbing in
-                if scrubbing { preview.request(scrubTime) } else { preview.clear() }
+                if scrubbing {
+                    previewSource?.useVideoSize(model.videoSize)
+                    preview.request(scrubTime)
+                } else {
+                    preview.clear()
+                }
             }
 
             HStack {
@@ -227,21 +234,15 @@ struct TVPlayerView: View {
     /// nobody is scrubbing is just something in the way.
     @ViewBuilder
     private var scrubPreview: some View {
-        if isScrubbing, preview.isAvailable {
+        // Only once there is a frame: a black box with a spinner in it covers the
+        // film and says nothing.
+        if isScrubbing, let frame = preview.frame, let image = UIImage(data: frame) {
             HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(.black.opacity(0.7))
-                    if let frame = preview.frame, let image = UIImage(data: frame) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    } else {
-                        ProgressView().tint(.white)
-                    }
-                }
-                .frame(width: 320, height: 180)
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 320, maxHeight: 180)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(alignment: .bottom) {
                     Text(timecode(scrubTime))
                         .font(.system(size: 21, weight: .semibold, design: .monospaced))
@@ -470,9 +471,9 @@ struct TVPlayerView: View {
         if let leaving = nowPlaying { model.rememberPosition(for: leaving.resource) }
         model.stop()
         nowPlaying = item
-        preview = ScrubPreviewLoader(
-            source: VLCScrubPreviewSource(url: item.resource.playbackURL, width: 480)
-        )
+        let source = VLCScrubPreviewSource(url: item.resource.playbackURL, width: 480)
+        previewSource = source
+        preview = ScrubPreviewLoader(source: source)
         model.onFinished = { goForward() }
         model.start(
             item.resource,

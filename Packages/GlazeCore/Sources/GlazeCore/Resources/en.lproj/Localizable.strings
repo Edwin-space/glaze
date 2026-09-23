@@ -811,3 +811,9 @@ Pull down to refresh in the app afterwards. You can delete this note.
 "network.manual.discovery_note" = "Apple TV cannot send a search to the whole network until Apple grants the multicast entitlement. Typing the server's address connects right away.";
 "network.manual.error.address" = "Type an address first.";
 "network.manual.error.not_found" = "No media server answered at that address. Check the address and port, and that the NAS has its media server (DLNA) switched on.";
+
+/* iPhone playback — double-tap skip and press-and-hold */
+"ios.player.skip_seconds_format" = "%d seconds";
+"ios.player.hold_speed_format" = "%@ speed";
+"ios.player.hold_speed" = "Hold to speed up";
+"ios.player.hold_speed.detail" = "Plays at this speed while you hold either side of the picture, and returns to normal when you let go.";

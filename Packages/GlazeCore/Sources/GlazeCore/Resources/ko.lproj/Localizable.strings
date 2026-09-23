@@ -811,3 +811,9 @@
 "network.manual.discovery_note" = "애플TV는 네트워크 전체에 검색 신호를 보낼 수 없습니다(애플의 멀티캐스트 권한 승인 전). 서버 주소를 직접 입력하면 바로 연결됩니다.";
 "network.manual.error.address" = "주소를 적어주세요.";
 "network.manual.error.not_found" = "이 주소에서 미디어 서버를 찾지 못했습니다. IP와 포트를 확인하고, NAS에서 미디어 서버(DLNA)가 켜져 있는지 보세요.";
+
+/* 아이폰 재생 — 더블 탭 이동과 길게 눌러 빨리 보기 */
+"ios.player.skip_seconds_format" = "%d초";
+"ios.player.hold_speed_format" = "%@ 속도";
+"ios.player.hold_speed" = "길게 눌러 빨리 보기";
+"ios.player.hold_speed.detail" = "화면 왼쪽이나 오른쪽을 누르고 있는 동안 이 속도로 재생합니다. 손을 떼면 원래 속도로 돌아옵니다.";

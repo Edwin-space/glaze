@@ -23,6 +23,7 @@ final class IOSUserPreferences {
         static let readingFontScale = "ios.reading.fontScale"
         static let tmdbAPIKey = "ios.metadata.tmdbAPIKey"
         static let browseLayout = "ios.browse.layout"
+        static let holdSpeed = "ios.playback.holdSpeed"
     }
 
     private let defaults: UserDefaults
@@ -49,6 +50,16 @@ final class IOSUserPreferences {
     /// Not shipped with the app. TMDB's terms around redistributing a key are not
     /// settled for a paid app (`docs/23`), and a shared key would be rate-limited
     /// across every copy of Glaze in the world anyway.
+    /// How much faster the film runs while a finger is held on the left or right of
+    /// the picture. The gesture is borrowed from where people already know it; the
+    /// multiplier is theirs to set because 2× is a comfortable skim for one person
+    /// and a blur for another.
+    var holdSpeed: Float {
+        didSet { defaults.set(holdSpeed, forKey: Key.holdSpeed) }
+    }
+
+    static let holdSpeedOptions: [Float] = [1.5, 2, 3, 4]
+
     var tmdbAPIKey: String {
         didSet { defaults.set(tmdbAPIKey, forKey: Key.tmdbAPIKey) }
     }
@@ -101,6 +112,7 @@ final class IOSUserPreferences {
         subtitleScale = storedScale > 0 ? storedScale : 100
         let storedRate = defaults.float(forKey: Key.playbackRate)
         playbackRate = storedRate > 0 ? storedRate : 1
+        holdSpeed = defaults.object(forKey: Key.holdSpeed) as? Float ?? 2
         lastSource = defaults.string(forKey: Key.lastSource)
         readingDirection = defaults.string(forKey: Key.readingDirection)
             .flatMap(ReadingDirection.init(rawValue:)) ?? .rightToLeft
