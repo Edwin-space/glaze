@@ -387,6 +387,9 @@ struct IOSPlayerView: View {
                 preview.request(time)
             }
             .onChange(of: isScrubbing) { _, scrubbing in
+                // A hold that was already running when the finger reached the bar
+                // ends here, rather than staying on for the length of the drag.
+                if scrubbing { releaseHold() }
                 if scrubbing {
                     // By now the film is open and VLC knows its dimensions, so the
                     // still is asked for in the right shape rather than squashed
@@ -619,6 +622,11 @@ struct IOSPlayerView: View {
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
             .onChanged { value in
                 guard !isLocked, case .second(true, let drag?) = value else { return }
+                // A slow drag along the timeline is a press on this layer too — the
+                // touch layer runs the full height of the screen, under the controls.
+                // Scrubbing is not holding, and a film that jumps to 2× while someone
+                // is looking for a scene is the player fighting them.
+                guard !isScrubbing else { return }
                 guard heldSide == nil else { return }
                 let side: SkipMark.Side = drag.startLocation.x > size.width / 2 ? .right : .left
                 heldSide = side
