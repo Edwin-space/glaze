@@ -94,6 +94,17 @@ struct IOSLocalBrowserView: View {
                     .id("\(entry.id)#\(watchRevision)")
             }
             .buttonStyle(.plain)
+            // A hold menu is the only way most people never find. The swipe is the
+            // gesture iOS teaches in Mail and Messages, and it is where someone looks
+            // for "do something to this row" before they think to hold it.
+            .swipeActions(edge: .trailing) {
+                Button {
+                    inspecting = item
+                } label: {
+                    Label(L10n.string("ios.metadata.title"), systemImage: "info.circle")
+                }
+                .tint(IOSTheme.amber)
+            }
             .contextMenu {
                 Button {
                     inspecting = item

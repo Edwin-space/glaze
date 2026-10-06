@@ -23,6 +23,9 @@ struct IOSNetworkBrowserView: View {
     @State private var entries: [IOSNetworkEntry] = []
     @State private var phase: Phase = .loading
     @State private var playing: IOSNetworkEntry?
+    /// The film whose record is being read or corrected. Held apart from `playing` so
+    /// opening the information never starts the film.
+    @State private var inspecting: Inspecting?
     /// Bumped when the player closes so NEW and watched marks catch up.
     @State private var watchRevision = 0
 
@@ -32,6 +35,16 @@ struct IOSNetworkBrowserView: View {
         case loading
         case ready
         case failed(String)
+    }
+
+    /// A film on a server, together with the place a corrected record for it would go.
+    /// Carried as one value because the second half is what decides whether the screen
+    /// can offer to save anything, and it is the server — not the film — that knows.
+    private struct Inspecting: Identifiable {
+        let item: MediaLibraryItem
+        let destination: (any SidecarDestination)?
+
+        var id: String { item.id }
     }
 
     var body: some View {
@@ -64,6 +77,14 @@ struct IOSNetworkBrowserView: View {
         // every appearance, which is what made the app feel like it was thinking.
         .task(id: folder.path) { await load() }
         .refreshable { await load() }
+        .sheet(item: $inspecting) { target in
+            IOSMediaInfoView(
+                item: target.item,
+                destination: target.destination,
+                onChanged: { Task { await load() } }
+            )
+            .environment(preferences)
+        }
         .fullScreenCover(item: $playing, onDismiss: {
             IOSScreenOrientation.release()
             watchRevision += 1
@@ -98,7 +119,11 @@ struct IOSNetworkBrowserView: View {
                             .id("\(entry.id)#\(watchRevision)")
                     }
                     .buttonStyle(.plain)
-                    .contextMenu { watchToggle(.network(resource), isWatched: watch == .watched) }
+                    .swipeActions(edge: .trailing) { infoButton(entry) }
+                    .contextMenu {
+                        infoButton(entry)
+                        watchToggle(.network(resource), isWatched: watch == .watched)
+                    }
                 case .book:
                     IOSListRow(symbol: "book.closed", title: entry.name, detail: detail(entry))
                 case .other:
@@ -127,6 +152,8 @@ struct IOSNetworkBrowserView: View {
                     case .film:
                         Button { playing = entry } label: { tile(entry, layout: layout) }
                             .buttonStyle(.plain)
+                            // A tile has no swipe, so the hold menu is the only way in.
+                            .contextMenu { infoButton(entry) }
                     case .book, .other:
                         tile(entry, layout: layout)
                     }
@@ -209,6 +236,29 @@ struct IOSNetworkBrowserView: View {
             return PlaybackQueueItem(resource: film, title: parsed.listTitle)
         }
         return PlaybackQueue(items: films, current: PlaybackQueueItem(resource: resource, title: title))
+    }
+
+    /// Opens the information for one film, wherever the row was tapped from.
+    @ViewBuilder
+    private func infoButton(_ entry: IOSNetworkEntry) -> some View {
+        Button {
+            guard case .film(let resource, let parsed) = entry.kind else { return }
+            inspecting = Inspecting(
+                item: MediaLibraryItem(
+                    id: entry.id,
+                    sourceName: entry.name,
+                    parsed: parsed,
+                    posterURL: entry.posterURL,
+                    playbackURL: resource.playbackURL,
+                    byteCount: entry.byteCount,
+                    duration: resource.duration
+                ),
+                destination: browser.sidecarDestination(forFilmAt: entry.path)
+            )
+        } label: {
+            Label(L10n.string("ios.metadata.title"), systemImage: "info.circle")
+        }
+        .tint(IOSTheme.amber)
     }
 
     @ViewBuilder

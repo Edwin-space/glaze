@@ -634,6 +634,7 @@
 "ios.metadata.not_found" = "Nothing matched. Try a different title.";
 "ios.metadata.footer" = "Saves the chosen film's details and poster beside the video as .nfo and -poster.jpg. The Mac and Apple TV read the same files.";
 "ios.metadata.no_key" = "Add a TMDB API key in Settings › Metadata first.";
+"ios.metadata.read_only" = "This server cannot be written to. You can read the results, but nothing will be saved. Connecting over WebDAV allows saving.";
 "ios.metadata.rate_limited" = "Too many requests to TMDB. Try again shortly.";
 "ios.metadata.write_failed" = "Could not write beside the film.";
 "ios.metadata.written_format" = "Changed to %1$@. Wrote %2$d files.";

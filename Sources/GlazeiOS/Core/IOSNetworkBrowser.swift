@@ -47,6 +47,13 @@ final class IOSNetworkBrowser {
 
     func disconnect() { reader = nil }
 
+    /// Where a corrected record for one film on this server would be written, or nil
+    /// when the server cannot be written to. The reader decides; see
+    /// `NetworkFolderReader.sidecarDestination(forFilmAt:)`.
+    func sidecarDestination(forFilmAt path: String) -> (any SidecarDestination)? {
+        reader?.sidecarDestination(forFilmAt: path)
+    }
+
     func read(_ path: String) async throws -> [IOSNetworkEntry] {
         guard let reader else { return [] }
         return try await reader.read(path).map(IOSNetworkEntry.init)

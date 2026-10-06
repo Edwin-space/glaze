@@ -27,11 +27,19 @@ final class IOSMetadataModel {
 
     /// What the file says about itself right now, before anything is changed.
     let current: MediaLibraryItem
-    private let videoURL: URL
+    /// The film's filename without its extension: the sidecars take the same stem.
+    private let baseName: String
+    /// Where the corrected record goes. Nil when the film sits on a server this app
+    /// cannot write to — a DLNA share, or a Synology reached through DSM — in which
+    /// case the search still runs and the answer is shown, but nothing is saved.
+    private let destination: (any SidecarDestination)?
 
-    init(item: MediaLibraryItem, videoURL: URL) {
+    var canSave: Bool { destination != nil }
+
+    init(item: MediaLibraryItem, baseName: String, destination: (any SidecarDestination)?) {
         current = item
-        self.videoURL = videoURL
+        self.baseName = baseName
+        self.destination = destination
     }
 
     /// - Parameter query: what to look for. Starts as the parsed title, but the whole
@@ -59,8 +67,13 @@ final class IOSMetadataModel {
     }
 
     /// Writes `<film>.nfo` and `<film>-poster.jpg` beside the film, replacing whatever
-    /// was there. Nothing else on the device is touched; the folder is the record.
+    /// was there. Nothing else is touched; the folder is the record, which is why the
+    /// correction also reaches the Mac and the television the next time they open it.
     func apply(_ match: MediaMetadataMatch) async {
+        guard let destination else {
+            stage = .failed(L10n.string("ios.metadata.read_only"))
+            return
+        }
         stage = .applying
         var poster: Data?
         if let posterURL = match.posterURL {
@@ -68,7 +81,12 @@ final class IOSMetadataModel {
         }
 
         do {
-            let written = try MediaSidecarWriter().write(match, poster: poster, besideVideoAt: videoURL)
+            let written = try await MediaSidecarWriter().write(
+                match,
+                poster: poster,
+                baseName: baseName,
+                to: destination
+            )
             stage = .done(
                 String(format: L10n.string("ios.metadata.written_format"), match.title, written.count)
             )

@@ -3,9 +3,10 @@ import SwiftUI
 
 /// What this film claims to be, and a way to correct it.
 ///
-/// Reached by holding a film in the list. Two things happen here and they are kept
-/// apart on purpose: reading what is currently recorded, and replacing it. Nothing is
-/// written until a specific film is chosen from the results and confirmed.
+/// Reached from a film's row — by the swipe, the hold, or the button in the player.
+/// Two things happen here and they are kept apart on purpose: reading what is currently
+/// recorded, and replacing it. Nothing is written until a specific film is chosen from
+/// the results and confirmed.
 struct IOSMediaInfoView: View {
     let item: MediaLibraryItem
 
@@ -19,10 +20,35 @@ struct IOSMediaInfoView: View {
     /// Set once the sidecars are rewritten, so the list behind can reload.
     var onChanged: () -> Void = {}
 
+    /// For a film in a folder on the device.
     init(item: MediaLibraryItem, onChanged: @escaping () -> Void = {}) {
+        self.init(
+            item: item,
+            destination: LocalSidecarDestination(videoURL: item.playbackURL),
+            onChanged: onChanged
+        )
+    }
+
+    /// For a film anywhere else.
+    ///
+    /// - Parameter destination: nil for a server that cannot be written to — a DLNA
+    ///   catalogue, a Synology reached through DSM. The lookup still runs, because
+    ///   seeing what a film actually is has worth of its own, but the screen says
+    ///   plainly that nothing will be saved.
+    init(
+        item: MediaLibraryItem,
+        destination: (any SidecarDestination)?,
+        onChanged: @escaping () -> Void = {}
+    ) {
         self.item = item
         self.onChanged = onChanged
-        _model = State(initialValue: IOSMetadataModel(item: item, videoURL: item.playbackURL))
+        _model = State(
+            initialValue: IOSMetadataModel(
+                item: item,
+                baseName: item.playbackURL.deletingPathExtension().lastPathComponent,
+                destination: destination
+            )
+        )
         _query = State(initialValue: item.parsed.title)
     }
 
@@ -125,7 +151,11 @@ struct IOSMediaInfoView: View {
         } header: {
             Text(L10n.string("ios.metadata.look_up"))
         } footer: {
-            Text(L10n.string(hasKey ? "ios.metadata.footer" : "ios.metadata.no_key"))
+            if !hasKey {
+                Text(L10n.string("ios.metadata.no_key"))
+            } else {
+                Text(L10n.string(model.canSave ? "ios.metadata.footer" : "ios.metadata.read_only"))
+            }
         }
     }
 
@@ -138,6 +168,9 @@ struct IOSMediaInfoView: View {
             ForEach(ranked) { candidate in
                 Button { pending = candidate.match } label: { row(candidate) }
                     .buttonStyle(.plain)
+                    // Nowhere to write it: the results are worth reading, but offering
+                    // to apply one would be a promise the server cannot keep.
+                    .disabled(!model.canSave)
             }
         }
     }

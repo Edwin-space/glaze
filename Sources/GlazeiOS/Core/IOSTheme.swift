@@ -104,7 +104,17 @@ struct IOSListRow: View {
     var accessibilityDescription: String?
 
     var body: some View {
-        HStack(spacing: IOSTheme.Spacing.medium) {
+        HStack(spacing: IOSTheme.Spacing.small) {
+            // A fixed column, present in every row whether it is used or not, so the
+            // mark always sits in the same place. The badge used to ride beside the
+            // title, which put it in a different spot on every row and pushed long
+            // titles around. Mail and Podcasts mark an unread row this way.
+            Circle()
+                .fill(IOSTheme.amber)
+                .frame(width: 7, height: 7)
+                .opacity(watch == .new ? 1 : 0)
+                .accessibilityHidden(true)
+
             Image(systemName: symbol)
                 .font(.title3)
                 .foregroundStyle(watch == .watched ? IOSTheme.dim : IOSTheme.amber)
@@ -112,16 +122,11 @@ struct IOSListRow: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
-                HStack(spacing: IOSTheme.Spacing.tight) {
-                    Text(title)
-                        // Watched films step back rather than disappear: they are still
-                        // there to rewatch, just no longer what the eye should land on.
-                        .foregroundStyle(watch == .watched ? AnyShapeStyle(IOSTheme.dim) : AnyShapeStyle(.primary))
-                        .lineLimit(1)
-                    if watch == .new {
-                        IOSNewBadge()
-                    }
-                }
+                Text(title)
+                    // Watched films step back rather than disappear: they are still
+                    // there to rewatch, just no longer what the eye should land on.
+                    .foregroundStyle(watch == .watched ? AnyShapeStyle(IOSTheme.dim) : AnyShapeStyle(.primary))
+                    .lineLimit(1)
                 if let detail {
                     Text(detail)
                         .font(.caption)
