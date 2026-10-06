@@ -24,6 +24,8 @@ final class IOSUserPreferences {
         static let tmdbAPIKey = "ios.metadata.tmdbAPIKey"
         static let browseLayout = "ios.browse.layout"
         static let holdSpeed = "ios.playback.holdSpeed"
+        static let hasSeenWelcome = "ios.onboarding.seenWelcome"
+        static let hasSeenGestureGuide = "ios.onboarding.seenGestureGuide"
     }
 
     private let defaults: UserDefaults
@@ -103,6 +105,24 @@ final class IOSUserPreferences {
         didSet { defaults.set(readingFontScale, forKey: Key.readingFontScale) }
     }
 
+    /// Whether the short "what this app is" card has been shown.
+    ///
+    /// Shown once, on the first launch, and never again by itself. Everything it says
+    /// stays reachable from 설정 › 도움말, because an introduction someone skipped
+    /// should not be gone for good.
+    var hasSeenWelcome: Bool {
+        didSet { defaults.set(hasSeenWelcome, forKey: Key.hasSeenWelcome) }
+    }
+
+    /// Whether the player's gestures have been explained once.
+    ///
+    /// The player has no visible affordance for a double tap, a swipe or a hold —
+    /// that is the point of them — so the one place they can be learnt is the first
+    /// time a film is opened.
+    var hasSeenGestureGuide: Bool {
+        didSet { defaults.set(hasSeenGestureGuide, forKey: Key.hasSeenGestureGuide) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaultSubtitleLanguageCode = defaults.string(forKey: Key.defaultSubtitleLanguage)
@@ -127,6 +147,8 @@ final class IOSUserPreferences {
         tmdbAPIKey = defaults.string(forKey: Key.tmdbAPIKey) ?? ""
         browseLayout = defaults.string(forKey: Key.browseLayout)
             .flatMap(IOSBrowseLayout.init(rawValue:)) ?? .list
+        hasSeenWelcome = defaults.bool(forKey: Key.hasSeenWelcome)
+        hasSeenGestureGuide = defaults.bool(forKey: Key.hasSeenGestureGuide)
     }
 }
 

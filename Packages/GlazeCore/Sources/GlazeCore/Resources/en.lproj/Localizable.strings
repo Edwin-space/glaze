@@ -818,3 +818,33 @@ Pull down to refresh in the app afterwards. You can delete this note.
 "ios.player.hold_speed_format" = "%@ speed";
 "ios.player.hold_speed" = "Hold to speed up";
 "ios.player.hold_speed.detail" = "Plays at this speed while you hold either side of the picture, and returns to normal when you let go.";
+
+/* First-run guidance and help */
+"ios.welcome.title" = "Glaze";
+"ios.welcome.subtitle" = "Your own films, on your own device. No account, no subscription.";
+"ios.welcome.files.title" = "Getting films in";
+"ios.welcome.files.detail" = "Put a film in Files › On My iPhone › Glaze and it appears in the Local tab. Sharing one to Glaze from another app works too.";
+"ios.welcome.network.title" = "NAS and media servers";
+"ios.welcome.network.detail" = "Connect a WebDAV, Synology or DLNA server on the same network from the Network tab. Films play straight from the server.";
+"ios.welcome.subtitles.title" = "Subtitles";
+"ios.welcome.subtitles.detail" = "Subtitles inside the film and subtitle files beside it are both read. Choose one from the subtitle button while a film is playing.";
+"ios.welcome.gestures.title" = "It is played with your fingers";
+"ios.welcome.gestures.detail" = "Double tap to skip ten seconds, swipe up or down at the sides for brightness and volume. The rest is in Settings › Help.";
+"ios.welcome.privacy" = "Your films never leave this device and the servers you connect. Only a title is sent to TMDB, with your own key, when you look a film up.";
+"ios.welcome.start" = "Start";
+
+"ios.guide.title" = "Gestures while a film plays";
+"ios.guide.got_it" = "Got it";
+"ios.guide.tap.title" = "Tap once";
+"ios.guide.tap.detail" = "Brings the controls up. Tapping again puts them away at once.";
+"ios.guide.double_tap.title" = "Double tap left or right";
+"ios.guide.double_tap.detail" = "Ten seconds back, ten seconds forward. The mark appears on the side you tapped and never covers the middle of the picture. Keep tapping and it adds up.";
+"ios.guide.swipe.title" = "Swipe at the sides";
+"ios.guide.swipe.detail" = "Up and down on the left changes brightness, on the right changes volume.";
+"ios.guide.hold.title" = "Press and hold left or right";
+"ios.guide.hold.detail" = "Plays faster for as long as you hold. The speed is set in Settings › Playback.";
+"ios.guide.scrub.title" = "Drag the timeline";
+"ios.guide.scrub.detail" = "Anywhere on the bar takes the touch. While you drag, the frame at that point is shown.";
+
+"ios.settings.help" = "Help";
+"ios.settings.help.welcome" = "Show the introduction again";

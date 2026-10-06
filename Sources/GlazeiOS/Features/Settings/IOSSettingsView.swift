@@ -15,6 +15,7 @@ struct IOSSettingsView: View {
     @State private var files = IOSDeviceFilesModel()
     @State private var cache = IOSCacheStore()
     @State private var isClearingCache = false
+    @State private var showsWelcome = false
 
     private let sizeOptions: [(key: String, value: Float)] = [
         ("subtitle.appearance.size.small", 85),
@@ -136,6 +137,17 @@ struct IOSSettingsView: View {
                 Text(L10n.string("ios.settings.metadata.detail"))
             }
 
+            // Everything the first launch said, still reachable. An introduction that
+            // can only be seen once is the same as not having written it.
+            Section {
+                NavigationLink(L10n.string("ios.guide.title")) {
+                    IOSGestureGuidePage()
+                }
+                Button(L10n.string("ios.settings.help.welcome")) { showsWelcome = true }
+            } header: {
+                Text(L10n.string("ios.settings.help"))
+            }
+
             Section(L10n.string("ios.settings.about")) {
                 LabeledContent(L10n.string("ios.settings.version"), value: Self.version)
                 NavigationLink(L10n.string("legal.title")) {
@@ -151,6 +163,7 @@ struct IOSSettingsView: View {
         .glazeListBackground()
         .navigationTitle(L10n.string("settings.title"))
         .task { cache.refresh() }
+        .sheet(isPresented: $showsWelcome) { IOSWelcomeView() }
         .confirmationDialog(
             L10n.string("ios.settings.cache.clear"),
             isPresented: $isClearingCache,

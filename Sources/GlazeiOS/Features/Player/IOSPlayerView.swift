@@ -55,6 +55,10 @@ struct IOSPlayerView: View {
     @State private var skipMarkTask: Task<Void, Never>?
     /// Set while a finger is held on one side, running the film faster.
     @State private var heldSide: SkipMark.Side?
+    /// The gesture card, shown over the first film ever opened and never again on its
+    /// own. The gestures leave no mark on the screen, so this is the only place they
+    /// can be learnt without being told.
+    @State private var showsGuide = false
 
     private var displayedTime: TimeInterval { isScrubbing ? scrubTime : model.currentTime }
 
@@ -100,6 +104,10 @@ struct IOSPlayerView: View {
                 holdOverlay
             }
 
+            if showsGuide {
+                guideOverlay
+            }
+
         }
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
@@ -109,6 +117,13 @@ struct IOSPlayerView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: isLocked)
         // Pausing suppresses the hide; playing again has to start it.
         .onChange(of: model.isPlaying) { _, playing in
+            // The film reaches this a moment after it was asked to open, which is
+            // usually after the guide went up. Catch it there too, or the opening
+            // scene runs behind five paragraphs nobody has finished reading.
+            if playing, showsGuide {
+                model.togglePlayback()
+                return
+            }
             if playing { scheduleHide() } else { hideTask?.cancel() }
         }
         .sheet(isPresented: $showsPlaylist) {
@@ -145,12 +160,38 @@ struct IOSPlayerView: View {
             let source = VLCScrubPreviewSource(url: resource.playbackURL)
             previewSource = source
             preview = ScrubPreviewLoader(source: source)
+            if !preferences.hasSeenGestureGuide { showsGuide = true }
         }
         .onDisappear {
             hideTask?.cancel()
             model.stop()
             if isHoldingLandscape { IOSScreenOrientation.release() }
         }
+    }
+
+    /// The gestures, over the first film. A scrim because it is asking to be read, and
+    /// it takes the touches while it is up so a gesture learnt here is not also
+    /// performed on the film underneath.
+    private var guideOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.7).ignoresSafeArea()
+            IOSGestureGuideView {
+                preferences.hasSeenGestureGuide = true
+                showsGuide = false
+                // The film was held at the start while this was read; it begins now.
+                if !model.isPlaying { model.togglePlayback() }
+                revealControls()
+            }
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(cornerRadius: IOSTheme.Radius.panel, style: .continuous)
+            )
+            .padding(IOSTheme.Spacing.large)
+        }
+        // Nobody should read five paragraphs while the opening scene goes past behind
+        // them. The film waits.
+        .onAppear { if model.isPlaying { model.togglePlayback() } }
+        .transition(.opacity)
     }
 
     // MARK: - Controls

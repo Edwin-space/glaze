@@ -22,6 +22,9 @@ struct IOSRootView: View {
     @State private var selection: IOSTab = .local
     @State private var path = NavigationPath()
     @State private var bookPath = NavigationPath()
+    /// The first-launch card. Held separately from the stored flag so dismissing it
+    /// closes the sheet whether it was dismissed by the button or by a drag.
+    @State private var showsWelcome = false
 
     /// Four places, each of which is one thing.
     ///
@@ -131,8 +134,12 @@ struct IOSRootView: View {
         .environment(covers)
         .environment(favorites)
         .environment(readingProgress)
+        .sheet(isPresented: $showsWelcome, onDismiss: { preferences.hasSeenWelcome = true }) {
+            IOSWelcomeView()
+        }
         .task {
             IOSDeviceFolder.prepareIfNeeded()
+            showsWelcome = !preferences.hasSeenWelcome
             await restorePreferredSource()
         }
         // Someone shared a file to Glaze from another app. It lands in the device
