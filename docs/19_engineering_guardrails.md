@@ -193,6 +193,27 @@ Synology는 사진과 비디오 루트를 모두 `object.container.storageFolder
 **Apple TV 빌드 ID와 설치 ID는 다르다.**
 `xcodebuild -destination`에는 기기 UDID(`00008110-...`)를 쓰고 `xcrun devicectl --device`에는 CoreDevice 식별자(`FBC69999-...`)를 쓴다. 첫 실기기 빌드는 `-allowProvisioningUpdates -allowProvisioningDeviceRegistration`이 필요하다. Codex 샌드박스 안의 `devicectl`은 CoreDeviceService XPC가 끊긴 것처럼 보일 수 있으므로 개발 도구 권한으로 실행해 구분한다.
 
+**맥 아카이브가 "Operation not permitted"로 죽으면 `xcodegen generate`부터 한다.**
+2026-10-06 빌드 14에서 `GlazeMac` 아카이브가 `bash: script/xcode_vlc_stage.sh: Operation not permitted`로 실패했다. iOS·tvOS는 멀쩡했다 — 스크립트 단계가 없기 때문이다.
+`Glaze.xcodeproj`는 `project.yml`에서 생성되고 `.gitignore`에 있다. XcodeGen은
+`ENABLE_USER_SCRIPT_SANDBOXING`을 아예 쓰지 않는데(생성 직후 `grep` 결과 0건),
+실패한 프로젝트 파일에는 `= YES`가 두 군데 들어 있었다. Xcode에서 프로젝트를 열고
+"Update to recommended settings"를 받으면 Xcode가 직접 써 넣는 값이다.
+그 상태에서는 VLC 런타임(플러그인 264개)과 ffmpeg을 앱 안으로 복사하는 단계가
+샌드박스에 막힌다. 입력·출력을 선언해도 소용없다. Xcode는 출력 경로를 `literal`로만
+허용해서 디렉터리 하위에 파일을 만드는 것 자체가 불가능하기 때문이다.
+**빌드 전 `xcodegen generate`를 돌리면 생성된 프로젝트가 원래 상태로 돌아간다.**
+`script/build_and_run.sh`와 `AGENTS.md`의 빌드 명령이 그렇게 되어 있는 이유다.
+Xcode에서 직접 아카이브할 때도 먼저 `xcodegen generate`를 한 번 돌릴 것.
+
+**Release 서명은 파일마다 애플 서버를 한 번씩 다녀온다.**
+같은 날 두 번째 실패는 `failed to sign .../libmod_plugin.dylib` 한 줄이었고,
+같은 명령을 손으로 돌리니 바로 서명됐다. `--timestamp`가 붙은 서명은 애플
+타임스탬프 서버로 왕복하는데 이 단계는 270여 개를 연속으로 서명한다. 한 번
+거절당하면 아카이브 전체가 끝났고, `codesign`의 실제 메시지는 `>/dev/null`로
+버려져서 서버가 바쁜 것인지 빌드가 망가진 것인지 알 수 없었다.
+지금은 세 번까지 다시 시도하고, 그래도 안 되면 `codesign`이 한 말을 그대로 찍는다.
+
 작업 전에 상태를 확인해야 하는 항목이다.
 
 - ~~샌드박스에서 사이드카 자막을 읽지 못한다~~ **해결(2026-08-24).** `~/Movies`는 `com.apple.security.assets.movies.read-write`로, 그 밖의 폴더는 자막을 못 읽을 때만 한 번 묻는 security-scoped bookmark로 처리한다. related items 단독으로는 통하지 않았다(위 §3).

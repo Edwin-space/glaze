@@ -29,7 +29,11 @@ if [[ ! -d "$LOCAL_TOOLS_DIR" ]]; then
   exit 0
 fi
 
-mkdir -p "$APP_RESOURCES/Tools" "$APP_EXECUTABLES"
+# Resources/Tools is only ever removed from here on — it is where an older build
+# put the helpers, in a place the App Store does not allow loadable code. Creating
+# it again would be asking the script sandbox for write access to a directory whose
+# whole purpose is to not exist.
+mkdir -p "$APP_EXECUTABLES"
 for tool in ffmpeg ffprobe; do
   if [[ -f "$LOCAL_TOOLS_DIR/$tool" ]]; then
     helper_path="$APP_EXECUTABLES/$tool"
@@ -73,16 +77,34 @@ signing_identity_for_config() {
   fi
 }
 
+# A Release signature is timestamped, which means a round trip to Apple for each
+# file — and this signs about 270 of them in a row. One refused request used to end
+# the whole archive with "failed to sign", with codesign's own message thrown away,
+# which reads like a broken build rather than a busy server. Three tries, and the
+# real message if it still will not go.
 sign_library() {
   local path="$1"
   local identity
   identity="$(signing_identity_for_config)"
   if [[ "$identity" == "-" ]]; then
     codesign --force --sign - "$path" >/dev/null 2>&1 || true
-  else
-    codesign --force --sign "$identity" --options runtime --timestamp "$path" >/dev/null 2>&1 \
-      || { echo "xcode_vlc_stage.sh: failed to sign $path" >&2; exit 1; }
+    return
   fi
+
+  local attempt output
+  for attempt in 1 2 3; do
+    if output="$(codesign --force --sign "$identity" --options runtime --timestamp "$path" 2>&1)"; then
+      return
+    fi
+    if [[ $attempt -lt 3 ]]; then
+      echo "xcode_vlc_stage.sh: signing $(basename "$path") failed, retrying ($attempt/3)" >&2
+      sleep $((attempt * 2))
+    fi
+  done
+
+  echo "xcode_vlc_stage.sh: failed to sign $path" >&2
+  echo "$output" >&2
+  exit 1
 }
 
 if [[ -d "$LOCAL_TOOLS_DIR/vlc" ]]; then
