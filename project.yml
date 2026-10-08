@@ -123,6 +123,30 @@ targets:
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
 
+  # Driving the phone from the Mac. There is no other way to reach a real device:
+  # devicectl can photograph the screen but cannot touch it, and the simulator
+  # proved twice this week that it is not the same machine — the scrub preview and
+  # the 2x hold both behaved differently there.
+  #
+  # Kept out of the GlazeiOS scheme on purpose, so nothing about the release build
+  # changes because a test target exists.
+  GlazeiOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/GlazeiOSUITests
+    dependencies:
+      - target: GlazeiOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JBN99YZ7KN
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: GlazeiOS
+
 schemes:
   GlazeMac:
     build:
@@ -148,3 +172,12 @@ schemes:
       config: Debug
     archive:
       config: Release
+  GlazeiOSUITests:
+    build:
+      targets:
+        GlazeiOS: all
+        GlazeiOSUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - GlazeiOSUITests
