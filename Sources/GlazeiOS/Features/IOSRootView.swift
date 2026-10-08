@@ -138,6 +138,7 @@ struct IOSRootView: View {
             IOSWelcomeView()
         }
         .task {
+            PlaybackLog.begin("app launched")
             IOSDeviceFolder.prepareIfNeeded()
             showsWelcome = !preferences.hasSeenWelcome
             await restorePreferredSource()

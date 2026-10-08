@@ -17,7 +17,8 @@ final class NetworkPlaybackOnDeviceTests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = [
             "-ios.onboarding.seenWelcome", "YES",
-            "-ios.onboarding.seenGestureGuide", "YES"
+            "-ios.onboarding.seenGestureGuide", "YES",
+            "-glaze.playbackLog", "YES"
         ]
     }
 
@@ -173,10 +174,23 @@ final class NetworkPlaybackOnDeviceTests: XCTestCase {
             NSPredicate(format: "label MATCHES %@", "[0-9]+:[0-9]{2}")
         )
 
-        // First opening.
+        // First opening. Tapped by coordinate inside the row rather than by element:
+        // the element tap reports success while the button's action never runs — the
+        // app's own log shows the folder loading and then silence. Which of the two
+        // is at fault is exactly what this distinguishes.
         var started = Date()
-        fresh.tap()
-        XCTAssertTrue(clock.firstMatch.waitForExistence(timeout: 90), "처음 여는데 열리지 않았다")
+        fresh.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        if !clock.firstMatch.waitForExistence(timeout: 30) {
+            // Nothing happened. Is the app wedged, or is it only this row? Tapping a
+            // tab writes to the log from a different screen, so the answer is in the
+            // file rather than in another guess.
+            print("NAS: 행을 눌러도 열리지 않음 — 앱이 살아 있는지 확인한다")
+            app.buttons["로컬"].firstMatch.tap()
+            let localAlive = app.staticTexts["로컬"].firstMatch.waitForExistence(timeout: 15)
+            print("NAS: 다른 탭 반응 \(localAlive ? "있음 — 앱은 살아 있다" : "없음 — 앱이 멈췄다")")
+            XCTFail("행을 눌러도 재생 화면이 열리지 않는다 (다른 탭 반응: \(localAlive))")
+            return
+        }
         print("NAS: 1회차 \(String(format: "%.1f", Date().timeIntervalSince(started)))초")
 
         // Let it run a little so there is a position worth remembering, then close

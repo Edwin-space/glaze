@@ -86,9 +86,11 @@ struct IOSNetworkBrowserView: View {
             .environment(preferences)
         }
         .fullScreenCover(item: $playing, onDismiss: {
+            PlaybackLog.write("cover dismissed")
             IOSScreenOrientation.release()
             watchRevision += 1
         }) { entry in
+            let _ = PlaybackLog.write("cover body for \(entry.name)")
             if case .film(let resource, let parsed) = entry.kind {
                 IOSPlayerView(
                     resource: resource,
@@ -114,7 +116,10 @@ struct IOSNetworkBrowserView: View {
                     }
                 case .film(let resource, _):
                     let watch = positions.state(for: .network(resource))
-                    Button { playing = entry } label: {
+                    Button {
+                        PlaybackLog.write("row tapped: \(entry.name) watch=\(String(describing: watch))")
+                        playing = entry
+                    } label: {
                         IOSListRow(symbol: "film", title: entry.displayName, detail: detail(entry), watch: watch)
                             .id("\(entry.id)#\(watchRevision)")
                     }
@@ -329,10 +334,13 @@ struct IOSNetworkBrowserView: View {
 
     private func load() async {
         phase = entries.isEmpty ? .loading : phase
+        PlaybackLog.write("folder load begin: \(folder.name)")
         do {
             entries = try await browser.read(folder.path)
+            PlaybackLog.write("folder load ok: \(folder.name) — \(entries.count)개")
             phase = .ready
         } catch {
+            PlaybackLog.write("folder load failed: \(folder.name) — \(error)")
             phase = .failed(IOSLibraryModel.message(forSynology: error))
         }
     }

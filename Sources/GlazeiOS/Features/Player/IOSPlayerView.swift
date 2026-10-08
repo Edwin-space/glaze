@@ -145,6 +145,7 @@ struct IOSPlayerView: View {
                 .presentationDetents([.medium, .large])
         }
         .onAppear {
+            PlaybackLog.write("player onAppear startAt=\(Int(startAt))")
             let first = PlaybackQueueItem(resource: resource, title: title)
             nowPlaying = first
             playlist = queue.map { PlaybackQueue(items: $0.items, current: first) }

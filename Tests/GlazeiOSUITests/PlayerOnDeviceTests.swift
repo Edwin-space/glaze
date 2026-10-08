@@ -27,7 +27,8 @@ final class PlayerOnDeviceTests: XCTestCase {
         // stored on the phone.
         app.launchArguments = [
             "-ios.onboarding.seenWelcome", "NO",
-            "-ios.onboarding.seenGestureGuide", "NO"
+            "-ios.onboarding.seenGestureGuide", "NO",
+            "-glaze.playbackLog", "YES"
         ]
     }
 

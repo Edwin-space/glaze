@@ -106,6 +106,20 @@ final class IOSPlaybackModel {
         for option in MediaCachingPolicy.mediaOptions(for: resource.playbackURL) {
             media?.addOption(option)
         }
+        // Resume by telling libVLC where to open, not by opening at zero and then
+        // seeking. `player.time = …` is a synchronous call into libVLC, and on a
+        // network stream the demuxer has to reposition before it returns — which can
+        // take minutes on a large file. It ran on the main thread a fraction of a
+        // second after the player was presented, so the player never painted and the
+        // folder stayed on screen: a film that had been watched once would not open
+        // again. `:start-time` makes the open itself land in the right place.
+        if let resume = pendingResume, resume > 0 {
+            media?.addOption(":start-time=\(Int(resume))")
+            startedAtResume = resume
+            pendingResume = nil
+        } else {
+            startedAtResume = nil
+        }
         if let subtitleURL {
             // Priority 4 is VLC's "user selected". It loads the file but does not show
             // it, so the choice is made explicitly once the tracks exist.
@@ -135,8 +149,12 @@ final class IOSPlaybackModel {
 
         configureRemoteCommands()
         observeAudioRoute()
+        PlaybackLog.begin("start \(resource.playbackURL.lastPathComponent)")
+        PlaybackLog.write("resume=\(startedAtResume.map { String(format: "%.0f", $0) } ?? "none") url=\(resource.playbackURL.scheme ?? "?")")
         player.play()
+        PlaybackLog.write("play() returned")
         player.rate = rate
+        PlaybackLog.write("rate set")
     }
 
     /// Stops the film when the sound would otherwise move to the phone's own speaker.
@@ -190,6 +208,8 @@ final class IOSPlaybackModel {
     }
 
     func seek(to time: TimeInterval) {
+        PlaybackLog.write("seek -> \(Int(time)) (begin)")
+        defer { PlaybackLog.write("seek -> \(Int(time)) (end)") }
         let ceiling = duration > 0 ? duration : .greatestFiniteMagnitude
         let target = min(max(time, 0), ceiling)
         player.time = VLCTime(int: Int32(target * 1000))
@@ -304,6 +324,7 @@ final class IOSPlaybackModel {
         default:
             break
         }
+        PlaybackLog.write("state=\(state.rawValue) time=\(player.time.intValue) len=\(player.media?.length.intValue ?? -1)")
         let lastTime = currentTime
         readState()
         // Tracks appear once, when the media is read, and change only when the film
@@ -340,7 +361,7 @@ final class IOSPlaybackModel {
             hasOpened = true
         }
         guard hasOpened else {
-            currentTime = pendingResume ?? 0
+            currentTime = startedAtResume ?? pendingResume ?? 0
             return
         }
 
@@ -353,6 +374,10 @@ final class IOSPlaybackModel {
 
     /// Whether this film — not the one before it — has told us how long it is.
     private var hasOpened = false
+
+    /// Where libVLC was asked to open, when it was not the beginning. Only so the bar
+    /// can show that point before the first time report arrives.
+    private var startedAtResume: TimeInterval?
 
     /// Seeking before the media is open is dropped, so the resume waits for the clock
     /// to start moving and is applied once.
