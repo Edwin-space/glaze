@@ -617,15 +617,28 @@ struct IOSPlayerView: View {
     }
 
     /// Press and hold either side to run the film at the viewer's chosen multiple.
+    /// How much of the bottom of the screen the transport and the timeline occupy.
+    /// Measured from the layout: a 44pt bar, its clocks, and the padding around them.
+    private static let chromeStrip: CGFloat = 170
+
     private func holdGesture(in size: CGSize) -> some Gesture {
         LongPressGesture(minimumDuration: 0.45)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
             .onChanged { value in
                 guard !isLocked, case .second(true, let drag?) = value else { return }
-                // A slow drag along the timeline is a press on this layer too — the
-                // touch layer runs the full height of the screen, under the controls.
-                // Scrubbing is not holding, and a film that jumps to 2× while someone
-                // is looking for a scene is the player fighting them.
+                // The bottom of the screen belongs to the transport and the timeline
+                // whenever the chrome is up. A press that starts there is someone
+                // reaching for the bar, not asking the film to run faster — and a
+                // film that jumps to 2× while they are looking for a scene is the
+                // player fighting them.
+                //
+                // Asking `isScrubbing` instead was tried and was not enough: the hold
+                // and the bar's own drag begin from the same touch, and which of them
+                // the layer below hears about first is not ours to decide. Where the
+                // finger landed is known before either of them starts.
+                if showsControls, drag.startLocation.y > size.height - Self.chromeStrip {
+                    return
+                }
                 guard !isScrubbing else { return }
                 guard heldSide == nil else { return }
                 let side: SkipMark.Side = drag.startLocation.x > size.width / 2 ? .right : .left

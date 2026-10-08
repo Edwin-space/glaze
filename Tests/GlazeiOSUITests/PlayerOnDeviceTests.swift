@@ -66,26 +66,30 @@ final class PlayerOnDeviceTests: XCTestCase {
         // screenshot is taken. Everything about this gesture is the thing being
         // tested: slow, along the bar, and long enough to have been read as a
         // press-and-hold before the fix.
+        // Looked for while the finger is still down. Checking afterwards proves
+        // nothing: the badge goes as soon as the hold is released, so the first
+        // version of this test passed over a bug that was plainly on screen.
+        let watcher = SpeedBadgeWatcher(app: app)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 3) { watcher.look() }
+
         let bar = app.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.896))
         let further = app.coordinate(withNormalizedOffset: CGVector(dx: 0.62, dy: 0.896))
         bar.press(
             forDuration: 0.6,
             thenDragTo: further,
             withVelocity: .slow,
-            thenHoldForDuration: 4.0
+            thenHoldForDuration: 6.0
         )
+        let sawSpeedBadge = watcher.saw
 
         attach(name: "05-scrub-preview")
-
-        // The regression: 2x used to engage while someone was looking for a scene.
-        let speedBadge = app.staticTexts.matching(
-            NSPredicate(format: "label ENDSWITH %@", "속도")
-        )
-        XCTAssertEqual(
-            speedBadge.count, 0,
-            "재생 막대를 끄는 동안 배속 표시가 떴다 — 길게 누르기가 같이 걸렸다"
-        )
+        XCTAssertFalse(sawSpeedBadge, Self.speedBadgeFailure)
     }
+
+    static let speedBadgeFailure = """
+        재생 막대를 끄는 동안 배속 표시가 떴다 — 길게 누르기가 같이 걸렸다.
+        손을 뗀 뒤에 확인하면 이미 사라져 있으므로 끄는 도중에 봐야 한다.
+        """
 
     /// The preview card, photographed while the finger is still on the bar.
     ///
@@ -135,6 +139,31 @@ final class PlayerOnDeviceTests: XCTestCase {
             attachment.name = "09-scrub-while-dragging-\(index + 1)"
             attachment.lifetime = .keepAlways
             add(attachment)
+        }
+    }
+
+    /// Reads the screen for the 2x badge from another queue, because the thread
+    /// that could ask is busy performing the drag.
+    private final class SpeedBadgeWatcher: @unchecked Sendable {
+        private let app: XCUIApplication
+        private let lock = NSLock()
+        private var seen = false
+
+        init(app: XCUIApplication) { self.app = app }
+
+        func look() {
+            let found = app.staticTexts.matching(
+                NSPredicate(format: "label ENDSWITH %@", "속도")
+            ).count > 0
+            lock.lock()
+            seen = seen || found
+            lock.unlock()
+        }
+
+        var saw: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return seen
         }
     }
 
