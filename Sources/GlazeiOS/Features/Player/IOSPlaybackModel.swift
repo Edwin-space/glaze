@@ -91,6 +91,9 @@ final class IOSPlaybackModel {
         subtitleScale = preferences.subtitleScale
         rate = preferences.playbackRate
         hasChosenSubtitle = false
+        hasOpened = false
+        lastNowPlaying = nil
+        lastPositionWrite = .distantPast
         hasFailed = false
         isBuffering = true
         hasReportedFinish = false
@@ -176,6 +179,9 @@ final class IOSPlaybackModel {
     func togglePlayback() {
         if player.isPlaying { player.pause() } else { player.play() }
         isPlaying = player.isPlaying
+        // Pausing is a moment someone may well walk away from, and the tick only
+        // writes the position every few seconds now.
+        rememberPosition()
         updateNowPlaying()
     }
 
@@ -189,6 +195,7 @@ final class IOSPlaybackModel {
         player.time = VLCTime(int: Int32(target * 1000))
         currentTime = target
         updateNowPlaying()
+        lastNowPlaying = nil
     }
 
     /// The film's shape, once VLC knows it. Nil until the first frame is decoded.
@@ -299,6 +306,11 @@ final class IOSPlaybackModel {
         }
         let lastTime = currentTime
         readState()
+        // Tracks appear once, when the media is read, and change only when the film
+        // does. Asking libVLC to enumerate them four times a second was both waste
+        // and a main-thread call into a library whose input thread is busy pulling
+        // bytes off the network.
+        refreshTracks()
 
         // VLCKit 4 has no distinct "ended": a film that ran out is simply `.stopped`.
         // What separates it from a stop by hand is where the clock had got to, read
@@ -316,16 +328,31 @@ final class IOSPlaybackModel {
 
     private func readState() {
         isPlaying = player.isPlaying
-        currentTime = TimeInterval(player.time.intValue) / 1000
-        if let length = player.media?.length.intValue, length > 0 {
+
+        // One `VLCMediaPlayer` serves every film, and until the new one is open it
+        // still answers with the old one's clock. That is the knob that appears
+        // somewhere in the middle of an unwatched film and then jumps to the start:
+        // it was showing where the *previous* film had got to. Nothing is believed
+        // until this media reports its own length.
+        let length = player.media?.length.intValue ?? 0
+        if length > 0 {
             duration = TimeInterval(length) / 1000
+            hasOpened = true
         }
+        guard hasOpened else {
+            currentTime = pendingResume ?? 0
+            return
+        }
+
+        currentTime = TimeInterval(player.time.intValue) / 1000
         applyResumeIfReady()
         chooseSubtitleIfReady()
-        refreshTracks()
-        rememberPosition()
-        updateNowPlaying()
+        rememberPositionOccasionally()
+        updateNowPlayingIfChanged()
     }
+
+    /// Whether this film — not the one before it — has told us how long it is.
+    private var hasOpened = false
 
     /// Seeking before the media is open is dropped, so the resume waits for the clock
     /// to start moving and is applied once.
@@ -356,7 +383,7 @@ final class IOSPlaybackModel {
         return SubtitleLanguageCode.normalized(language) == wanted
     }
 
-    private func refreshTracks() {
+    func refreshTracks() {
         subtitleTracks = player.textTracks.map(Self.option(for:))
         audioTracks = player.audioTracks.map(Self.option(for:))
         subtitleDelay = TimeInterval(player.currentVideoSubTitleDelay) / 1_000_000
@@ -376,7 +403,22 @@ final class IOSPlaybackModel {
         )
     }
 
-    private func rememberPosition() {
+    /// Writing the position is two dictionaries read out of `UserDefaults`, changed
+    /// and written back — the whole library's worth, every time. On the time tick
+    /// that is four times a second for as long as the film runs, and it gets slower
+    /// the more films someone has watched. Once every few seconds is as much as
+    /// resuming needs.
+    private func rememberPositionOccasionally() {
+        let now = Date()
+        guard now.timeIntervalSince(lastPositionWrite) >= Self.positionWriteInterval else { return }
+        lastPositionWrite = now
+        rememberPosition()
+    }
+
+    private static let positionWriteInterval: TimeInterval = 5
+    private var lastPositionWrite = Date.distantPast
+
+    func rememberPosition() {
         // Held while a resume is still waiting: playback starts at zero, and a
         // near-zero position clears the very value about to be seeked to.
         guard pendingResume == nil, let resource, duration > 0 else { return }
@@ -455,6 +497,42 @@ final class IOSPlaybackModel {
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
+
+    /// The lock screen extrapolates elapsed time from the rate it was last given, so
+    /// it only needs telling when something actually changes. Rebuilding the whole
+    /// dictionary on the time tick was four cross-process writes a second that said
+    /// the same thing.
+    private func updateNowPlayingIfChanged() {
+        let state = NowPlayingState(
+            seconds: Int(currentTime),
+            duration: Int(duration),
+            isPlaying: isPlaying,
+            rate: rate
+        )
+        guard state.isWorthSending(comparedTo: lastNowPlaying) else { return }
+        lastNowPlaying = state
+        updateNowPlaying()
+    }
+
+    private struct NowPlayingState: Equatable {
+        var seconds: Int
+        var duration: Int
+        var isPlaying: Bool
+        var rate: Float
+
+        /// A second ticking by on its own is not news; the lock screen is already
+        /// counting. Everything else is.
+        func isWorthSending(comparedTo previous: NowPlayingState?) -> Bool {
+            guard let previous else { return true }
+            if duration != previous.duration { return true }
+            if isPlaying != previous.isPlaying { return true }
+            if rate != previous.rate { return true }
+            // A jump means a seek, which the lock screen cannot have guessed.
+            return abs(seconds - previous.seconds) > 2
+        }
+    }
+
+    private var lastNowPlaying: NowPlayingState?
 
     private func updateNowPlaying() {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [

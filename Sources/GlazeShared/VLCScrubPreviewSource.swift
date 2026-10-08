@@ -84,6 +84,13 @@ private final class ThumbnailGrab: NSObject, VLCMediaThumbnailerDelegate, @unche
         finish: @escaping (Data?) -> Void
     ) {
         guard let media = VLCMedia(url: url) else { return nil }
+        // A still from a film on a NAS means a second connection to it, opened and
+        // seeked from cold while the first one is busy keeping playback fed. With no
+        // buffer at all that connection stalls, which is why the preview worked on
+        // the device's own files and not over the network.
+        for option in MediaCachingPolicy.mediaOptions(for: url) {
+            media.addOption(option)
+        }
         self.finish = finish
         super.init()
         let thumbnailer = VLCMediaThumbnailer(media: media, andDelegate: self)
