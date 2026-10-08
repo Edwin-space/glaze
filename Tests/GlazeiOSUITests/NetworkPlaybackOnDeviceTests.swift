@@ -24,11 +24,15 @@ final class NetworkPlaybackOnDeviceTests: XCTestCase {
     func testNetworkFilmOpensAndSurvivesSkipping() throws {
         app.launch()
 
-        app.buttons["네트워크"].tap()
+        // iPad's tab bar reports the item twice, so an exact query is ambiguous there.
+        app.buttons["네트워크"].firstMatch.tap()
         _ = app.buttons.firstMatch.waitForExistence(timeout: 15)
 
+        if app.staticTexts[Self.noServers].exists {
+            throw XCTSkip("이 기기에는 추가한 서버가 없다. 네트워크 탭에서 먼저 연결할 것.")
+        }
         guard let server = firstServerRow() else {
-            throw XCTSkip("이 폰에 저장된 서버가 없거나 같은 네트워크에서 보이지 않는다")
+            throw XCTSkip("저장된 서버도, 발견된 서버도 없다")
         }
 
         let connectStarted = Date()
@@ -96,16 +100,25 @@ final class NetworkPlaybackOnDeviceTests: XCTestCase {
         return clocks.min { $0.frame.minX < $1.frame.minX }?.label
     }
 
-    /// A saved or discovered server. Rows in the sources list carry a server symbol.
+    /// A saved or discovered server, and nothing else.
+    ///
+    /// There used to be a fallback to "the first row, whatever it is", which on a
+    /// device with no servers tapped 새 서버 and then waited a minute for a folder
+    /// listing that was never coming. Three runs reported the server as unreachable
+    /// when the truth was that there was no server: saved connections live in this
+    /// device's own settings and Keychain, so a second device starts empty.
     private func firstServerRow() -> XCUIElement? {
         for identifier in ["externaldrive.connected.to.line.below", "tv.badge.wifi", "externaldrive"] {
             let match = app.buttons.containing(.image, identifier: identifier)
                 .allElementsBoundByIndex
-                .first { $0.exists && $0.isHittable }
+                .first { $0.exists && $0.isHittable && $0.label != Self.addServer }
             if let match { return match }
         }
-        return app.cells.allElementsBoundByIndex.first { $0.exists && $0.isHittable }
+        return nil
     }
+
+    private static let addServer = "새 서버"
+    private static let noServers = "아직 추가한 서버가 없습니다."
 
     private func waitForFolderContents(timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)

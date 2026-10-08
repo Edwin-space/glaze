@@ -8,8 +8,14 @@ import XCTest
 /// been seen on a device at all. VLC decodes with the hardware here and not there,
 /// and a finger is not a synthetic touch, so these are checked where they are used.
 ///
-/// The test also leaves a screenshot at each step. They are the App Store pictures,
-/// taken from the real thing rather than mocked up.
+/// The test also leaves a screenshot at each step.
+///
+/// One caution about those screenshots: on iPad, `XCUIScreen.screenshot()` comes back
+/// with the video area **black** while the film is plainly playing. VLC draws into a
+/// layer the test's capture does not see. It reads exactly like a broken player and
+/// is not one — `devicectl device capture screenshot`, which photographs the real
+/// framebuffer, shows the picture. Judge anything about what the film looks like from
+/// that, never from an attachment here.
 final class PlayerOnDeviceTests: XCTestCase {
     private var app: XCUIApplication!
 
@@ -190,7 +196,7 @@ final class PlayerOnDeviceTests: XCTestCase {
 
     /// The whole point of the information screen: ask TMDB, get more than one answer,
     /// and let the viewer pick. Nothing is applied — this reads, it does not write.
-    func testLookingUpAFilmReturnsSeveralAnswersToChooseFrom() {
+    func testLookingUpAFilmReturnsSeveralAnswersToChooseFrom() throws {
         app.launch()
 
         if app.buttons["시작하기"].waitForExistence(timeout: 20) {
@@ -204,6 +210,13 @@ final class PlayerOnDeviceTests: XCTestCase {
 
         let field = app.textFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 10), "검색어 칸이 없다")
+
+        // The key lives in this device's own settings, so a second phone or an iPad
+        // will not have one. That is a missing precondition, not a defect, and a
+        // test that calls it a failure teaches people to ignore red.
+        if app.staticTexts[Self.noKeyNotice].exists {
+            throw XCTSkip("이 기기에는 TMDB 키가 없다. 설정 › 메타데이터에서 넣고 다시 실행할 것.")
+        }
 
         // Put the cursor at the end of what is there, then take it out a character
         // at a time. The select-all menu was tried first and silently did nothing,
@@ -246,6 +259,7 @@ final class PlayerOnDeviceTests: XCTestCase {
     }
 
     private static let nothingMatched = "맞는 작품을 찾지 못했습니다. 제목을 바꿔서 다시 찾아보세요."
+    private static let noKeyNotice = "설정 › 메타데이터에서 TMDB API 키를 먼저 넣어야 합니다."
 
     /// Rows under 검색 결과: each is a button carrying a poster and a title.
     private func resultRowCount() -> Int {
