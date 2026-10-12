@@ -55,6 +55,9 @@ struct IOSPlayerView: View {
     @State private var skipMarkTask: Task<Void, Never>?
     /// Set while a finger is held on one side, running the film faster.
     @State private var heldSide: SkipMark.Side?
+    /// Whether the controls were on screen when a gesture scrub began, so they can be
+    /// left exactly as they were found.
+    @State private var chromeWasUpAtScrubStart = false
     /// The gesture card, shown over the first film ever opened and never again on its
     /// own. The gestures leave no mark on the screen, so this is the only place they
     /// can be learnt without being told.
@@ -108,6 +111,11 @@ struct IOSPlayerView: View {
                 guideOverlay
             }
 
+            // Scrubbing without the chrome still has to say where it is going.
+            if isScrubbing, !showsControls {
+                bareScrubReadout
+            }
+
         }
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
@@ -158,9 +166,7 @@ struct IOSPlayerView: View {
                 preferences: preferences
             )
             revealControls()
-            let source = VLCScrubPreviewSource(url: resource.playbackURL)
-            previewSource = source
-            preview = ScrubPreviewLoader(source: source)
+            preparePreview(for: resource)
             if !preferences.hasSeenGestureGuide { showsGuide = true }
         }
         .onDisappear {
@@ -460,6 +466,48 @@ struct IOSPlayerView: View {
         }
     }
 
+    /// Where a gesture scrub is heading, when the controls are not up.
+    ///
+    /// The same still and clock the bar would show, and the distance travelled so the
+    /// viewer can tell a nudge from a leap — floating over the film rather than
+    /// dragging the whole transport back onto it.
+    @ViewBuilder
+    private var bareScrubReadout: some View {
+        let delta = scrubTime - gesture.anchor
+        VStack(spacing: IOSTheme.Spacing.tight) {
+            if let frame = preview.frame, let image = UIImage(data: frame) {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 176, maxHeight: 108)
+                    .clipShape(RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: IOSTheme.Radius.card, style: .continuous)
+                            .stroke(.white.opacity(0.18))
+                    )
+            }
+            HStack(spacing: IOSTheme.Spacing.small) {
+                Text(Self.timecode(scrubTime))
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                Text(Self.signedTimecode(delta))
+                    .font(.subheadline.weight(.medium).monospacedDigit())
+                    .foregroundStyle(IOSTheme.amber)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, IOSTheme.Spacing.medium)
+            .padding(.vertical, IOSTheme.Spacing.small)
+            .background(.ultraThinMaterial, in: Capsule())
+        }
+        .transition(.opacity)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private static func signedTimecode(_ seconds: TimeInterval) -> String {
+        let sign = seconds < 0 ? "−" : "+"
+        return sign + timecode(abs(seconds))
+    }
+
     /// Which way a double tap sent the film, and how far.
     struct SkipMark: Equatable {
         enum Side { case left, right }
@@ -701,7 +749,12 @@ struct IOSPlayerView: View {
                         scrubTime = model.currentTime
                         gesture.anchor = model.currentTime
                         hideTask?.cancel()
-                        showsControls = true
+                        // Whether the chrome was wanted is the viewer's business, not
+                        // the gesture's. Dragging used to raise the whole bar — every
+                        // button, the title, the gradient — over a film somebody was
+                        // deliberately watching without it. The gesture shows what the
+                        // gesture needs and nothing else.
+                        chromeWasUpAtScrubStart = showsControls
                     }
                     let span = max(model.duration, 60)
                     let seconds = gesture.anchor + Double(value.translation.width / 320) * min(span, 600)
@@ -726,7 +779,8 @@ struct IOSPlayerView: View {
                 if isScrubbing {
                     isScrubbing = false
                     model.seek(to: scrubTime)
-                    revealControls()
+                    // Only put the controls back if they were there to begin with.
+                    if chromeWasUpAtScrubStart { revealControls() }
                 }
                 gesture.end()
             }
@@ -774,6 +828,15 @@ struct IOSPlayerView: View {
         play(previous)
     }
 
+    /// Points the scrub preview at the film now playing, and throws away whatever
+    /// was cached for the last one.
+    private func preparePreview(for resource: NetworkMediaResource) {
+        preview.clear()
+        let source = VLCScrubPreviewSource(url: resource.playbackURL)
+        previewSource = source
+        preview = ScrubPreviewLoader(source: source)
+    }
+
     private func jump(to id: String) {
         guard var queue = playlist, id != nowPlaying?.id, let item = queue.jump(to: id) else { return }
         playlist = queue
@@ -786,6 +849,10 @@ struct IOSPlayerView: View {
         model.stop()
         nowPlaying = item
         wireQueue()
+        // The preview was built once, for the film the player opened with, and kept
+        // pointing at it through every "next". Ten episodes in, the still under the
+        // thumb was from the first one.
+        preparePreview(for: item.resource)
         model.start(
             item.resource,
             title: item.title,

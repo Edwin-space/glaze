@@ -214,7 +214,74 @@ final class NetworkPlaybackOnDeviceTests: XCTestCase {
         XCTAssertTrue(opened, "같은 영상을 두 번째로 여니 열리지 않는다 — 이어보기 지점이 생긴 뒤")
     }
 
+    /// Twelve films in a row, the way somebody works through a season.
+    ///
+    /// The report is that around the tenth one the picture stops arriving. Pressing
+    /// "next" keeps the player on screen and only restarts the media underneath it,
+    /// so whatever is running out is running out inside one view's lifetime. This
+    /// says which press it happens on.
+    func testWorkingThroughAFolderWithNext() throws {
+        app.launch()
+        app.buttons["네트워크"].firstMatch.tap()
+        _ = app.buttons.firstMatch.waitForExistence(timeout: 15)
+
+        if app.staticTexts[Self.noServers].exists { throw XCTSkip("서버가 없다") }
+        guard let server = firstServerRow() else { throw XCTSkip("서버가 없다") }
+        server.tap()
+        guard waitForFolderContents(timeout: 60) else {
+            XCTFail("폴더 목록이 오지 않았다"); return
+        }
+        guard let film = descendToFilm() else { throw XCTSkip("영화를 찾지 못했다") }
+        film.tap()
+
+        let clock = app.staticTexts.matching(
+            NSPredicate(format: "label MATCHES %@", "[0-9]+:[0-9]{2}")
+        )
+        guard clock.firstMatch.waitForExistence(timeout: 90) else {
+            XCTFail("첫 영상이 열리지 않았다"); return
+        }
+
+        let next = app.buttons["다음 영상"].firstMatch
+        guard next.waitForExistence(timeout: 10) else {
+            throw XCTSkip("이 폴더에는 다음 영상 단추가 없다 — 영화가 하나뿐이다")
+        }
+
+        for step in 1...12 {
+            revealControls()
+            guard next.exists, next.isHittable else {
+                XCTFail("\(step)번째에서 '다음 영상' 단추가 사라졌다"); return
+            }
+            let started = Date()
+            next.tap()
+
+            // The clock belongs to whichever film is now loaded; what matters is
+            // that one arrives at all.
+            let arrived = clock.firstMatch.waitForExistence(timeout: 60)
+            let seconds = Date().timeIntervalSince(started)
+            print("NEXT \(step): \(arrived ? String(format: "%.1f초", seconds) : "60초 안에 안 열림") state=\(app.state.rawValue)")
+            PlaybackLogMarker.note("next \(step) arrived=\(arrived)")
+
+            XCTAssertEqual(app.state, .runningForeground, "\(step)번째 이동에서 앱이 죽었다")
+            XCTAssertTrue(arrived, "\(step)번째 이동에서 영상이 열리지 않았다")
+        }
+    }
+
+    /// Nothing clever — the app writes its own log, and this only keeps the test's
+    /// numbering next to it so the two can be read together.
+    private enum PlaybackLogMarker {
+        static func note(_ text: String) { print("MARK \(text)") }
+    }
+
     // MARK: - Helpers
+
+    private func revealControls() {
+        let clock = app.staticTexts.matching(
+            NSPredicate(format: "label MATCHES %@", "[0-9]+:[0-9]{2}")
+        )
+        guard !clock.firstMatch.exists else { return }
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+        _ = clock.firstMatch.waitForExistence(timeout: 5)
+    }
 
     /// The left-hand clock under the bar: where the film is now.
     private func positionLabel() -> String? {

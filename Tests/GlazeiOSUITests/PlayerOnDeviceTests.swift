@@ -193,6 +193,68 @@ final class PlayerOnDeviceTests: XCTestCase {
         }
     }
 
+    /// Scrubbing with a finger must not drag the whole transport back onto the film.
+    ///
+    /// Someone watching without the controls up asked for that. A sideways drag used
+    /// to raise every button, the title and the gradient over the picture, and then
+    /// leave them there for another five seconds.
+    func testGestureScrubLeavesTheControlsWhereItFoundThem() {
+        app.launchArguments += ["-ios.onboarding.seenGestureGuide", "YES"]
+        app.launch()
+
+        if app.buttons["시작하기"].waitForExistence(timeout: 20) {
+            app.buttons["시작하기"].tap()
+        }
+        openSampleFilm()
+
+        let closeButton = app.buttons["재생 닫기"].firstMatch
+        XCTAssertTrue(closeButton.waitForExistence(timeout: 30), "재생 화면이 열리지 않았다")
+
+        // Wait for the chrome to take itself away, which is the state being tested.
+        let deadline = Date().addingTimeInterval(20)
+        while closeButton.exists, Date() < deadline {
+            _ = XCTWaiter.wait(for: [XCTestExpectation(description: "chrome hides")], timeout: 1)
+        }
+        XCTAssertFalse(closeButton.exists, "컨트롤이 스스로 사라지지 않아 시험할 상태가 되지 않았다")
+
+        let watcher = ChromeWatcher(app: app)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) { watcher.look() }
+
+        // A sideways drag across the middle of the picture: the scrub gesture.
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 4.0)
+
+        XCTAssertFalse(
+            watcher.sawChrome,
+            "손동작으로 이동하는 동안 컨트롤바가 올라왔다 — 부르지 않았는데 나타났다"
+        )
+        XCTAssertFalse(
+            closeButton.exists,
+            "손동작 이동이 끝난 뒤에도 컨트롤바가 남아 있다"
+        )
+    }
+
+    /// Looks for a control that only exists when the chrome is up, from off the test
+    /// thread — the gesture holds the test thread until it is over, and by then the
+    /// chrome would have hidden itself again.
+    private final class ChromeWatcher: @unchecked Sendable {
+        private let app: XCUIApplication
+        private let lock = NSLock()
+        private var seen = false
+
+        init(app: XCUIApplication) { self.app = app }
+
+        func look() {
+            let found = app.buttons["재생 닫기"].firstMatch.exists
+            lock.lock(); seen = seen || found; lock.unlock()
+        }
+
+        var sawChrome: Bool {
+            lock.lock(); defer { lock.unlock() }; return seen
+        }
+    }
+
     // MARK: - Film information
 
     /// The whole point of the information screen: ask TMDB, get more than one answer,
