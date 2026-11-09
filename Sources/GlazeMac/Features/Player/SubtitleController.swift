@@ -141,6 +141,7 @@ final class SubtitleController {
 
     /// Resets subtitle state for a newly loaded video and auto-loads the best sidecar match, if any.
     func prepareForNewVideo(url: URL) {
+        DiagnosticsCenter.shared.record("subtitle.prepare")
         mediaSessionID = UUID()
         let sessionID = mediaSessionID
         sidecarDiscoveryTask?.cancel()
@@ -402,6 +403,7 @@ final class SubtitleController {
 
     /// Starts on-device AI subtitle generation for the given video. No-op if a generation is already running.
     func startGenerating(from videoURL: URL) {
+        DiagnosticsCenter.shared.record("subtitle.generation_requested")
         guard !isGenerating else {
             return
         }
@@ -450,6 +452,7 @@ final class SubtitleController {
     }
 
     func cancelGenerating() {
+        DiagnosticsCenter.shared.record("subtitle.generation_cancelled")
         generationTask?.cancel()
         generationTask = nil
         isGenerating = false
@@ -519,6 +522,7 @@ final class SubtitleController {
     ///   works is the point of the whole feature — a two-hour film takes minutes to
     ///   translate, and nobody wants to sit in front of a progress bar for that.
     func startTranslating(for videoURL: URL, timing: SubtitleTranslationTiming = .beforeWatching) {
+        DiagnosticsCenter.shared.record("subtitle.translation_requested")
         guard let request = pendingTranslationRequest, !subtitleCues.isEmpty else { return }
 
         translationTask?.cancel()
@@ -605,6 +609,7 @@ final class SubtitleController {
     }
 
     func cancelTranslating() {
+        DiagnosticsCenter.shared.record("subtitle.translation_cancelled")
         translationTask?.cancel()
         translationTask = nil
         translationConfiguration = nil
@@ -713,6 +718,7 @@ final class SubtitleController {
     }
 
     func failTranslating(_ error: Error) {
+        DiagnosticsCenter.shared.record("subtitle.translation_failed")
         if error is CancellationError {
             cancelTranslating()
             return
@@ -725,6 +731,7 @@ final class SubtitleController {
     }
 
     private func finishTranslating(cues: [SubtitleCue], videoURL: URL) {
+        DiagnosticsCenter.shared.record("subtitle.translation_completed", numbers: ["cues": Double(cues.count)])
         isTranslating = false
         translationConfiguration = nil
         translationSourceCues = []
@@ -805,6 +812,7 @@ final class SubtitleController {
     }
 
     private func finishGenerating(cues: [SubtitleCue], videoURL: URL, languageCode: String?) {
+        DiagnosticsCenter.shared.record("subtitle.generation_completed", numbers: ["cues": Double(cues.count)])
         isGenerating = false
 
         do {

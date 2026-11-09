@@ -58,6 +58,8 @@ final class IOSPlaybackModel {
     /// skip through a whole folder.
     private var hasReportedFinish = false
     private var resource: NetworkMediaResource?
+    private var diagnostics: PlaybackDiagnostics?
+    private var lastDiagnosticBufferPercent = -1
     private var title = ""
     private var pendingResume: TimeInterval?
     private var observer: PlayerObserver?
@@ -82,6 +84,8 @@ final class IOSPlaybackModel {
         subtitleURL: URL?,
         preferences: IOSUserPreferences
     ) {
+        diagnostics = PlaybackDiagnostics(url: resource.playbackURL)
+        lastDiagnosticBufferPercent = -1
         self.resource = resource
         self.title = title
         pendingResume = startAt > 0 ? startAt : positions.position(for: .network(resource))
@@ -127,14 +131,29 @@ final class IOSPlaybackModel {
             pendingSubtitleLanguage = SubtitleFile.manual(url: subtitleURL).languageCode
         }
 
+        let diagnosticSessionID = diagnostics?.id
         let observer = PlayerObserver(
-            onState: { [weak self] state in Task { @MainActor in self?.apply(state) } },
-            onTime: { [weak self] in Task { @MainActor in self?.readState() } },
+            onState: { [weak self] state in Task { @MainActor in
+                guard let self, self.diagnostics?.id == diagnosticSessionID else { return }
+                self.apply(state)
+            } },
+            onTime: { [weak self] in Task { @MainActor in
+                guard let self, self.diagnostics?.id == diagnosticSessionID else { return }
+                self.readState()
+            } },
             onBuffering: { [weak self] progress in
                 // Reported as a fraction, not a percentage: a full cache arrives as
                 // 1.0. Comparing against 100 left the spinner on top of a film that
                 // was already playing.
-                Task { @MainActor in self?.isBuffering = progress < 1 }
+                Task { @MainActor in
+                    guard let self, self.diagnostics?.id == diagnosticSessionID else { return }
+                    self.isBuffering = progress < 1
+                    let percent = progress.isFinite ? Int(max(0, min(progress, 1)) * 10) : -1
+                    if percent != self.lastDiagnosticBufferPercent {
+                        self.lastDiagnosticBufferPercent = percent
+                        DiagnosticsCenter.shared.record("playback.buffer", id: diagnosticSessionID, numbers: ["fraction": Double(progress)])
+                    }
+                }
             }
         )
         self.observer = observer
@@ -152,6 +171,7 @@ final class IOSPlaybackModel {
         PlaybackLog.begin("start \(resource.playbackURL.lastPathComponent)")
         PlaybackLog.write("resume=\(startedAtResume.map { String(format: "%.0f", $0) } ?? "none") url=\(resource.playbackURL.scheme ?? "?")")
         player.play()
+        DiagnosticsCenter.shared.record("playback.play_returned", id: diagnostics?.id)
         PlaybackLog.write("play() returned")
         player.rate = rate
         PlaybackLog.write("rate set")
@@ -208,6 +228,8 @@ final class IOSPlaybackModel {
     }
 
     func seek(to time: TimeInterval) {
+        DiagnosticsCenter.shared.record("playback.seek_begin", id: diagnostics?.id, numbers: ["seconds": time])
+        defer { DiagnosticsCenter.shared.record("playback.seek_end", id: diagnostics?.id) }
         PlaybackLog.write("seek -> \(Int(time)) (begin)")
         defer { PlaybackLog.write("seek -> \(Int(time)) (end)") }
         let ceiling = duration > 0 ? duration : .greatestFiniteMagnitude
@@ -251,6 +273,12 @@ final class IOSPlaybackModel {
     }
 
     func stop() {
+        DiagnosticsCenter.shared.record("playback.stop_begin", id: diagnostics?.id)
+        diagnostics?.expectProgress(false)
+        defer {
+            DiagnosticsCenter.shared.record("playback.stop_end", id: diagnostics?.id)
+            diagnostics = nil
+        }
         // Stopped by hand is never "finished": the next film must not start by itself
         // because someone closed this one near its end.
         hasReportedFinish = true
@@ -311,6 +339,8 @@ final class IOSPlaybackModel {
     // MARK: - State
 
     private func apply(_ state: VLCMediaPlayerState) {
+        DiagnosticsCenter.shared.record("playback.state", id: diagnostics?.id, numbers: ["state": Double(state.rawValue)])
+        diagnostics?.expectProgress(state == .opening || state == .playing)
         isPlaying = player.isPlaying
         hasFailed = state == .error
         // There is no buffering state in VLCKit 4 — a stall is reported through
@@ -366,6 +396,7 @@ final class IOSPlaybackModel {
         }
 
         currentTime = TimeInterval(player.time.intValue) / 1000
+        diagnostics?.progress(time: currentTime, playing: isPlaying || isBuffering)
         applyResumeIfReady()
         chooseSubtitleIfReady()
         rememberPositionOccasionally()

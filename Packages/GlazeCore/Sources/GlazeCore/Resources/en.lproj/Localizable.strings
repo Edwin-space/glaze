@@ -848,3 +848,12 @@ Pull down to refresh in the app afterwards. You can delete this note.
 
 "ios.settings.help" = "Help";
 "ios.settings.help.welcome" = "Show the introduction again";
+// Local diagnostic reports
+"diagnostics.title" = "Diagnostics";
+"diagnostics.enabled" = "Record diagnostic events";
+"diagnostics.detail" = "Stored only on this device. Up to 15 MB for 7 days. Addresses, credentials, filenames and subtitle text are excluded. Nothing is sent automatically.";
+"diagnostics.prepare" = "Prepare diagnostic report";
+"diagnostics.export" = "Share diagnostic report";
+"diagnostics.clear" = "Delete diagnostic data";
+"diagnostics.failed" = "Could not prepare the report. Try again.";
+"diagnostics.instructions" = "Enable recording before testing. If the app freezes, reopen it and prepare a report. Share it using AirDrop or Files. The report includes app version, OS version, event times and technical state.";

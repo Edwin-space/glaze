@@ -60,6 +60,7 @@ final class PlaybackController {
     }
 
     func loadWithNativeEngine(_ url: URL) {
+        DiagnosticsCenter.shared.record("playback.mac.native_start", id: DiagnosticsCenter.shared.token(for: url.absoluteString))
         beginNewPlaybackSession()
         nativeVLCSession.onTimeUpdate = { [weak self] time in
             guard let self else { return }
@@ -78,6 +79,7 @@ final class PlaybackController {
     }
 
     func loadWithAVKit(originalURL: URL, playbackURL: URL, shouldStartPlayback: Bool) {
+        DiagnosticsCenter.shared.record("playback.mac.av_start", id: DiagnosticsCenter.shared.token(for: originalURL.absoluteString))
         beginNewPlaybackSession()
 
         let item = AVPlayerItem(url: playbackURL)
@@ -168,6 +170,8 @@ final class PlaybackController {
     }
 
     func seek(to time: TimeInterval) {
+        DiagnosticsCenter.shared.record("playback.mac.seek_begin", numbers: ["seconds": time])
+        defer { DiagnosticsCenter.shared.record("playback.mac.seek_end") }
         let nextTime = min(max(time, 0), max(displayedDuration, 0))
         switch activePlaybackEngine {
         case .nativeVLC:

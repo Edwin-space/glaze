@@ -33,6 +33,8 @@ final class VLCScrubPreviewSource: ScrubPreviewSource, @unchecked Sendable {
     }
 
     func frame(at time: TimeInterval) async -> Data? {
+        let diagnostic = DiagnosticOperation("playback.preview")
+        defer { withExtendedLifetime(diagnostic) {} }
         let url = url
         let width = width
         // VLCKit scales the picture into exactly the box it is given, so a box of
@@ -42,7 +44,7 @@ final class VLCScrubPreviewSource: ScrubPreviewSource, @unchecked Sendable {
             guard size.width > 0, size.height > 0 else { return width * 9 / 16 }
             return (width * size.height / size.width).rounded()
         } ?? width * 9 / 16
-        return await withCheckedContinuation { continuation in
+        let result: Data? = await withCheckedContinuation { continuation in
             // The thumbnailer is one-shot: its settings are read when the fetch starts
             // and ignored afterwards, so each frame gets its own. Built on the main
             // thread, which is where VLCKit expects its objects to be made; the answer
@@ -57,6 +59,8 @@ final class VLCScrubPreviewSource: ScrubPreviewSource, @unchecked Sendable {
                 grab.start()
             }
         }
+        if result != nil { diagnostic.succeed() }
+        return result
     }
 }
 

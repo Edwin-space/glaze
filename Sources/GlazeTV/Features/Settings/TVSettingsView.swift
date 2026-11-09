@@ -6,6 +6,7 @@ struct TVSettingsView: View {
     var onOpenPairing: () -> Void = {}
 
     @State private var showsLicenses = false
+    @State private var diagnosticsEnabled = DiagnosticsCenter.shared.isEnabled
 
     private let sizeOptions: [(String, Float)] = [
         ("subtitle.appearance.size.small", 85),
@@ -22,6 +23,9 @@ struct TVSettingsView: View {
                 appearanceSection
                 playbackSection
                 aboutSection
+                Toggle(L10n.string("diagnostics.enabled"), isOn: $diagnosticsEnabled)
+                    .onChange(of: diagnosticsEnabled) { _, value in DiagnosticsCenter.shared.setEnabled(value) }
+                Text(L10n.string("diagnostics.detail")).font(.caption)
             }
             .padding(.horizontal, 84)
             .padding(.top, 70)

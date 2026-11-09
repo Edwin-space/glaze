@@ -153,6 +153,7 @@ struct IOSRootView: View {
             selection = MediaFileTypes.isVideo(url) ? .local : .books
         }
         .task { books.reload() }
+        .onChange(of: selection) { _, _ in DiagnosticsCenter.shared.record("ui.tab_changed") }
         // Files land while the app is in the background — the Files app, a cable, a
         // share from somewhere else. Only the device folder is re-read: going back to
         // a NAS every time someone switches apps would be rude and slow.

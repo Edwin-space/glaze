@@ -13,6 +13,7 @@ struct GlazeSettingsView: View {
         case network
         case metadata
         case keyboard
+        case diagnostics
 
         var id: Self { self }
 
@@ -23,6 +24,7 @@ struct GlazeSettingsView: View {
             case .network: "settings.tab.network"
             case .metadata: "settings.tab.metadata"
             case .keyboard: "settings.tab.keyboard"
+            case .diagnostics: "diagnostics.title"
             }
         }
 
@@ -33,6 +35,7 @@ struct GlazeSettingsView: View {
             case .network: "externaldrive.connected.to.line.below"
             case .metadata: "film"
             case .keyboard: "keyboard"
+            case .diagnostics: "stethoscope"
             }
         }
     }
@@ -102,6 +105,7 @@ struct GlazeSettingsView: View {
     @ViewBuilder
     private var selectedPage: some View {
         switch selection ?? .subtitles {
+        case .diagnostics: MacDiagnosticsView()
         case .subtitles: subtitleSettings
         case .translation: translationSettings
         case .network: networkSettings

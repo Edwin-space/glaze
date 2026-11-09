@@ -290,3 +290,7 @@
 - 한국어/영어 문구를 동시에 작성한다.
 - 구현된 키는 `Localizable.strings`와 대조한다.
 - FAQ나 사용자 가이드로 확장 가능한 문구는 별도 후보에 남긴다.
+
+## 진단 (2026-11-09)
+
+GlazeCore 한/영 `diagnostics.*`: title, enabled, detail, prepare, export, clear, failed, instructions. 기기 내 보관 15MB·7일, 제외 필드와 자동 전송 없음, 재실행 후 공유 방법을 같은 화면에서 설명한다.

@@ -30,6 +30,7 @@ final class IOSBookLibraryModel {
     static let sourceKey = "device.books"
 
     func reload() {
+        DiagnosticsCenter.shared.record("books.library.reload")
         task?.cancel()
         phase = .loading
 

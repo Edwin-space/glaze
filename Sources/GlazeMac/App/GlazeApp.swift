@@ -4,12 +4,15 @@ import SwiftUI
 
 @main
 struct GlazeApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+    init() { DiagnosticsCenter.shared.start() }
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onChange(of: scenePhase) { _, phase in DiagnosticsCenter.shared.setActive(phase == .active) }
                 .frame(minWidth: 960, minHeight: 620)
                 // Opening a video from Finder while Glaze was running made a *second*
                 // window and played the file there, behind the one the viewer was

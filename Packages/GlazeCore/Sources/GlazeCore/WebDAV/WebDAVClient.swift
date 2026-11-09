@@ -102,6 +102,7 @@ public struct WebDAVClient: Sendable {
         _ url: URL,
         credentials: (username: String, password: String)?
     ) async throws -> [WebDAVEntry] {
+        let diagnostic = DiagnosticOperation("network.webdav.list")
         var request = URLRequest(url: url)
         request.httpMethod = "PROPFIND"
         // Depth 1 is this folder's children. Depth infinity would walk an entire NAS
@@ -152,6 +153,8 @@ public struct WebDAVClient: Sendable {
             throw WebDAVError.network("HTTP \(http.statusCode)")
         }
 
+        diagnostic.succeed()
+        DiagnosticsCenter.shared.record("network.webdav.response", numbers: ["status": Double(http.statusCode), "bytes": Double(data.count)])
         return WebDAVPropfindParser.parse(data, baseURL: url)
     }
 

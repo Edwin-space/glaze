@@ -149,6 +149,8 @@ struct IOSSettingsView: View {
             }
 
             Section(L10n.string("ios.settings.about")) {
+                NavigationLink(L10n.string("diagnostics.title")) { IOSDiagnosticsView() }
+                    .accessibilityIdentifier("diagnostics.entry")
                 LabeledContent(L10n.string("ios.settings.version"), value: Self.version)
                 NavigationLink(L10n.string("legal.title")) {
                     IOSLicensesView()

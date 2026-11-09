@@ -33,6 +33,7 @@ final class TVPlaybackModel {
 
     let player = VLCMediaPlayer()
     private var observer: PlayerObserver?
+    private var diagnosticSessionID = UUID().uuidString
 
     private let positions = PlaybackPositionStore()
 
@@ -61,6 +62,8 @@ final class TVPlaybackModel {
         automaticallySelectSubtitles: Bool = true,
         preferredSubtitleScale: Float = 100
     ) {
+        diagnosticSessionID = UUID().uuidString
+        DiagnosticsCenter.shared.record("playback.tv.start", id: diagnosticSessionID)
         let media = VLCMedia(url: resource.playbackURL)
         // Apple TV was left on VLCKit's default buffer, which a 4K remux over the
         // network outruns — see `MediaCachingPolicy`.
@@ -140,6 +143,8 @@ final class TVPlaybackModel {
     }
 
     func stop() {
+        DiagnosticsCenter.shared.record("playback.tv.stop_begin", id: diagnosticSessionID)
+        defer { DiagnosticsCenter.shared.record("playback.tv.stop_end", id: diagnosticSessionID) }
         hasReportedFinish = true
         player.stop()
         isPlaying = false

@@ -78,6 +78,7 @@ public struct NetworkFolderReader: Sendable {
     /// Everything directly in one folder. Folders first, then everything else, each
     /// group in the order a person numbers files.
     public func read(_ path: String) async throws -> [NetworkFolderEntry] {
+        let diagnostic = DiagnosticOperation("network.folder.read")
         let target = path.isEmpty ? rootPath : path
         let entries: [NetworkFolderEntry] = switch backend {
         case .synology(let session): try await readSynology(target, session: session)
@@ -85,6 +86,8 @@ public struct NetworkFolderReader: Sendable {
             try await readWebDAV(target, connection: connection, password: password)
         case .dlna(let server): try await readDLNA(target, server: server)
         }
+        diagnostic.succeed()
+        DiagnosticsCenter.shared.record("network.folder.result", numbers: ["count": Double(entries.count)])
         return sort(entries)
     }
 

@@ -30,7 +30,10 @@ public actor UPnPContentDirectoryClient: NetworkMediaServerBrowsing {
     }
 
     public func browse(server: NetworkMediaServer, objectID: String) async throws -> [NetworkMediaNode] {
-        try await loadNodes(server: server, objectID: objectID)
+        let diagnostic = DiagnosticOperation("network.dlna.browse")
+        let nodes = try await loadNodes(server: server, objectID: objectID)
+        diagnostic.succeed()
+        return nodes
     }
 
     /// Returns a media-server root suitable for a video player rather than a generic

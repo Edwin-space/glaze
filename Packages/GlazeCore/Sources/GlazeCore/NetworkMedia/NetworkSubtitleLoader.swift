@@ -45,9 +45,12 @@ public actor NetworkSubtitleLoader {
     }
 
     public func load(_ resource: NetworkSubtitleResource) async throws -> URL {
+        let diagnostic = DiagnosticOperation("subtitle.download")
+        defer { withExtendedLifetime(diagnostic) {} }
         let destination = cacheURL(for: resource)
         let outputURL = convertedURLIfNeeded(for: destination)
         if FileManager.default.fileExists(atPath: outputURL.path) {
+            diagnostic.succeed()
             return outputURL
         }
         guard outputURL == destination || convertToSRT != nil else {
@@ -62,13 +65,14 @@ public actor NetworkSubtitleLoader {
         let data = try await download(from: resource.url)
         try data.write(to: destination, options: .atomic)
 
-        guard outputURL != destination, let convertToSRT else { return destination }
+        guard outputURL != destination, let convertToSRT else { diagnostic.succeed(); return destination }
         do {
             try await convertToSRT(destination, outputURL)
         } catch {
             try? FileManager.default.removeItem(at: destination)
             throw error
         }
+        diagnostic.succeed()
         return outputURL
     }
 

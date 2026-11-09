@@ -206,3 +206,9 @@ Finder에서 이동 > 서버에 연결(⌘K)로 SMB 폴더를 먼저 마운트�
 - 위 질문 순서는 실제 사용 순서를 따른다(영상 열기 → 자막 → 만들기 → 번역 → 네트워크 → 개인정보).
 - "아직 되지 않는 것"은 숨기지 않고 별도 항목으로 싣는다.
 - 앱 안 `?` 설명과 문장이 달라지면 둘 중 하나가 틀린 것이다. 앱을 기준으로 맞춘다.
+
+## 앱이 멈췄을 때 진단 파일 보내기
+
+테스트 전 설정 → 정보 → 진단에서 `진단 기록 켜기`를 켜세요. 멈추면 발생 시각과 동작을 메모하고 앱을 다시 실행해 `진단 파일 준비` → `진단 파일 공유`에서 AirDrop/파일로 전달하세요. 최근 기록은 강제 종료 후에도 남습니다. 최대 15MB·7일, 자동 업로드 없음. 주소·인증·파일명·자막 본문은 제외됩니다. 기록을 끄거나 삭제할 수 있습니다. 공개 이슈에 보고서를 첨부하지 마세요.
+
+Enable diagnostic recording in Settings → About → Diagnostics before testing. After a freeze, note the time/action, reopen the app, prepare and share a report via AirDrop or Files. Reports stay local (up to 15 MB, 7 days), exclude credentials/addresses/filenames/subtitle text, and are never uploaded automatically. Do not post reports publicly.

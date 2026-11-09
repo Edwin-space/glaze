@@ -201,12 +201,15 @@ public struct SynologyClient: Sendable {
     }
 
     private func send(_ request: URLRequest) async throws -> [String: Any] {
+        let diagnostic = DiagnosticOperation("network.synology.request")
+        defer { withExtendedLifetime(diagnostic) {} }
         let (data, _) = try await load(request)
 
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw SynologyError.notSynology
         }
         if root["success"] as? Bool == true {
+            diagnostic.succeed()
             return root["data"] as? [String: Any] ?? [:]
         }
         let code = (root["error"] as? [String: Any])?["code"] as? Int ?? -1
