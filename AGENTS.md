@@ -95,6 +95,13 @@ Run command:
 https://github.com/Edwin-space/glaze.git
 ```
 
+## Physical Device Testing
+
+- Use the connected **iPhone 13 mini** as the default iPhone for installation, launch, diagnostics, and real-device tests.
+- Do not use **iPhone 17 Pro** for testing unless the user explicitly requests it.
+- Verify the device model before selecting a destination; do not choose a phone merely because it is newer or listed first.
+- If iPhone 13 mini is unavailable or locked, report that condition instead of switching to another iPhone.
+
 ## Agent Startup Checklist
 
 At the start of a new session:
