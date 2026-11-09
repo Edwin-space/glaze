@@ -7,6 +7,7 @@ import SwiftUI
 /// why they are good gestures and why nobody finds them. Shown once over the first
 /// film, and after that only when asked for in 설정 › 도움말.
 struct IOSGestureGuideView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     /// Over a film the card floats on the picture and carries its own dismissal; in
     /// Settings it is a page and the navigation bar does that job.
     var onDone: (() -> Void)?
@@ -49,10 +50,65 @@ struct IOSGestureGuideView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: IOSTheme.Spacing.large) {
-            Text(L10n.string("ios.guide.title"))
-                .font(.title3.weight(.semibold))
+        Group {
+            if let onDone {
+                VStack(spacing: 0) {
+                    if !dynamicTypeSize.isAccessibilitySize {
+                        guideTitle
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(IOSTheme.Spacing.large)
+                    }
+                    ScrollView {
+                        if dynamicTypeSize.isAccessibilitySize {
+                            // A large heading must not consume the entire short
+                            // landscape viewport. Keep it readable in the scroll
+                            // content rather than shrinking or truncating it.
+                            guideContents.padding(IOSTheme.Spacing.large)
+                        } else {
+                            gestureRows
+                                .padding(.horizontal, IOSTheme.Spacing.large)
+                                .padding(.bottom, IOSTheme.Spacing.large)
+                        }
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .accessibilityIdentifier("player.gestureGuide.content")
+                    Divider()
+                    Button(action: onDone) {
+                        Text(L10n.string("ios.guide.got_it"))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(IOSTheme.onAccent)
+                            .frame(maxWidth: .infinity, minHeight: IOSTheme.minimumTouchTarget)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(IOSTheme.amber)
+                    .accessibilityIdentifier("player.gestureGuide.done")
+                    .padding(IOSTheme.Spacing.large)
+                }
+                .frame(maxHeight: .infinity)
+            } else {
+                guideContents.padding(IOSTheme.Spacing.large)
+            }
+        }
+        .frame(maxWidth: 420)
+    }
 
+    private var guideContents: some View {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.large) {
+            guideTitle
+            gestureRows
+        }
+    }
+
+    private var guideTitle: some View {
+        Text(L10n.string("ios.guide.title"))
+            .font(.title3.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("player.gestureGuide.title")
+    }
+
+    private var gestureRows: some View {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.large) {
             ForEach(gestures) { gesture in
                 HStack(alignment: .top, spacing: IOSTheme.Spacing.medium) {
                     Image(systemName: gesture.symbol)
@@ -71,20 +127,7 @@ struct IOSGestureGuideView: View {
                 .accessibilityElement(children: .combine)
             }
 
-            if let onDone {
-                Button {
-                    onDone()
-                } label: {
-                    Text(L10n.string("ios.guide.got_it"))
-                        .font(.body.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: IOSTheme.minimumTouchTarget)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(IOSTheme.amber)
-            }
         }
-        .padding(IOSTheme.Spacing.large)
-        .frame(maxWidth: 420)
     }
 }
 

@@ -850,6 +850,11 @@ Pull down to refresh in the app afterwards. You can delete this note.
 "ios.settings.help.welcome" = "Show the introduction again";
 // Local diagnostic reports
 "diagnostics.title" = "Diagnostics";
+"diagnostics.section.recording" = "Recording";
+"diagnostics.section.report" = "Report and sharing";
+"diagnostics.section.data" = "Stored data";
+"diagnostics.preparing" = "Preparing report…";
+"ios.server.empty.detail" = "Add a WebDAV, Synology, or DLNA server to browse videos on your network.";
 "diagnostics.enabled" = "Record diagnostic events";
 "diagnostics.detail" = "Stored only on this device. Up to 15 MB for 7 days. Addresses, credentials, filenames and subtitle text are excluded. Nothing is sent automatically.";
 "diagnostics.prepare" = "Prepare diagnostic report";

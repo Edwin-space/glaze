@@ -396,7 +396,7 @@ final class SubtitleController {
             return
         }
         let correctedDisplayName = selectedSubtitleLanguageCode.flatMap {
-            Locale.current.localizedString(forLanguageCode: $0)
+            L10n.languageName(for: $0)
         } ?? displayName
         offerTranslation(displayName: correctedDisplayName, sourceLanguageCode: selectedSubtitleLanguageCode)
     }
@@ -664,8 +664,7 @@ final class SubtitleController {
             segments: SubtitleSegmenter.segments(from: subtitleCues),
             output: translationOutput,
             targetLanguageCode: targetLanguageCode,
-            targetLanguageDisplayName: Locale.current
-                .localizedString(forLanguageCode: targetLanguageCode) ?? targetLanguageCode,
+            targetLanguageDisplayName: L10n.languageName(for: targetLanguageCode) ?? targetLanguageCode,
             engineID: translationEngineID,
             videoURL: videoURL
         )
@@ -917,7 +916,7 @@ final class SubtitleController {
     var panelOutputValue: String {
         if !subtitleCues.isEmpty {
             let language = selectedSubtitleLanguageCode.flatMap {
-                Locale.current.localizedString(forLanguageCode: $0)
+                L10n.languageName(for: $0)
             } ?? L10n.string("subtitle.language.unknown")
             return String(format: L10n.string("subtitle.panel.output_loaded_format"), language)
         }
@@ -980,7 +979,7 @@ final class SubtitleController {
     /// that Glaze will work it out from the audio.
     var panelSpokenLanguageValue: String {
         guard let spokenLanguageCode,
-              let name = Locale.current.localizedString(forLanguageCode: spokenLanguageCode) else {
+              let name = L10n.languageName(for: spokenLanguageCode) else {
             return L10n.string("subtitle.panel.auto_detect")
         }
 
@@ -994,7 +993,7 @@ final class SubtitleController {
         if let languageCode = track.languageCode {
             return String(
                 format: L10n.string("subtitle.embedded.language_format"),
-                languageCode.uppercased()
+                L10n.languageName(for: languageCode) ?? languageCode.uppercased()
             )
         }
         return String(

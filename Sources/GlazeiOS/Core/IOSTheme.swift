@@ -7,6 +7,8 @@ import SwiftUI
 enum IOSTheme {
     static let ground = Color(red: 0.055, green: 0.055, blue: 0.063)
     static let amber = Color(red: 0.91, green: 0.59, blue: 0.24)
+    /// Dark ink on amber: white on this brand color has only ~2.37:1 contrast.
+    static let onAccent = Color.black
     static let dim = Color.white.opacity(0.55)
 
     /// Gaps come from here rather than from whatever number felt right.

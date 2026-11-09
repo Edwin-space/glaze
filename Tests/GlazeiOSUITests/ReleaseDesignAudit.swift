@@ -62,16 +62,19 @@ final class ReleaseDesignAudit: XCTestCase {
         app.launch()
         app.buttons["Network"].firstMatch.tap()
         capture("30-network-start")
-        app.buttons["New Server"].firstMatch.tap()
+        let emptyAction = app.buttons["network.empty.addServer"]
+        XCTAssertTrue(emptyAction.isHittable)
+        emptyAction.tap()
         capture("31-source-choices")
         let webdav = app.buttons.containing(NSPredicate(format: "label CONTAINS[c] %@", "WebDAV")).firstMatch
         XCTAssertTrue(webdav.waitForExistence(timeout: 10))
         webdav.tap()
-        let address = app.textFields.element(boundBy: 1)
+        let address = app.textFields["webdav.address"]
         XCTAssertTrue(address.waitForExistence(timeout: 10))
         capture("32-webdav-empty")
         address.tap()
         address.typeText("https://example.invalid:5006/video/")
+        XCTAssertTrue(app.staticTexts["Address"].exists, "A filled field must retain its visible label")
         capture("33-webdav-keyboard")
         #endif
     }
@@ -112,6 +115,15 @@ final class ReleaseDesignAudit: XCTestCase {
     }
 
     func testFirstPlaybackGuideLandscape() {
+        captureFirstPlaybackGuide(expectPinnedTitle: true)
+    }
+
+    func testFirstPlaybackGuideWithLargeText() {
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        captureFirstPlaybackGuide(expectPinnedTitle: false)
+    }
+
+    private func captureFirstPlaybackGuide(expectPinnedTitle: Bool) {
         app.launchArguments += ["-ios.onboarding.seenGestureGuide", "NO"]
         app.launch()
         let folder = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "GlazeAudit")).firstMatch
@@ -123,6 +135,18 @@ final class ReleaseDesignAudit: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         Thread.sleep(forTimeInterval: 2)
         capture("46-first-playback-guide-landscape")
+        let done = app.buttons["player.gestureGuide.done"]
+        XCTAssertTrue(done.isHittable)
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(done.frame), "Completion stays inside the visible screen")
+        let guide = app.scrollViews["player.gestureGuide.content"]
+        guide.swipeUp()
+        capture("46b-first-playback-guide-landscape-scrolled")
+        XCTAssertTrue(done.isHittable)
+        if expectPinnedTitle {
+            let title = app.staticTexts["player.gestureGuide.title"]
+            XCTAssertTrue(app.windows.firstMatch.frame.contains(title.frame), "Guide heading stays visible while explanations scroll")
+        }
+        done.tap()
         XCUIDevice.shared.orientation = .portrait
     }
 

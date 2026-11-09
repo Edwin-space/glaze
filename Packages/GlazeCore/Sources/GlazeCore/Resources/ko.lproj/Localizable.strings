@@ -850,6 +850,11 @@
 "ios.settings.help.welcome" = "처음 안내 다시 보기";
 // Local diagnostic reports
 "diagnostics.title" = "진단";
+"diagnostics.section.recording" = "기록 관리";
+"diagnostics.section.report" = "보고서 및 공유";
+"diagnostics.section.data" = "보관된 데이터";
+"diagnostics.preparing" = "보고서 준비 중…";
+"ios.server.empty.detail" = "WebDAV, 시놀로지 또는 DLNA 서버를 추가하면 네트워크의 영상을 탐색할 수 있습니다.";
 "diagnostics.enabled" = "진단 기록 켜기";
 "diagnostics.detail" = "이 기기에만 최대 15MB·7일간 저장합니다. 주소·인증 정보·파일명·자막 본문은 기록하지 않으며 자동 전송하지 않습니다.";
 "diagnostics.prepare" = "진단 파일 준비";

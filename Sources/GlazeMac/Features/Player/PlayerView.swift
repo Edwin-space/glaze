@@ -825,7 +825,7 @@ struct PlayerView: View {
     }
 
     private func languageDisplayName(_ code: String) -> String {
-        Locale.current.localizedString(forLanguageCode: code) ?? code.uppercased()
+        L10n.languageName(for: code) ?? code.uppercased()
     }
 
     private var selectedSubtitleLanguageBinding: Binding<String> {

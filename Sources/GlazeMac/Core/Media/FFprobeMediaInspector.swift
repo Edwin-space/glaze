@@ -157,10 +157,7 @@ actor FFprobeMediaInspector {
     }
 
     private func displayContainer(_ rawValue: String?, fallback: String) -> String {
-        let names = rawValue?.split(separator: ",").map(String.init) ?? []
-        let preferred = names.first(where: { $0 != "matroska" }) ?? names.first
-        let value = preferred ?? fallback
-        return value.isEmpty ? "–" : value.uppercased()
+        MediaContainerName.displayName(formatNames: rawValue, pathExtension: fallback)
     }
 
     private func formatDuration(_ rawValue: String?) -> String {

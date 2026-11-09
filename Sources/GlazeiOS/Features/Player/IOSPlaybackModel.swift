@@ -449,7 +449,7 @@ final class IOSPlaybackModel {
 
     private static func option(for track: VLCMediaPlayer.Track) -> IOSTrackOption {
         let normalized = track.language.flatMap(SubtitleLanguageCode.normalized)
-        let localized = normalized.flatMap { Locale.current.localizedString(forLanguageCode: $0) }
+        let localized = normalized.flatMap { L10n.languageName(for: $0) }
         let name = track.trackName.trimmingCharacters(in: .whitespacesAndNewlines)
         return IOSTrackOption(
             id: track.trackId,

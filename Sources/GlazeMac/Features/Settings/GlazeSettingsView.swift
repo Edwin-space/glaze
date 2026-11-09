@@ -462,7 +462,7 @@ struct GlazeSettingsView: View {
     }
 }
 
-private struct SettingsPage<Content: View>: View {
+struct SettingsPage<Content: View>: View {
     let titleKey: String
     let descriptionKey: String
     let content: Content

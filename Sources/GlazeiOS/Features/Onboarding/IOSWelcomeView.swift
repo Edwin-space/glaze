@@ -56,6 +56,7 @@ struct IOSWelcomeView: View {
                 } label: {
                     Text(L10n.string("ios.welcome.start"))
                         .font(.body.weight(.semibold))
+                        .foregroundStyle(IOSTheme.onAccent)
                         .frame(maxWidth: .infinity, minHeight: IOSTheme.minimumTouchTarget)
                 }
                 .buttonStyle(.borderedProminent)

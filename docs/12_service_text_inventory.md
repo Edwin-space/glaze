@@ -294,3 +294,17 @@
 ## 진단 (2026-11-09)
 
 GlazeCore 한/영 `diagnostics.*`: title, enabled, detail, prepare, export, clear, failed, instructions. 기기 내 보관 15MB·7일, 제외 필드와 자동 전송 없음, 재실행 후 공유 방법을 같은 화면에서 설명한다.
+
+## 출시 검수 수정 문구 (2026-11-09)
+
+| 키 | 한국어 | English |
+|---|---|---|
+| diagnostics.section.recording | 기록 관리 | Recording |
+| diagnostics.section.report | 보고서 및 공유 | Report and sharing |
+| diagnostics.section.data | 보관된 데이터 | Stored data |
+| diagnostics.preparing | 보고서 준비 중… | Preparing report… |
+| ios.server.empty.detail | WebDAV, 시놀로지 또는 DLNA 서버를 추가하면 네트워크의 영상을 탐색할 수 있습니다. | Add a WebDAV, Synology, or DLNA server to browse videos on your network. |
+
+기존 `ios.server.add`를 빈 상태 버튼에도 재사용한다. WebDAV의 기존 name/address/username/password
+키는 placeholder 대신 지속 라벨과 접근성 이름에 사용한다. 언어명은 앱이 선택한 ko/en에 맞춰
+`L10n.languageName`으로 표시하며 서버에서 제공한 사용자 지정 트랙 제목은 보존한다.

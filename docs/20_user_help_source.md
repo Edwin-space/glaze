@@ -212,3 +212,19 @@ Finder에서 이동 > 서버에 연결(⌘K)로 SMB 폴더를 먼저 마운트�
 테스트 전 설정 → 정보 → 진단에서 `진단 기록 켜기`를 켜세요. 멈추면 발생 시각과 동작을 메모하고 앱을 다시 실행해 `진단 파일 준비` → `진단 파일 공유`에서 AirDrop/파일로 전달하세요. 최근 기록은 강제 종료 후에도 남습니다. 최대 15MB·7일, 자동 업로드 없음. 주소·인증·파일명·자막 본문은 제외됩니다. 기록을 끄거나 삭제할 수 있습니다. 공개 이슈에 보고서를 첨부하지 마세요.
 
 Enable diagnostic recording in Settings → About → Diagnostics before testing. After a freeze, note the time/action, reopen the app, prepare and share a report via AirDrop or Files. Reports stay local (up to 15 MB, 7 days), exclude credentials/addresses/filenames/subtitle text, and are never uploaded automatically. Do not post reports publicly.
+
+## 2026-11-09 · 안내 및 연결 화면 보완
+
+- iPhone 최초 재생 안내는 설명을 스크롤할 수 있고 완료 버튼은 항상 별도 하단에 남습니다.
+  접근성 글자 크기에서는 긴 제목도 스크롤되므로 가로 화면에서도 글자를 줄일 필요가 없습니다.
+- 네트워크에 서버가 없다면 화면 안의 `서버 추가` 또는 우측 상단 +로 연결을 시작하세요.
+  WebDAV 주소를 입력해도 이름/주소/사용자 이름/암호 라벨은 계속 표시됩니다.
+- Mac 설정의 `진단`은 기록 관리, 보고서 및 공유, 보관된 데이터로 나뉩니다.
+  보고서 준비 중에는 완료를 기다린 후 공유하거나 기록을 삭제하세요.
+- 기본 언어 이름은 앱 언어에 맞춰 표시합니다. NAS에서 붙인 사용자 지정 자막 트랙 제목은
+  그대로 남을 수 있습니다. Matroska 파일은 정보 패널에서 Matroska로 표시합니다.
+
+The first-playback guide keeps its completion button outside the scrollable explanation. At accessibility
+text sizes, its heading scrolls too rather than being shrunk. Start adding a server from the empty
+Network screen or the toolbar +; WebDAV labels stay visible after typing. Mac Diagnostics now groups
+recording, report/sharing and stored data. Wait for report preparation to finish before sharing or clearing.

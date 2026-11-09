@@ -9,6 +9,7 @@ import SwiftUI
 enum TVTheme {
     static let ground = Color(red: 0.039, green: 0.039, blue: 0.047)
     static let amber = Color(red: 0.91, green: 0.59, blue: 0.24)
+    static let onAccent = Color.black
     static let dim = Color.white.opacity(0.55)
 
     enum Radius {

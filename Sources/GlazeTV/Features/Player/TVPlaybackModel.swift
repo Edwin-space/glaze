@@ -246,7 +246,7 @@ final class TVPlaybackModel {
         subtitleTracks = tracks.map { track in
             let normalizedLanguage = track.language.flatMap(SubtitleLanguageCode.normalized)
             let localizedLanguage = normalizedLanguage.flatMap {
-                Locale.current.localizedString(forLanguageCode: $0)
+                L10n.languageName(for: $0)
             }
             let name = track.trackName.trimmingCharacters(in: .whitespacesAndNewlines)
             return TVSubtitleTrackOption(

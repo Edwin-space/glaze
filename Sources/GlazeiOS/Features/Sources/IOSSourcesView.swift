@@ -93,9 +93,21 @@ struct IOSSourcesView: View {
     private var serverSection: some View {
         Section {
             if servers.isEmpty {
-                Text(L10n.string("ios.server.empty"))
-                    .font(.footnote)
-                    .foregroundStyle(IOSTheme.dim)
+                VStack(alignment: .leading, spacing: IOSTheme.Spacing.small) {
+                    Text(L10n.string("ios.server.empty")).font(.headline)
+                    Text(L10n.string("ios.server.empty.detail"))
+                        .font(.subheadline)
+                        .foregroundStyle(IOSTheme.dim)
+                    Button { isAddingServer = true } label: {
+                        Label(L10n.string("ios.server.add"), systemImage: "plus")
+                            .foregroundStyle(IOSTheme.onAccent)
+                            .frame(minHeight: IOSTheme.minimumTouchTarget)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(IOSTheme.amber)
+                    .accessibilityIdentifier("network.empty.addServer")
+                }
+                .padding(.vertical, IOSTheme.Spacing.small)
             }
             ForEach(servers, content: serverRow)
                 .onDelete(perform: remove)
@@ -254,15 +266,27 @@ struct IOSWebDAVSetupView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField(L10n.string("webdav.field.name"), text: $name)
-                    TextField(L10n.string("webdav.field.url"), text: $address)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                    TextField(L10n.string("webdav.field.username"), text: $username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    SecureField(L10n.string("webdav.field.password"), text: $password)
+                    field("webdav.field.name") {
+                        TextField("", text: $name)
+                            .accessibilityIdentifier("webdav.name")
+                    }
+                    field("webdav.field.url") {
+                        TextField("https://nas.example/video/", text: $address)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.URL)
+                            .accessibilityIdentifier("webdav.address")
+                    }
+                    field("webdav.field.username") {
+                        TextField("", text: $username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textContentType(.username)
+                    }
+                    field("webdav.field.password") {
+                        SecureField("", text: $password)
+                            .textContentType(.password)
+                    }
                 } footer: {
                     Text(L10n.string("webdav.field.url.hint"))
                 }
@@ -316,6 +340,17 @@ struct IOSWebDAVSetupView: View {
                 }
             }
         }
+    }
+
+    private func field<Content: View>(_ key: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {
+            Text(L10n.string(key))
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+                .accessibilityHidden(true) // The input retains the same spoken label.
+            content().accessibilityLabel(L10n.string(key))
+        }
+        .padding(.vertical, IOSTheme.Spacing.hair)
     }
 
     private var canConnect: Bool {

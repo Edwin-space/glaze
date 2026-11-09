@@ -9,6 +9,10 @@ as evidence; the Mac suite captures the target application's window.
 
 - `GlazeiOSUITests/ReleaseDesignAudit`: welcome, settings, largest text, Korean,
   source forms, local playback, subtitle sheet, rotation, first-playback guide.
+  The guide also runs at accessibility XXXL: its heading joins the scroll content,
+  while completion remains fixed. At standard sizes both heading and completion
+  stay outside the scroll content. Tests assert the completion control is hittable
+  and inside the visible window, before and after scrolling.
 - `GlazeMacUITests/MacReleaseDesignAudit`: start, settings, playback and inspectors.
 - `GlazeTVUITests/TVReleaseDesignAudit`: simulator onboarding, home and settings.
 

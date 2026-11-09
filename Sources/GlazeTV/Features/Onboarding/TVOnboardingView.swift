@@ -112,7 +112,10 @@ struct TVOnboardingView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 940)
 
-            Button(L10n.string("tv.onboarding.continue")) { step = .language }
+            Button { step = .language } label: {
+                Text(L10n.string("tv.onboarding.continue"))
+                    .foregroundStyle(TVTheme.onAccent)
+            }
                 .buttonStyle(.borderedProminent)
                 .tint(TVTheme.amber)
                 .padding(.top, 18)
@@ -165,7 +168,10 @@ struct TVOnboardingView: View {
             HStack(spacing: 22) {
                 Button(L10n.string("network.browser.back")) { step = .welcome }
                     .focused($focusedControl, equals: .languageBack)
-                Button(L10n.string("tv.onboarding.continue")) { step = .sources }
+                Button { step = .sources } label: {
+                    Text(L10n.string("tv.onboarding.continue"))
+                        .foregroundStyle(TVTheme.onAccent)
+                }
                     .buttonStyle(.borderedProminent)
                     .tint(TVTheme.amber)
                     .focused($focusedControl, equals: .languageContinue)
@@ -204,9 +210,10 @@ struct TVOnboardingView: View {
                     Task { await finish() }
                 } label: {
                     if isFinishing {
-                        ProgressView()
+                        ProgressView().tint(TVTheme.onAccent)
                     } else {
                         Text(L10n.string("tv.onboarding.finish"))
+                            .foregroundStyle(TVTheme.onAccent)
                     }
                 }
                     .buttonStyle(.borderedProminent)

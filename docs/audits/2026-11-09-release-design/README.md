@@ -134,3 +134,53 @@ AI 생성·번역 완료/취소/실패, 도서 리더, tvOS 재생·탐색·자�
 Release 권한, 전 플랫폼 VoiceOver·대비 증가·투명도 줄이기·최소 지원 OS는
 유효한 종단 캡처가 없다. 실제/전용 검수 서버·추가 fixture와 별도 시나리오가 필요하다.
 기존 화면의 버튼 존재나 이전 문서로 대신 통과 처리하지 않았다.
+
+## 14. UI-00–06 수정 후 증거
+
+최초 검수 원본은 위에 보존한다. 아래는 수정본에서 직접 열어 확인한 증거이며
+전체 기능/접근성 통과를 의미하지 않는다. 최초 안내는 최종 일반/접근성 분기 코드의
+캡처다. 다른 패널은 해당 수정이 들어간 재검수 배치의 원본이며 이후 안내 전용 수정은
+그 패널들을 바꾸지 않는다. 테스트 식별자/실행 경계는 [수정 후 보고](../../53_release_design_audit.md)에 기록한다.
+
+### 최초 안내 · 일반 가로와 최대 글자 스크롤
+
+일반 크기에서는 제목·완료 고정, 접근성 크기에서는 제목도 본문과 스크롤한다.
+두 경우 모두 완료 버튼은 화면 안에 남고 실제 탭으로 안내를 끝냈다.
+
+![일반 가로 안내](fixes/guide-landscape.png)
+![최대 글자 크기 본문 스크롤 후](fixes/guide-accessibility-scrolled.png)
+
+### Mac 설정 정렬 / 컨테이너 정보
+
+제목과 설명이 공통 설정 시작선을 따르고 기록/공유/삭제가 카드로 구분된다.
+MKV 정보는 Matroska로 표시하며 정지 상태 영상도 유지된다. 회색/유리 표면의
+시스템 대비 전체를 검증한 것은 아니다.
+
+![Mac 진단 설정](fixes/mac-diagnostics.png)
+![Matroska 정보](fixes/mac-matroska.png)
+
+### 언어 / 입력 / 네트워크 빈 상태
+
+영문 앱의 언어명이 English/German 등으로 일치한다. 주소를 입력해도 Address가
+남고 빈 서버 목록에서 New Server로 진입한다. 실제 인증을 수행한 캡처는 아니다.
+
+![영문 기본 언어](fixes/english-settings.png)
+![WebDAV 입력 후 라벨](fixes/webdav-filled.png)
+![네트워크 빈 상태 CTA](fixes/network-empty.png)
+![iPad 자막·오디오 언어](fixes/ipad-track-language.png)
+
+### tvOS 포커스 / 언어명
+
+밝은 포커스의 Continue가 검정으로 읽힌다. 언어 카드는 앱의 영문 표기를 따른다.
+실물 TV 재생·리모컨 탐색 검증은 별도다.
+
+![TV 포커스 전경](fixes/tv-focused-continue.png)
+![TV 언어 설정](fixes/tv-language.png)
+
+### 실물 iPhone 13 mini · 최종 빌드
+
+지정된 실물에서 환영 화면/안내 기본/안내 AX XXXL 3개가 통과했다. 캡처는 공개 검수
+파일만 사용했다. iPhone 17 Pro는 사용하지 않았다.
+
+![실물 mini 시작 버튼](fixes/device-mini-start.png)
+![실물 mini 가로 안내](fixes/device-mini-guide.png)

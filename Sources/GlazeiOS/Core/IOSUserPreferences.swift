@@ -156,7 +156,7 @@ struct IOSSubtitleLanguage: Identifiable, Hashable {
     let id: String
 
     var localizedName: String {
-        Locale.current.localizedString(forLanguageCode: id)?.capitalized ?? id.uppercased()
+        L10n.languageName(for: id) ?? id.uppercased()
     }
 
     static let supported: [IOSSubtitleLanguage] = [
