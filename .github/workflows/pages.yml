@@ -11,6 +11,7 @@ on:
     paths:
       - "site/**"
       - ".github/workflows/pages.yml"
+      - "script/check_public_site.py"
   workflow_dispatch:
 
 permissions:
@@ -30,9 +31,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Validate documents and local asset links
+        run: python3 script/check_public_site.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Check published documents and assets
+        run: python3 script/check_public_site.py --base-url "$PAGES_URL"
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
