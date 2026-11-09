@@ -30,6 +30,7 @@
 - `19_engineering_guardrails.md`: **작업 전 필수 확인 사항.** 놓치면 조용히 깨지는 것들을 실제 사고와 함께 정리
 - `20_user_help_source.md`: 출시 시 웹사이트 FAQ·사용 설명서로 옮길 사용자 도움말 원본
 - `21_media_server_vision.md`: **최종 방향.** NAS 중심 개인 미디어 서비스와, 지금 그 길을 막지 않기 위한 결정
+- `53_release_design_audit.md`: 2026-11-09 실행 화면 기반 출시 전 UI 검수, 우선순위와 미검수 게이트
 
 ## 제품 한 줄 정의
 

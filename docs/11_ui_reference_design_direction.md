@@ -374,6 +374,10 @@ AI 생성 필드:
 
 ## 참고 출처
 
+2026-11-09 현재 구현의 검수 결과는 [출시 전 UI 검수](53_release_design_audit.md)를
+기준으로 본다. 아래 과거 구현 상태와 승인 시안만으로 현재 앱이 검증됐다고
+판단하지 않는다. 이번 작업은 검수이며 승인 디자인 또는 제품 UI를 변경하지 않았다.
+
 - IINA 공식 웹사이트: https://iina.io/
 - Infuse 공식 웹사이트: https://firecore.com/infuse
 - Elmedia Player 공식 웹사이트: https://www.elmedia-video-player.com/

@@ -147,7 +147,59 @@ targets:
         SWIFT_VERSION: "6.0"
         TEST_TARGET_NAME: GlazeiOS
 
+  GlazeTVUITests:
+    type: bundle.ui-testing
+    platform: tvOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/GlazeTVUITests
+    dependencies:
+      - target: GlazeTV
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze.tvuitests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JBN99YZ7KN
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: GlazeTV
+
+  GlazeMacUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Tests/GlazeMacUITests
+    dependencies:
+      - target: GlazeMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.edwin.glaze.macuitests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JBN99YZ7KN
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: GlazeMac
+
 schemes:
+  GlazeTVUITests:
+    build:
+      targets:
+        GlazeTV: all
+        GlazeTVUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - GlazeTVUITests
+  GlazeMacUITests:
+    build:
+      targets:
+        GlazeMac: all
+        GlazeMacUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - GlazeMacUITests
   GlazeMac:
     build:
       targets:
