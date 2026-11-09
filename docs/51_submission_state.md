@@ -5,6 +5,8 @@
 > [배포 42583284965](https://github.com/Edwin-space/glaze/actions/runs/42583284965)가 성공했다.
 > 홈페이지/지원/개인정보/약관과 CSS·이미지 3개는 HTTP 200, 브라우저에서 홈페이지→지원→FAQ
 > 이동/펼침을 확인했다. `script/check_public_site.py`를 배포 전·후 자동 검사로 추가했다.
+> 수정 코드 푸시 후 [최종 배포 42588026110](https://github.com/Edwin-space/glaze/actions/runs/42588026110)도
+> 성공했으며, 새 자동 검사와 실제 공개 개인정보 문구(키체인 잔존 가능성) 반영을 재확인했다.
 > 현재 UI 검수와 출시 전 미확인 범위는 [53_release_design_audit.md](53_release_design_audit.md).
 > 이 문서의 아래 빌드·버그·기기 등록 내용은 10월 당시 기록이며, 현재 상태를
 > 다시 확인한 것으로 해석하면 안 된다. 현재 실물 iPhone 테스트는 13 mini만 사용한다.
