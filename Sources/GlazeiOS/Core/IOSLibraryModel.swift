@@ -361,7 +361,7 @@ final class IOSLibraryModel {
 }
 
 /// A subtitle file the viewer can attach by hand.
-struct IOSSubtitleCandidate: Identifiable, Equatable {
+struct IOSSubtitleCandidate: Identifiable, Equatable, Sendable {
     let id: String
     let name: String
     let url: URL

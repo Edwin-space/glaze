@@ -124,6 +124,10 @@ struct IOSNetworkBrowserView: View {
                             .id("\(entry.id)#\(watchRevision)")
                     }
                     .buttonStyle(.plain)
+                    #if DEBUG
+                    .accessibilityValue(ProcessInfo.processInfo.arguments.contains("-glaze.seekAudit.telemetry")
+                        ? "srt=\(resource.subtitleResources.filter(PlaybackSubtitleLoader.supports).count)" : "")
+                    #endif
                     .swipeActions(edge: .trailing) { infoButton(entry) }
                     .contextMenu {
                         infoButton(entry)

@@ -44,23 +44,64 @@ final class VLCScrubPreviewSource: ScrubPreviewSource, @unchecked Sendable {
             guard size.width > 0, size.height > 0 else { return width * 9 / 16 }
             return (width * size.height / size.width).rounded()
         } ?? width * 9 / 16
-        let result: Data? = await withCheckedContinuation { continuation in
+        let cancellation = ThumbnailCancellation()
+        let result: Data? = await withTaskCancellationHandler {
+          await withCheckedContinuation { continuation in
             // The thumbnailer is one-shot: its settings are read when the fetch starts
             // and ignored afterwards, so each frame gets its own. Built on the main
             // thread, which is where VLCKit expects its objects to be made; the answer
             // comes back on a thread of VLCKit's choosing.
             Task { @MainActor in
                 guard let grab = ThumbnailGrab(url: url, time: time, width: width, height: height, finish: { data in
+                    cancellation.finish()
                     continuation.resume(returning: data)
                 }) else {
                     continuation.resume(returning: nil)
                     return
                 }
-                grab.start()
+                if cancellation.install(grab) { grab.start() } else { grab.cancel() }
             }
+          }
+        } onCancel: {
+            cancellation.cancel()
         }
         if result != nil { diagnostic.succeed() }
         return result
+    }
+}
+
+/// Bridges cancellation that can arrive before a main-actor thumbnailer exists.
+/// Cancelling a thumbnailer suppresses its delegate, so we must also resume the
+/// awaiting continuation ourselves; dropping the Task alone leaked a NAS request.
+private final class ThumbnailCancellation: @unchecked Sendable {
+    private struct State {
+        var cancelled = false
+        var grab: ThumbnailGrab?
+    }
+    private let state = Mutex(State())
+
+    func install(_ grab: ThumbnailGrab) -> Bool {
+        state.withLock {
+            guard !$0.cancelled else { return false }
+            $0.grab = grab
+            return true
+        }
+    }
+
+    func finish() { state.withLock { $0.grab = nil } }
+
+    func cancel() {
+        let grab = state.withLock {
+            $0.cancelled = true
+            let result = $0.grab
+            $0.grab = nil
+            return result
+        }
+        if let grab {
+            // Native cancellation is synchronized inside the thumbnailer; it does
+            // not touch UIKit. Do not make the UI wait for a NAS parser to stop.
+            Task.detached(priority: .userInitiated) { grab.cancel() }
+        }
     }
 }
 
@@ -75,7 +116,8 @@ final class VLCScrubPreviewSource: ScrubPreviewSource, @unchecked Sendable {
 /// (`_dispatch_assert_queue_fail`), which is what crashed the phone the moment
 /// someone dragged along the timeline. The little state there is is behind a lock.
 private final class ThumbnailGrab: NSObject, VLCMediaThumbnailerDelegate, @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = NSRecursiveLock()
+    private var cancelled = false
     private var thumbnailer: VLCMediaThumbnailer?
     private var finish: ((Data?) -> Void)?
     private var keptAlive: ThumbnailGrab?
@@ -109,10 +151,22 @@ private final class ThumbnailGrab: NSObject, VLCMediaThumbnailerDelegate, @unche
 
     func start() {
         lock.lock()
+        defer { lock.unlock() }
+        guard !cancelled, finish != nil else { return }
         keptAlive = self
+        // Serialize the short native start with cancellation. Cancellation that
+        // wins before start must not be followed by a new, orphaned NAS fetch.
+        thumbnailer?.fetchThumbnail()
+    }
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
         let thumbnailer = thumbnailer
         lock.unlock()
-        thumbnailer?.fetchThumbnail()
+        thumbnailer?.cancel()
+        DiagnosticsCenter.shared.record("playback.preview_cancelled")
+        complete(with: nil)
     }
 
     func mediaThumbnailer(_ mediaThumbnailer: VLCMediaThumbnailer, didFinishThumbnail thumbnail: CGImage) {

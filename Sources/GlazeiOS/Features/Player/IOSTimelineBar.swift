@@ -58,6 +58,7 @@ struct IOSTimelineBar: View {
         }
         .frame(height: 44)
         .accessibilityElement()
+        .accessibilityIdentifier("player.timeline")
         .accessibilityLabel(L10n.string("ios.player.a11y.timeline"))
         .accessibilityValue(IOSPlayerView.timecode(value))
         .accessibilityAdjustableAction { direction in

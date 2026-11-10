@@ -22,6 +22,9 @@ public actor NetworkSubtitleLoader {
     private let convertToSRT: SubtitleConverter?
     private let cacheDirectory: URL
     private let maximumBytes: Int
+    private let maximumCacheAge: TimeInterval
+    private let maximumCacheBytes: Int
+    private var inFlight: [URL: Task<URL, Error>] = [:]
 
     /// A subtitle answered slowly is worth abandoning; the film is already playing.
     /// URLSession's own default would hold the panel for a minute.
@@ -36,23 +39,40 @@ public actor NetworkSubtitleLoader {
         session: URLSession? = nil,
         convertToSRT: SubtitleConverter? = nil,
         cacheDirectory: URL? = nil,
-        maximumBytes: Int = 16 * 1_024 * 1_024
+        maximumBytes: Int = 16 * 1_024 * 1_024,
+        maximumCacheAge: TimeInterval = 86_400,
+        maximumCacheBytes: Int = 64 * 1_024 * 1_024
     ) {
         self.session = session ?? Self.defaultSession()
         self.convertToSRT = convertToSRT
         self.cacheDirectory = cacheDirectory ?? Self.defaultCacheDirectory()
         self.maximumBytes = maximumBytes
+        self.maximumCacheAge = maximumCacheAge
+        self.maximumCacheBytes = maximumCacheBytes
     }
 
     public func load(_ resource: NetworkSubtitleResource) async throws -> URL {
+        if let task = inFlight[resource.url] { return try await task.value }
+        let task = Task { try await self.loadUnshared(resource) }
+        inFlight[resource.url] = task
+        defer { inFlight[resource.url] = nil }
+        return try await task.value
+    }
+
+    private func loadUnshared(_ resource: NetworkSubtitleResource) async throws -> URL {
         let diagnostic = DiagnosticOperation("subtitle.download")
         defer { withExtendedLifetime(diagnostic) {} }
         let destination = cacheURL(for: resource)
         let outputURL = convertedURLIfNeeded(for: destination)
-        if FileManager.default.fileExists(atPath: outputURL.path) {
+        if let values = try? outputURL.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]),
+           let modified = values.contentModificationDate,
+           Date().timeIntervalSince(modified) < maximumCacheAge,
+           (values.fileSize ?? 0) > 0 {
+            DiagnosticsCenter.shared.record("subtitle.cache_hit")
             diagnostic.succeed()
             return outputURL
         }
+        DiagnosticsCenter.shared.record("subtitle.cache_miss")
         guard outputURL == destination || convertToSRT != nil else {
             throw LoaderError.conversionUnavailable
         }
@@ -65,7 +85,11 @@ public actor NetworkSubtitleLoader {
         let data = try await download(from: resource.url)
         try data.write(to: destination, options: .atomic)
 
-        guard outputURL != destination, let convertToSRT else { diagnostic.succeed(); return destination }
+        guard outputURL != destination, let convertToSRT else {
+            pruneCache(keeping: destination)
+            diagnostic.succeed()
+            return destination
+        }
         do {
             try await convertToSRT(destination, outputURL)
         } catch {
@@ -73,7 +97,16 @@ public actor NetworkSubtitleLoader {
             throw error
         }
         diagnostic.succeed()
+        pruneCache(keeping: outputURL)
         return outputURL
+    }
+
+    /// Only app-owned cache files are removed; the remote source is never changed.
+    public func invalidate(_ resource: NetworkSubtitleResource) {
+        let destination = cacheURL(for: resource)
+        for url in Set([destination, convertedURLIfNeeded(for: destination)]) {
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 
     /// Credentials travel inside the URL because that is what the player hands VLC.
@@ -118,7 +151,27 @@ public actor NetworkSubtitleLoader {
             ? "subtitle.srt"
             : resource.url.lastPathComponent
         let filename = resource.displayName.isEmpty ? fallback : resource.displayName
-        return root.appendingPathComponent(filename.replacingOccurrences(of: "/", with: "-"))
+        let suffix = URL(fileURLWithPath: filename).pathExtension.lowercased()
+        // Keep original names out of cache paths, retaining only a parser suffix.
+        let safeSuffix = suffix.allSatisfy { $0.isASCII && $0.isLetter } && !suffix.isEmpty ? suffix : "srt"
+        return root.appendingPathComponent("subtitle.\(safeSuffix)")
+    }
+
+    private func pruneCache(keeping current: URL) {
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey]
+        guard let files = FileManager.default.enumerator(at: cacheDirectory, includingPropertiesForKeys: Array(keys)) else { return }
+        var entries: [(url: URL, bytes: Int, modified: Date)] = []
+        for case let url as URL in files {
+            guard let value = try? url.resourceValues(forKeys: keys), value.isRegularFile == true,
+                  value.isSymbolicLink != true else { continue }
+            entries.append((url, value.fileSize ?? 0, value.contentModificationDate ?? .distantPast))
+        }
+        var total = entries.reduce(0) { $0 + $1.bytes }
+        for file in entries.sorted(by: { $0.modified < $1.modified }) where file.url != current {
+            if total > maximumCacheBytes || Date().timeIntervalSince(file.modified) >= maximumCacheAge {
+                do { try FileManager.default.removeItem(at: file.url); total -= file.bytes } catch { /* cache eviction is best effort */ }
+            }
+        }
     }
 
     private func convertedURLIfNeeded(for sourceURL: URL) -> URL {

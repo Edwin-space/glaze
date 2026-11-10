@@ -61,7 +61,14 @@ struct IOSPlayerSettingsView: View {
 
     private var subtitleTrackSection: some View {
         Section(L10n.string("ios.player.subtitle.tracks")) {
-            if model.subtitleTracks.isEmpty {
+            if model.sidecarSubtitles.isPreparing {
+                ProgressView(L10n.string("ios.player.subtitle.preparing"))
+            }
+            if model.sidecarSubtitles.failed {
+                Text(L10n.string("ios.player.subtitle.prepare_failed"))
+                    .foregroundStyle(IOSTheme.dim)
+            }
+            if model.subtitleTracks.isEmpty, !model.sidecarSubtitles.isPreparing {
                 Text(L10n.string("ios.player.subtitle.none"))
                     .foregroundStyle(IOSTheme.dim)
             }
@@ -69,6 +76,7 @@ struct IOSPlayerSettingsView: View {
                 Button { model.selectSubtitleTrack(id: track.id) } label: {
                     row(track.title, isSelected: track.isSelected)
                 }
+                .accessibilityIdentifier("player.subtitle.track.\(track.id)")
             }
             Button { model.disableSubtitles() } label: {
                 row(
@@ -91,7 +99,7 @@ struct IOSPlayerSettingsView: View {
             }
             ForEach(candidates) { candidate in
                 Button {
-                    model.addSubtitle(candidate.url)
+                    model.addSubtitle(candidate.url, displayName: candidate.name)
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: IOSTheme.Spacing.hair) {

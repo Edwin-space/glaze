@@ -644,8 +644,8 @@
 "ios.settings.cache" = "Storage";
 "ios.settings.cache.size" = "Files the app made";
 "ios.settings.cache.clear" = "Clear temporary files";
-"ios.settings.cache.detail" = "Comics and books unpacked to be read, and the covers drawn from them. Your own files are untouched, and anything cleared is made again next time you open it. Viewing as a list reads no covers, so almost nothing accumulates.";
-"ios.settings.cache.confirm" = "Deletes unpacked books and covers. The files you put on the device are not touched.";
+"ios.settings.cache.detail" = "Unpacked books, cover images, and locally cached network subtitles. Your originals are untouched; cached subtitles are downloaded again when needed.";
+"ios.settings.cache.confirm" = "Deletes unpacked books, covers, and cached subtitles. Your original files and files on the server are not touched.";
 "ios.settings.metadata" = "Metadata";
 "ios.settings.tmdb_key" = "TMDB API key";
 "ios.settings.tmdb_get" = "Get a key from TMDB";
@@ -855,6 +855,8 @@ Pull down to refresh in the app afterwards. You can delete this note.
 "diagnostics.section.data" = "Stored data";
 "diagnostics.preparing" = "Preparing report…";
 "ios.server.empty.detail" = "Add a WebDAV, Synology, or DLNA server to browse videos on your network.";
+"ios.player.subtitle.preparing" = "Preparing subtitles…";
+"ios.player.subtitle.prepare_failed" = "Couldn’t load the subtitles. Choose the subtitle file again to retry.";
 "diagnostics.enabled" = "Record diagnostic events";
 "diagnostics.detail" = "Stored only on this device. Up to 15 MB for 7 days. Addresses, credentials, filenames and subtitle text are excluded. Nothing is sent automatically.";
 "diagnostics.prepare" = "Prepare diagnostic report";

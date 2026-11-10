@@ -21,6 +21,7 @@ final class IOSCacheStore {
         /// EPUBs opened out for the web view.
         case books = "glaze-books"
         case covers = "glaze-book-covers"
+        case subtitles = "Glaze/NetworkSubtitles"
     }
 
     private(set) var byteCount: Int64 = 0

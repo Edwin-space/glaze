@@ -14,12 +14,25 @@ struct GlazeiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            IOSRootView()
+            rootView
                 .preferredColorScheme(.dark)
                 .onChange(of: scenePhase) { _, phase in DiagnosticsCenter.shared.setActive(phase == .active) }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
                     DiagnosticsCenter.shared.record("app.memory_warning")
                 }
         }
+    }
+
+    @ViewBuilder
+    private var rootView: some View {
+        #if DEBUG
+        if let fixture = IOSSeekAuditFixture.requested() {
+            IOSSeekAuditFixtureView(fixture: fixture)
+        } else {
+            IOSRootView()
+        }
+        #else
+        IOSRootView()
+        #endif
     }
 }

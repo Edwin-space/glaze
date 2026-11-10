@@ -308,3 +308,12 @@ GlazeCore 한/영 `diagnostics.*`: title, enabled, detail, prepare, export, clea
 기존 `ios.server.add`를 빈 상태 버튼에도 재사용한다. WebDAV의 기존 name/address/username/password
 키는 placeholder 대신 지속 라벨과 접근성 이름에 사용한다. 언어명은 앱이 선택한 ko/en에 맞춰
 `L10n.languageName`으로 표시하며 서버에서 제공한 사용자 지정 트랙 제목은 보존한다.
+
+## iOS SRT 캐시 및 준비 상태 (2026-11-10)
+
+| 키 | 한국어 | English |
+|---|---|---|
+| ios.player.subtitle.preparing | 자막 준비 중… | Preparing subtitles… |
+| ios.player.subtitle.prepare_failed | 자막을 불러오지 못했습니다. 자막 파일을 다시 선택해 주세요. | Couldn’t load the subtitles. Choose the subtitle file again to retry. |
+| ios.settings.cache.detail | 압축을 푼 책, 표지 그림, 네트워크 자막의 로컬 캐시입니다. 원본은 그대로 유지되며, 캐시한 자막은 필요할 때 다시 내려받습니다. | Unpacked books, cover images, and locally cached network subtitles. Your originals are untouched; cached subtitles are downloaded again when needed. |
+| ios.settings.cache.confirm | 압축을 푼 책, 표지와 자막 캐시를 지웁니다. 원본 파일과 서버의 파일은 지워지지 않습니다. | Deletes unpacked books, covers, and cached subtitles. Your original files and files on the server are not touched. |

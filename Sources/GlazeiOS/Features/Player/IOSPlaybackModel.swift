@@ -35,6 +35,9 @@ final class IOSPlaybackModel {
     private(set) var subtitleScale: Float = 100
     private(set) var rate: Float = 1
     private(set) var isFillingScreen = false
+    private(set) var isSeeking = false
+    private(set) var videoSize: CGSize?
+    let sidecarSubtitles = IOSSidecarSubtitles()
 
     static let skipInterval: TimeInterval = 10
     static let rateOptions: [Float] = [0.75, 1, 1.25, 1.5, 2]
@@ -71,6 +74,22 @@ final class IOSPlaybackModel {
     private var preferredSubtitleLanguage: String?
     private var shouldAutomaticallySelectSubtitles = true
     private var hasChosenSubtitle = false
+    private var seekQueue = PlaybackSeekQueue()
+    private var seekWatchdog: Task<Void, Never>?
+    private var seekIssuedAt: TimeInterval = 0
+    private var seekSequence = 0
+
+    init() {
+        sidecarSubtitles.onSelectionChanged = { [weak self] in
+            guard let self else { return }
+            if sidecarSubtitles.selectedID != nil {
+                player.deselectAllTextTracks()
+                hasChosenSubtitle = true
+            }
+            refreshTracks()
+            synchronizeSidecar(force: true)
+        }
+    }
 
     // MARK: - Starting
 
@@ -84,6 +103,13 @@ final class IOSPlaybackModel {
         subtitleURL: URL?,
         preferences: IOSUserPreferences
     ) {
+        seekWatchdog?.cancel()
+        seekQueue.reset()
+        seekSequence = 0
+        isSeeking = false
+        videoSize = nil
+        sidecarSubtitles.reset()
+        pendingSubtitleLanguage = nil
         diagnostics = PlaybackDiagnostics(url: resource.playbackURL)
         lastDiagnosticBufferPercent = -1
         self.resource = resource
@@ -124,11 +150,26 @@ final class IOSPlaybackModel {
         } else {
             startedAtResume = nil
         }
-        if let subtitleURL {
+        let sidecar = subtitleURL.map { url in
+            resource.subtitleResources.first(where: { $0.url == url })
+                ?? NetworkSubtitleResource(url: url, displayName: url.lastPathComponent,
+                    languageCode: SubtitleFile.manual(url: url).languageCode)
+        }
+        if let sidecar, PlaybackSubtitleLoader.supports(sidecar) {
+            // The app owns this timed-text track. VLC must not independently
+            // discover the same local SRT later and draw a second copy.
+            media?.addOption(":sub-autodetect-file=0")
+        }
+        DiagnosticsCenter.shared.record("subtitle.candidates", id: diagnostics?.id, numbers: [
+            "total": Double(resource.subtitleResources.count),
+            "srt": Double(resource.subtitleResources.filter(PlaybackSubtitleLoader.supports).count),
+            "selected_srt": sidecar.map { PlaybackSubtitleLoader.supports($0) ? 1 : 0 } ?? 0,
+            "automatic": shouldAutomaticallySelectSubtitles ? 1 : 0])
+        if let sidecar, !PlaybackSubtitleLoader.supports(sidecar) {
             // Priority 4 is VLC's "user selected". It loads the file but does not show
             // it, so the choice is made explicitly once the tracks exist.
-            media?.addSlave(VLCMediaSlave(url: subtitleURL, type: .subtitle, priority: 4))
-            pendingSubtitleLanguage = SubtitleFile.manual(url: subtitleURL).languageCode
+            media?.addSlave(VLCMediaSlave(url: sidecar.url, type: .subtitle, priority: 4))
+            pendingSubtitleLanguage = sidecar.languageCode
         }
 
         let diagnosticSessionID = diagnostics?.id
@@ -140,6 +181,10 @@ final class IOSPlaybackModel {
             onTime: { [weak self] in Task { @MainActor in
                 guard let self, self.diagnostics?.id == diagnosticSessionID else { return }
                 self.readState()
+            } },
+            onTracks: { [weak self] in Task { @MainActor in
+                guard let self, self.diagnostics?.id == diagnosticSessionID else { return }
+                self.refreshTracks()
             } },
             onBuffering: { [weak self] progress in
                 // Reported as a fraction, not a percentage: a full cache arrives as
@@ -175,6 +220,9 @@ final class IOSPlaybackModel {
         PlaybackLog.write("play() returned")
         player.rate = rate
         PlaybackLog.write("rate set")
+        if let sidecar, PlaybackSubtitleLoader.supports(sidecar) {
+            sidecarSubtitles.load(sidecar, sessionID: diagnostics?.id)
+        }
     }
 
     /// Stops the film when the sound would otherwise move to the phone's own speaker.
@@ -228,23 +276,86 @@ final class IOSPlaybackModel {
     }
 
     func seek(to time: TimeInterval) {
-        DiagnosticsCenter.shared.record("playback.seek_begin", id: diagnostics?.id, numbers: ["seconds": time])
-        defer { DiagnosticsCenter.shared.record("playback.seek_end", id: diagnostics?.id) }
-        PlaybackLog.write("seek -> \(Int(time)) (begin)")
-        defer { PlaybackLog.write("seek -> \(Int(time)) (end)") }
-        let ceiling = duration > 0 ? duration : .greatestFiniteMagnitude
-        let target = min(max(time, 0), ceiling)
-        player.time = VLCTime(int: Int32(target * 1000))
+        guard time.isFinite, duration > 0 else { return }
+        let target = min(max(time, 0), duration)
+        let request = seekQueue.enqueue(target: target)
         currentTime = target
-        updateNowPlaying()
         lastNowPlaying = nil
+        sidecarSubtitles.suppressDuringSeek()
+        DiagnosticsCenter.shared.record("playback.seek_requested", id: diagnostics?.id,
+            numbers: ["seconds": target, "coalesced": request == nil ? 1 : 0])
+        if let request { issueSeek(request) }
     }
 
-    /// The film's shape, once VLC knows it. Nil until the first frame is decoded.
-    var videoSize: CGSize? {
-        let size = player.videoSize
-        return size.width > 0 && size.height > 0 ? size : nil
+    private func issueSeek(_ request: PlaybackSeekQueue.Request) {
+        guard let sessionID = diagnostics?.id else { return }
+        isSeeking = true
+        seekSequence = request.sequence
+        seekIssuedAt = ProcessInfo.processInfo.systemUptime
+        DiagnosticsCenter.shared.record("playback.seek_begin", id: sessionID,
+            numbers: ["seconds": request.target, "sequence": Double(request.sequence)])
+        let engineTime = TimeInterval(player.time.intValue) / 1000
+        let offset = min(max((request.target - engineTime) * 1000, Double(Int32.min)), Double(Int32.max))
+        // This binding's completion is driven by the engine's seek/discontinuity
+        // callback. A setter returning is not the end of video/subtitle recovery.
+        let accepted = player.jump(withOffset: Int32(offset)) { [weak self] in
+            Task { @MainActor in
+                guard let self, self.diagnostics?.id == sessionID, self.seekQueue.active?.id == request.id else { return }
+                self.finishSeek(request, source: 1)
+            }
+        }
+        DiagnosticsCenter.shared.record("playback.seek_call_returned", id: sessionID, numbers: [
+            "sequence": Double(request.sequence), "accepted": accepted ? 1 : 0,
+            "milliseconds": (ProcessInfo.processInfo.systemUptime - seekIssuedAt) * 1000])
+        guard accepted else { finishSeek(request, source: 0); return }
+        seekWatchdog?.cancel()
+        seekWatchdog = Task { [weak self] in
+            // Paused/short seeks do not always produce the completion callback in
+            // VLCKit 4. A clock fallback is logged as such, never as a decoded frame.
+            for _ in 0..<40 {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard let self, !Task.isCancelled, diagnostics?.id == sessionID,
+                      seekQueue.active?.id == request.id else { return }
+                let actual = TimeInterval(player.time.intValue) / 1000
+                let elapsed = ProcessInfo.processInfo.systemUptime - seekIssuedAt
+                if elapsed >= 0.75, !isBuffering, abs(actual - request.target) <= 1.5 {
+                    finishSeek(request, source: 2)
+                    return
+                }
+            }
+            guard let self, !Task.isCancelled, seekQueue.active?.id == request.id else { return }
+            finishSeek(request, source: 3)
+        }
     }
+
+    private func finishSeek(_ request: PlaybackSeekQueue.Request, source: Double) {
+        guard seekQueue.active?.id == request.id else { return }
+        seekWatchdog?.cancel()
+        seekWatchdog = nil
+        let actual = max(0, TimeInterval(player.time.intValue) / 1000)
+        let event: StaticString = source == 3 ? "playback.seek_timeout"
+            : source == 0 ? "playback.seek_rejected" : "playback.seek_recovered"
+        DiagnosticsCenter.shared.record(event, id: diagnostics?.id, numbers: [
+            "sequence": Double(request.sequence), "source": source, "seconds": actual,
+            "target": request.target, "drift": actual - request.target,
+            "milliseconds": (ProcessInfo.processInfo.systemUptime - seekIssuedAt) * 1000])
+        if let next = seekQueue.finish(id: request.id) { issueSeek(next); return }
+        isSeeking = false
+        currentTime = actual
+        synchronizeSidecar(force: true)
+        rememberPosition()
+        updateNowPlaying()
+    }
+
+    private func synchronizeSidecar(force: Bool = false) {
+        guard !isSeeking else { return }
+        sidecarSubtitles.update(at: currentTime, delay: subtitleDelay, sequence: seekSequence, force: force)
+    }
+
+    #if DEBUG
+    var auditSRTCandidates: Int { resource?.subtitleResources.filter(PlaybackSubtitleLoader.supports).count ?? 0 }
+    var auditNativeCaptionCount: Int { player.textTracks.filter(\.isSelected).count }
+    #endif
 
     /// Speeds playback up while a finger is held down, and puts it back afterwards.
     /// The rate the viewer chose is remembered separately, so letting go returns to
@@ -273,6 +384,11 @@ final class IOSPlaybackModel {
     }
 
     func stop() {
+        seekWatchdog?.cancel()
+        seekWatchdog = nil
+        seekQueue.reset()
+        isSeeking = false
+        sidecarSubtitles.reset()
         DiagnosticsCenter.shared.record("playback.stop_begin", id: diagnostics?.id)
         diagnostics?.expectProgress(false)
         defer {
@@ -297,7 +413,9 @@ final class IOSPlaybackModel {
     // MARK: - Tracks
 
     func selectSubtitleTrack(id: String) {
+        if sidecarSubtitles.select(id: id) { return }
         guard let track = player.textTracks.first(where: { $0.trackId == id }) else { return }
+        sidecarSubtitles.deselect()
         player.selectTextTracks([track])
         // A choice made by hand must not be overwritten by the automatic one.
         hasChosenSubtitle = true
@@ -305,6 +423,7 @@ final class IOSPlaybackModel {
     }
 
     func disableSubtitles() {
+        sidecarSubtitles.deselect()
         player.deselectAllTextTracks()
         hasChosenSubtitle = true
         refreshTracks()
@@ -318,7 +437,13 @@ final class IOSPlaybackModel {
 
     /// Attaches a subtitle the player never found on its own — the file whose name does
     /// not match the film's.
-    func addSubtitle(_ url: URL) {
+    func addSubtitle(_ url: URL, displayName: String? = nil) {
+        let resource = NetworkSubtitleResource(url: url, displayName: displayName ?? url.lastPathComponent)
+        if PlaybackSubtitleLoader.supports(resource) {
+            sidecarSubtitles.load(resource, sessionID: diagnostics?.id)
+            return
+        }
+        sidecarSubtitles.deselect()
         player.addPlaybackSlave(url, type: .subtitle, enforce: true)
         hasChosenSubtitle = true
     }
@@ -327,6 +452,7 @@ final class IOSPlaybackModel {
         let next = min(max(subtitleDelay + seconds, -10), 10)
         player.currentVideoSubTitleDelay = Int(next * 1_000_000)
         subtitleDelay = next
+        synchronizeSidecar(force: true)
     }
 
     func setSubtitleScale(_ scale: Float) {
@@ -395,12 +521,28 @@ final class IOSPlaybackModel {
             return
         }
 
-        currentTime = TimeInterval(player.time.intValue) / 1000
-        diagnostics?.progress(time: currentTime, playing: isPlaying || isBuffering)
+        // Cache the dimensions once rather than calling a native engine getter
+        // during every SwiftUI subtitle layout or timeline tick.
+        if videoSize == nil {
+            let size = player.videoSize
+            if size.width > 0, size.height > 0 { videoSize = size }
+        }
+
+        let engineTime = TimeInterval(player.time.intValue) / 1000
+        if !isSeeking { currentTime = engineTime }
+        // An optimistic timeline position must not make a stalled native engine
+        // look healthy to the independent diagnostics watchdog.
+        diagnostics?.progress(time: engineTime, playing: isPlaying || isBuffering)
         applyResumeIfReady()
         chooseSubtitleIfReady()
+        synchronizeSidecar()
         rememberPositionOccasionally()
         updateNowPlayingIfChanged()
+    }
+
+    func recordSubtitleOverlayUpdate(characters: Int) {
+        DiagnosticsCenter.shared.record("subtitle.overlay_updated", id: diagnostics?.id,
+            numbers: ["characters": Double(characters), "sequence": Double(seekSequence)])
     }
 
     /// Whether this film — not the one before it — has told us how long it is.
@@ -422,7 +564,7 @@ final class IOSPlaybackModel {
     /// Picks the subtitle the viewer would have picked. Tracks do not exist until the
     /// media has been read, so this runs on the time updates and does its work once.
     private func chooseSubtitleIfReady() {
-        guard !hasChosenSubtitle, shouldAutomaticallySelectSubtitles else { return }
+        guard !hasChosenSubtitle, shouldAutomaticallySelectSubtitles, !sidecarSubtitles.isPreparing else { return }
         let tracks = player.textTracks
         guard !tracks.isEmpty else { return }
 
@@ -440,7 +582,17 @@ final class IOSPlaybackModel {
     }
 
     func refreshTracks() {
-        subtitleTracks = player.textTracks.map(Self.option(for:))
+        let nativeText = player.textTracks
+        // Embedded tracks can arrive after the cached SRT finishes preparing.
+        // Enforce exclusive rendering on track updates, not just at initial load.
+        if sidecarSubtitles.selectedID != nil, nativeText.contains(where: \.isSelected) {
+            player.deselectAllTextTracks()
+        }
+        subtitleTracks = sidecarSubtitles.tracks + nativeText.map { track in
+            let option = Self.option(for: track)
+            return IOSTrackOption(id: option.id, title: option.title, languageCode: option.languageCode,
+                isSelected: sidecarSubtitles.selectedID == nil && option.isSelected)
+        }
         audioTracks = player.audioTracks.map(Self.option(for:))
         subtitleDelay = TimeInterval(player.currentVideoSubTitleDelay) / 1_000_000
         let reportedScale = SubtitleScale.percent(fromFraction: player.currentSubTitleFontScale)
@@ -610,15 +762,18 @@ final class IOSPlaybackModel {
 private final class PlayerObserver: NSObject, VLCMediaPlayerDelegate {
     private let onState: @Sendable (VLCMediaPlayerState) -> Void
     private let onTime: @Sendable () -> Void
+    private let onTracks: @Sendable () -> Void
     private let onBuffering: @Sendable (Float) -> Void
 
     init(
         onState: @escaping @Sendable (VLCMediaPlayerState) -> Void,
         onTime: @escaping @Sendable () -> Void,
+        onTracks: @escaping @Sendable () -> Void,
         onBuffering: @escaping @Sendable (Float) -> Void
     ) {
         self.onState = onState
         self.onTime = onTime
+        self.onTracks = onTracks
         self.onBuffering = onBuffering
     }
 
@@ -633,4 +788,14 @@ private final class PlayerObserver: NSObject, VLCMediaPlayerDelegate {
     func mediaPlayerBufferingChanged(_ progress: Float) {
         onBuffering(progress)
     }
+
+    func mediaPlayerTrackAdded(_ id: String, with type: VLCMedia.TrackType) { onTracks() }
+
+    func mediaPlayerTrackRemoved(_ id: String, with type: VLCMedia.TrackType) { onTracks() }
+
+    func mediaPlayerTrackUpdated(_ id: String, with type: VLCMedia.TrackType) { onTracks() }
+
+    // VLCKit declares these nonnull but passes nil for the missing side of a
+    // selection event. Accept optional IDs at the Objective-C boundary.
+    func mediaPlayerTrackSelected(_ type: VLCMedia.TrackType, selectedId: String?, unselectedId: String?) { onTracks() }
 }

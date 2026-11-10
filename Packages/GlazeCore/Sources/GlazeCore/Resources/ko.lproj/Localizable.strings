@@ -644,8 +644,8 @@
 "ios.settings.cache" = "저장 공간";
 "ios.settings.cache.size" = "앱이 만든 임시 파일";
 "ios.settings.cache.clear" = "임시 파일 지우기";
-"ios.settings.cache.detail" = "압축을 푼 만화와 책, 그리고 표지 그림입니다. 원본 파일은 그대로 있고, 지운 뒤 다시 열면 다시 만들어집니다. 목록을 '목록'으로 보면 표지를 읽지 않아 거의 쌓이지 않습니다.";
-"ios.settings.cache.confirm" = "압축을 푼 책과 표지를 지웁니다. 넣어둔 파일은 지워지지 않습니다.";
+"ios.settings.cache.detail" = "압축을 푼 책, 표지 그림, 네트워크 자막의 로컬 캐시입니다. 원본은 그대로 유지되며, 캐시한 자막은 필요할 때 다시 내려받습니다.";
+"ios.settings.cache.confirm" = "압축을 푼 책, 표지와 자막 캐시를 지웁니다. 원본 파일과 서버의 파일은 지워지지 않습니다.";
 "ios.settings.metadata" = "메타데이터";
 "ios.settings.tmdb_key" = "TMDB API 키";
 "ios.settings.tmdb_get" = "TMDB에서 키 발급받기";
@@ -855,6 +855,8 @@
 "diagnostics.section.data" = "보관된 데이터";
 "diagnostics.preparing" = "보고서 준비 중…";
 "ios.server.empty.detail" = "WebDAV, 시놀로지 또는 DLNA 서버를 추가하면 네트워크의 영상을 탐색할 수 있습니다.";
+"ios.player.subtitle.preparing" = "자막 준비 중…";
+"ios.player.subtitle.prepare_failed" = "자막을 불러오지 못했습니다. 자막 파일을 다시 선택해 주세요.";
 "diagnostics.enabled" = "진단 기록 켜기";
 "diagnostics.detail" = "이 기기에만 최대 15MB·7일간 저장합니다. 주소·인증 정보·파일명·자막 본문은 기록하지 않으며 자동 전송하지 않습니다.";
 "diagnostics.prepare" = "진단 파일 준비";

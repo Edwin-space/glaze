@@ -81,6 +81,8 @@ struct IOSPlayerView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
+            sidecarOverlay
+
             touchLayer
 
             if model.hasFailed {
@@ -116,6 +118,10 @@ struct IOSPlayerView: View {
                 bareScrubReadout
             }
 
+            #if DEBUG
+            seekAuditTelemetry
+            #endif
+
         }
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
@@ -148,7 +154,7 @@ struct IOSPlayerView: View {
             }
         }
         .sheet(isPresented: $showsSettings) {
-            IOSPlayerSettingsView(model: model, subtitleCandidates: subtitleCandidates)
+            IOSPlayerSettingsView(model: model, subtitleCandidates: currentSubtitleCandidates)
                 .environment(preferences)
                 .presentationDetents([.medium, .large])
         }
@@ -199,6 +205,47 @@ struct IOSPlayerView: View {
         // them. The film waits.
         .onAppear { if model.isPlaying { model.togglePlayback() } }
         .transition(.opacity)
+    }
+
+    @ViewBuilder
+    private var sidecarOverlay: some View {
+        if !model.sidecarSubtitles.text.isEmpty {
+            IOSSidecarSubtitleView(text: model.sidecarSubtitles.text, videoSize: model.videoSize,
+                fillsScreen: model.isFillingScreen, scale: model.subtitleScale)
+                .onChange(of: model.sidecarSubtitles.text, initial: true) { _, text in
+                    // A view update is not proof of a rendered video frame.
+                    model.recordSubtitleOverlayUpdate(characters: text.count)
+                }
+        }
+    }
+
+    #if DEBUG
+    @ViewBuilder
+    private var seekAuditTelemetry: some View {
+        if ProcessInfo.processInfo.arguments.contains("-glaze.seekAudit.telemetry") {
+            let targets = model.sidecarSubtitles.auditTargets(endingBefore: model.duration).map { String(format: "%.3f", $0) }.joined(separator: ",")
+            let caption = model.sidecarSubtitles.selectedID == nil ? 0 : 1
+            let active = model.sidecarSubtitles.auditActiveCueCount(at: model.currentTime, delay: model.subtitleDelay)
+            let state = "t=\(model.currentTime);d=\(model.duration);seeking=\(model.isSeeking ? 1 : 0);srt=\(caption);native=\(model.auditNativeCaptionCount);active=\(active);candidates=\(model.auditSRTCandidates);targets=\(targets)"
+            Text(verbatim: state)
+                .font(.system(size: 5, design: .monospaced))
+                .foregroundStyle(.gray)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .allowsHitTesting(false)
+                .accessibilityIdentifier("player.audit.clock")
+        }
+    }
+    #endif
+
+    private var currentSubtitleCandidates: (@Sendable () async -> [IOSSubtitleCandidate])? {
+        let current = nowPlaying?.resource ?? resource
+        // Caller-supplied local listings may include differently named subtitles.
+        if current.playbackURL == resource.playbackURL, let subtitleCandidates { return subtitleCandidates }
+        let files = current.subtitleResources.map {
+            IOSSubtitleCandidate(id: DiagnosticsCenter.shared.token(for: $0.url.absoluteString),
+                name: $0.displayName, url: $0.url, isBesideTheFilm: true)
+        }
+        return { files }
     }
 
     // MARK: - Controls

@@ -228,3 +228,22 @@ The first-playback guide keeps its completion button outside the scrollable expl
 text sizes, its heading scrolls too rather than being shrunk. Start adding a server from the empty
 Network screen or the toolbar +; WebDAV labels stay visible after typing. Mac Diagnostics now groups
 recording, report/sharing and stored data. Wait for report preparation to finish before sharing or clearing.
+
+## 2026-11-10 · iPhone 네트워크 SRT
+
+네트워크 영상 옆의 SRT는 기기에 임시 저장해 표시합니다. 영상 재생은 자막 준비를 기다리지
+않습니다. 타임라인 이동 후에는 이동한 시각의 문장을 다시 찾습니다. 자막 자체에 대사가 없는
+구간은 표시하지 않으며, 원본 자막의 싱크가 다르면 자막과 음성에서 싱크를 조절하세요.
+준비에 실패하면 같은 패널에서 자막 파일을 다시 선택하세요. 크기 조절·트랙 전환·끄기도 가능합니다.
+
+설정에서 캐시를 지우면 임시 저장한 네트워크 자막도 지워집니다. 다음에 필요할 때 다시 내려받으며
+서버 원본은 건드리지 않습니다. 이미 준비한 자막은 현재 재생 중 계속 보일 수 있습니다.
+기본 보관은 24시간·64MB 한도이며 OS가 먼저 캐시를 정리할 수도 있습니다. 자막이나 영상을
+분석 서비스에 전송하지 않습니다. 네트워크 영상 자체의 탐색·버퍼링 시간은 연결과 파일에 따라 다릅니다.
+
+iPhone caches external network SRT files locally without delaying video opening. After a seek it looks up
+the cue at the recovered playback time; genuine gaps remain blank. Retry a failed subtitle from Subtitles
+and Audio, or adjust its timing, size, selection and visibility there. Clearing the app cache also clears
+downloaded subtitles, never server originals. Already prepared text may remain for the current playback.
+The cache defaults to a 24-hour lifetime and a 64 MB budget, and the OS may evict it sooner. No subtitle
+or video is sent to an analysis service. Video seek/buffering time still depends on the file and network.

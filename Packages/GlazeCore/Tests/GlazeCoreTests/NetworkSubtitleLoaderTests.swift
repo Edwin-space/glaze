@@ -103,6 +103,67 @@ struct NetworkSubtitleLoaderTests {
         #expect(StubSubtitleProtocol.callCount == 1)
     }
 
+    @Test func coalescesConcurrentRequestsAndRetainsTheSRTSuffixForDSMURLs() async throws {
+        StubSubtitleProtocol.reset(.init(body: Self.srtBody))
+        let cache = makeCacheDirectory()
+        defer { try? FileManager.default.removeItem(at: cache) }
+        let loader = NetworkSubtitleLoader(session: makeSession(), cacheDirectory: cache)
+        let resource = NetworkSubtitleResource(url: URL(string: "http://nas.local/entry.cgi?api=download")!,
+            displayName: "Private Movie.ko.srt")
+        try await withThrowingTaskGroup(of: URL.self) { group in
+            for _ in 0..<8 { group.addTask { try await loader.load(resource) } }
+            for try await url in group {
+                #expect(url.pathExtension == "srt")
+                #expect(!url.path.contains("Private Movie"))
+            }
+        }
+        #expect(StubSubtitleProtocol.callCount == 1)
+        #expect(PlaybackSubtitleLoader.supports(resource))
+        let prepared = try await PlaybackSubtitleLoader(network: loader).prepare(resource)
+        #expect(prepared.timeline.text(at: 2) == "Hello")
+        #expect(StubSubtitleProtocol.callCount == 1)
+    }
+
+    @Test func expiredSubtitlesAreFetchedAgain() async throws {
+        StubSubtitleProtocol.reset(.init(body: Self.srtBody))
+        let cache = makeCacheDirectory()
+        defer { try? FileManager.default.removeItem(at: cache) }
+        let loader = NetworkSubtitleLoader(session: makeSession(), cacheDirectory: cache, maximumCacheAge: 0)
+        let resource = NetworkSubtitleResource(url: URL(string: "http://nas.local/a.srt")!, displayName: "a.srt")
+        _ = try await loader.load(resource)
+        _ = try await loader.load(resource)
+        #expect(StubSubtitleProtocol.callCount == 2)
+    }
+
+    @Test func malformedHTTP200DoesNotPoisonPlaybackRetries() async throws {
+        StubSubtitleProtocol.reset(.init(body: Data("<html>Sign in</html>".utf8)))
+        let cache = makeCacheDirectory()
+        defer { try? FileManager.default.removeItem(at: cache) }
+        let network = NetworkSubtitleLoader(session: makeSession(), cacheDirectory: cache)
+        let loader = PlaybackSubtitleLoader(network: network)
+        let resource = NetworkSubtitleResource(url: URL(string: "http://nas.local/entry.cgi")!, displayName: "a.srt")
+        do {
+            _ = try await loader.prepare(resource)
+            Issue.record("Expected invalid subtitle to fail")
+        } catch is SubtitleParser.ParseError { }
+        StubSubtitleProtocol.reset(.init(body: Self.srtBody))
+        let result = try await loader.prepare(resource)
+        #expect(result.timeline.text(at: 2) == "Hello")
+        #expect(StubSubtitleProtocol.callCount == 1)
+    }
+
+    @Test func cacheEvictsOlderFilesWhenItExceedsTheBudget() async throws {
+        StubSubtitleProtocol.reset(.init(body: Self.srtBody))
+        let cache = makeCacheDirectory()
+        defer { try? FileManager.default.removeItem(at: cache) }
+        let loader = NetworkSubtitleLoader(session: makeSession(), cacheDirectory: cache,
+            maximumCacheBytes: Self.srtBody.count + 1)
+        let first = try await loader.load(.init(url: URL(string: "http://nas.local/a.srt")!, displayName: "a.srt"))
+        let second = try await loader.load(.init(url: URL(string: "http://nas.local/b.srt")!, displayName: "b.srt"))
+        #expect(!FileManager.default.fileExists(atPath: first.path))
+        #expect(FileManager.default.fileExists(atPath: second.path))
+    }
+
     /// The password reaches the loader percent-encoded inside the URL, because that is
     /// the form VLC is handed. It has to arrive at the server decoded.
     @Test func sendsCredentialsAsAHeaderRatherThanInTheURL() async throws {
