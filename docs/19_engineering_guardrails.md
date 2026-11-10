@@ -24,6 +24,14 @@ xcodegen은 생성 시점의 파일 목록을 스냅샷한다. `project.yml`이 
 **체감 속도는 Release로 판단한다.**
 Debug는 `-Onone`이고 SwiftUI가 프레임마다 훨씬 많은 일을 한다. `./script/build_and_run.sh release`.
 
+**실기기 대상을 바꾼 증분 빌드는 리소스 서명도 다시 검증한다.**
+2026-11-10 mini용 Release 산출물을 17 Pro 대상으로 다시 빌드하자 기기별 `Assets.car`는
+갱신됐지만 CodeSign 단계는 재실행되지 않았다. 빌드는 성공했고 설치도 수락됐지만
+`codesign --verify --deep --strict`에서 `file modified: Assets.car`가 확인됐다.
+기존 인증서로 Xcode 서명 단계를 다시 실행한 뒤 검증·재설치했다. `OTHER_CODE_SIGN_FLAGS=--timestamp=none`
+으로 서명 명령을 갱신해 재실행할 수 있으며, 전체 clean build도 대안이다. 설치 성공만으로
+산출물 서명이 올바르다고 판정하지 않는다. 서명 검증 실패 시 후속 설치를 중단한다.
+
 ## 2. 조용히 실패하는 것들
 
 이 절의 항목은 **빌드가 성공하고 에러도 없는데 결과만 틀린** 경우다. 육안 확인 외에는 잡을 방법이 없다.
