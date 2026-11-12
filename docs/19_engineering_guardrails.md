@@ -271,3 +271,11 @@ SDK 갱신 시 실제 헤더와 `VLCMediaPlayer.m` 호출부를 함께 확인한
 Figma의 `listAvailableFontsAsync`/`loadFontAsync` 성공만으로 폰트가 렌더링된다고 판정하지 않는다.
 이번 SF Pro는 목록에 있고 전역 hasMissingFont=false였지만 실제 텍스트는 hasMissingFont=true였고
 캡처에서 사라졌다. 레이어별 실제 누락과 캡처를 확인하고, 사용자 승인 없이 대체 글꼴을 쓰지 않는다.
+
+## 12. 원격 main 이력 교체 (2026-11-12)
+
+push 거절 후 fetch 결과 원격 main이 `22f24f9`에서 웹사이트 전용 루트의 `6362216`으로 강제 갱신돼
+앱 소스/문서 이력과 공통 조상이 사라진 것이 확인됐다. 저장소는 shallow가 아니었다.
+현재 원격 파일은 site·배포 스크립트·README·라이선스 중심이므로 force-push나 unrelated-history
+병합으로 앱 이력을 덮어씌우지 않는다. 검증한 앱 이력은 별도 codex 브랜치에 보존하고 웹사이트와
+앱을 main에 어떻게 통합할지 사용자에게 확인한다. 웹사이트의 README/라이선스 정책도 임의로 바꾸지 않는다.

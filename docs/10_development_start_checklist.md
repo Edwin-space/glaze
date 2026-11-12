@@ -512,3 +512,5 @@ MKV/WebM/AVI/MP4/MOV 등 주요 로컬 영상 파일을 MP4 캐시로 먼저 변
 - [x] Debug/Release 빌드, 한영 strings 및 diff 공백 검사
 - [ ] XCUITest 자동 실행 재확인: 자동화 모드 초기화 타임아웃으로 실제 UI는 데스크톱 도구로 대체 검수
 - [ ] Figma SF Pro 실제 렌더링 복구 또는 사용자의 대체 폰트 승인 후 신규 안내창 시안 완료
+- [ ] 원격 main 통합 승인: 웹사이트 이력 `6362216`으로 강제 교체되어 앱 이력과 공통 조상이 없다.
+  기능 커밋 `96f7629`는 `codex/mac-subtitle-language-offer`에 보존했고 원격 main은 수정하지 않았다.
