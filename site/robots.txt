@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://edwin-space.github.io/glaze/sitemap.xml

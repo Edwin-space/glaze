@@ -1,0 +1,135 @@
+/* Glaze — the app's own amber on a screening-room ground. One look, on purpose:
+   the page is where a film is watched, so it stays dark in either system theme. */
+:root {
+  --ground: #0e0e10;
+  --surface: #17171a;
+  --rule: #26262b;
+  --ink: #eeebe5;
+  --dim: #9b978f;
+  --amber: #e8963d;
+  --amber-soft: rgba(232, 150, 61, 0.14);
+  --measure: 40rem;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo",
+    "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--ground); }
+
+body {
+  margin: 0;
+  padding-inline: 20px;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.7;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--amber); text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { max-width: 64rem; margin-inline: auto; }
+
+/* ---- header / footer ---- */
+.bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap; padding-block: 20px; border-bottom: 1px solid var(--rule);
+}
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-weight: 600; letter-spacing: -0.01em; }
+.brand img { width: 30px; height: 30px; border-radius: 7px; }
+.nav { display: flex; gap: 20px; flex-wrap: wrap; font-size: 15px; }
+.nav a { color: var(--dim); text-decoration: none; }
+.nav a:hover, .nav a[aria-current="page"] { color: var(--ink); }
+
+.foot {
+  margin-top: 96px; padding-block: 28px; border-top: 1px solid var(--rule);
+  color: var(--dim); font-size: 14px; display: flex; gap: 8px 24px; flex-wrap: wrap; justify-content: space-between;
+}
+.foot a { color: var(--dim); }
+
+/* ---- hero: a frame with its subtitle already in place ---- */
+.hero { padding-block: 72px 32px; display: grid; gap: 40px; }
+.hero h1 {
+  margin: 0; font-size: clamp(2.2rem, 5.5vw, 3.6rem); line-height: 1.15;
+  letter-spacing: -0.03em; font-weight: 700; text-wrap: balance;
+}
+.hero h1 em { font-style: normal; color: var(--amber); }
+.lede { margin: 0; max-width: var(--measure); color: var(--dim); font-size: 1.15rem; }
+
+.frame {
+  position: relative; aspect-ratio: 2.39 / 1; max-width: 100%; border-radius: 14px; overflow: hidden;
+  background:
+    radial-gradient(60% 90% at 70% 20%, rgba(255, 196, 120, 0.55), transparent 60%),
+    radial-gradient(80% 60% at 20% 110%, rgba(40, 70, 110, 0.9), transparent 70%),
+    linear-gradient(180deg, #2b3a52 0%, #5d5a63 45%, #a07a55 72%, #1a1a1e 100%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+.frame::after { /* letterbox grain */
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.0) 55%, rgba(0,0,0,0.55) 100%);
+}
+.caption {
+  position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); z-index: 1;
+  width: max-content; max-width: 88%; text-align: center;
+  font-size: clamp(0.95rem, 2.4vw, 1.5rem); font-weight: 600; line-height: 1.4;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6);
+  animation: caption-in 900ms 400ms both ease-out;
+}
+.caption small { display: block; font-weight: 500; opacity: 0.75; font-size: 0.72em; }
+@keyframes caption-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .caption { animation: none; } }
+
+.cta { display: flex; gap: 12px 20px; flex-wrap: wrap; align-items: center; }
+.button {
+  display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+  background: var(--amber); color: #1a1208; font-weight: 600; text-decoration: none;
+}
+.button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.note { color: var(--dim); font-size: 14px; }
+
+/* ---- sections ---- */
+.section { padding-block: 56px 0; }
+.section > h2 { margin: 0 0 8px; font-size: 1.6rem; letter-spacing: -0.02em; text-wrap: balance; }
+.section > p { margin: 0 0 28px; color: var(--dim); max-width: var(--measure); }
+
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 22px 22px 20px; }
+.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.card p { margin: 0; color: var(--dim); font-size: 15px; line-height: 1.6; }
+.card .kbd { font-family: var(--mono); font-size: 13px; color: var(--ink); background: var(--rule); padding: 1px 6px; border-radius: 5px; }
+
+.platforms { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.platforms div { background: var(--surface); padding: 18px 20px; }
+.platforms strong { display: block; }
+.pill { display: inline-block; margin-top: 6px; font-size: 12px; letter-spacing: 0.04em; padding: 2px 9px; border-radius: 999px; }
+.pill.live { background: var(--amber-soft); color: var(--amber); }
+.pill.soon { background: var(--rule); color: var(--dim); }
+
+/* ---- long-form documents ---- */
+.doc { max-width: var(--measure); padding-block: 56px 0; }
+.doc h1 { font-size: 2rem; letter-spacing: -0.02em; margin: 0 0 4px; line-height: 1.25; }
+.doc .meta { color: var(--dim); margin: 0 0 32px; font-size: 15px; }
+.doc h2 { font-size: 1.2rem; margin: 40px 0 8px; }
+.doc p, .doc li { color: #d9d5ce; }
+.doc ul, .doc ol { padding-left: 1.2em; }
+.doc li { margin-block: 6px; }
+.doc strong { color: var(--ink); }
+.lang-switch { display: flex; gap: 8px; margin-bottom: 24px; font-size: 14px; }
+.lang-switch a { color: var(--dim); text-decoration: none; padding: 4px 12px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--rule); }
+.divider { border: 0; border-top: 1px solid var(--rule); margin: 72px 0 0; }
+
+details { border-bottom: 1px solid var(--rule); padding-block: 14px; }
+details summary { cursor: pointer; font-weight: 600; list-style: none; }
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: "+"; float: right; color: var(--dim); }
+details[open] summary::after { content: "–"; }
+details p { margin: 10px 0 0; }
+
+/* Not a link yet: says where the app is going without pretending to be pressable. */
+.badge-soon { display: inline-flex; padding: 11px 18px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); font-weight: 600; font-size: 15px; }

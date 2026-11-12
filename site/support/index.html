@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>글레이즈 지원 | 영상·자막·네트워크 연결</title>
+  <link rel="icon" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../assets/site.css">
+<meta name="description" content="글레이즈의 영상 재생, AI 자막, Synology·WebDAV 연결과 독서 기능 도움말입니다."><meta name="robots" content="index,follow,max-image-preview:large"><link rel="canonical" href="https://edwin-space.github.io/glaze/support/"><link rel="alternate" hreflang="ko" href="https://edwin-space.github.io/glaze/support/"><link rel="alternate" hreflang="en" href="https://edwin-space.github.io/glaze/en/support/"><link rel="alternate" hreflang="x-default" href="https://edwin-space.github.io/glaze/support/"><meta property="og:type" content="website"><meta property="og:site_name" content="Glaze"><meta property="og:title" content="글레이즈 지원 | 영상·자막·네트워크 연결"><meta property="og:description" content="글레이즈의 영상 재생, AI 자막, Synology·WebDAV 연결과 독서 기능 도움말입니다."><meta property="og:url" content="https://edwin-space.github.io/glaze/support/"><meta property="og:image" content="https://edwin-space.github.io/glaze/assets/icon.png"><meta property="og:locale" content="ko_KR"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="글레이즈 지원 | 영상·자막·네트워크 연결"><script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "name": "글레이즈 지원 | 영상·자막·네트워크 연결", "description": "글레이즈의 영상 재생, AI 자막, Synology·WebDAV 연결과 독서 기능 도움말입니다.", "url": "https://edwin-space.github.io/glaze/support/", "inLanguage": "ko", "isPartOf": {"@type": "WebSite", "name": "Glaze", "url": "https://edwin-space.github.io/glaze/"}}</script></head>
+<body>
+  <div class="wrap">
+    <header class="bar">
+      <a class="brand" href="../"><img src="../assets/icon.png" alt="">글레이즈</a>
+      <nav class="nav" aria-label="사이트"><a href="../en/support/" lang="en">English</a>
+        <a href="./" aria-current="page">지원</a>
+        <a href="../privacy/">개인정보 처리방침</a>
+        <a href="../terms/">이용약관</a>
+      </nav>
+    </header>
+
+    <main class="doc">
+      <h1>지원</h1>
+      <p class="meta">문제가 생기면 <a href="https://github.com/Edwin-space/glaze/issues">GitHub Issues</a>에
+        남겨 주세요. macOS 버전, 앱 버전(글레이즈 → 글레이즈에 관하여), 무슨 일이 있었는지 적어 주시면
+        빨리 확인할 수 있습니다. NAS 주소나 비밀번호는 적지 마세요.</p>
+
+      <h2>자주 묻는 질문</h2>
+
+      <details>
+        <summary>어떤 파일을 재생할 수 있나요?</summary>
+        <p>MKV, MP4, MOV, AVI, WebM, M4V 영상과 SRT, VTT, SMI, ASS, SSA 자막을 열 수 있습니다.
+          Finder에서 파일을 끌어다 놓거나 “파일 → 영상 열기…”(⌘O)를 사용하세요.</p>
+      </details>
+
+      <details>
+        <summary>NAS는 어떻게 연결하나요?</summary>
+        <p>Synology NAS는 설정 → 네트워크 → 시놀로지 연결에서 DSM 주소와 계정으로 로그인하세요. WebDAV Server 패키지를 따로 켤 필요가 없습니다. 다른 WebDAV 지원 서버는 NAS 추가에서 주소와 계정을 등록합니다. 같은 네트워크의 DLNA/UPnP 서버도 별도 연결 방식이며, 기기별 검색 제한은 아래 연결 안내를 확인하세요.</p>
+      </details>
+
+      <details>
+        <summary>HTTPS로 연결할 때 인증서 오류가 나요.</summary>
+        <p>인증서가 <code>my-nas.synology.me</code> 같은 이름으로 발급되었는데 IP 주소로 접속하면
+          생기는 오류입니다. 글레이즈가 인증서에 적힌 이름을 알려주면 그 이름으로 주소를 바꾸세요.
+          자체 서명 인증서라면 지문을 확인한 뒤 신뢰할 수 있습니다.</p>
+      </details>
+
+      <details>
+        <summary>자막 생성은 인터넷이 필요한가요?</summary>
+        <p>Apple Silicon Mac에서 처음 사용할 음성 인식 모델과 번역 언어 자료를 내려받을 때 필요합니다. 그 뒤로는
+          영상과 음성이 맥 밖으로 나가지 않고 기기 안에서 처리됩니다.</p>
+      </details>
+
+      <details>
+        <summary>작품 정보(포스터, 줄거리)가 안 나와요.</summary>
+        <p>작품 정보는 TMDB에서 가져오며 본인의 TMDB API 키가 필요합니다.
+          <a href="https://www.themoviedb.org/settings/api">themoviedb.org</a>에서 키를 발급받아
+          설정 → 작품 정보에 입력하세요. 잘못 찾은 작품은 정보 패널에서 다시 검색해 고칠 수 있습니다.</p>
+      </details>
+
+      <details>
+        <summary>키보드 단축키를 바꾸고 싶어요.</summary>
+        <p>설정 → 키보드에서 동작마다 원하는 키를 지정할 수 있습니다. 기본값은 스페이스 재생/일시정지,
+          ←/→ 10초 이동, ↑/↓ 음량, ⌘←/⌘→ 이전/다음 영상입니다.</p>
+      </details>
+
+      <details>
+        <summary>시스템 요구 사항은 무엇인가요?</summary>
+        <p>자막 생성·번역을 위한 Mac 앱은 Apple Silicon 기반 Mac과 macOS 26 이상이 필요합니다. 온디바이스 음성 인식 모델과 번역 언어 자료를 처음 사용할 때 내려받아야 하며, 엔진·언어 조합에 따라 사용 가능 여부가 다릅니다.</p>
+      </details>
+
+      <details><summary>영어 영상에서 영어 자막도 만들 수 있나요?</summary><p>예. 음성 인식은 영상에서 말하는 언어의 원어 자막을 만드는 단계입니다. 영어 음성에서 영문 자막을 생성해 학습할 수 있고, 필요할 때 사용자 언어 설정에 맞춰 번역할 수 있습니다. 원어 자막 생성과 번역은 별도 작업이며, 번역은 한국어에 한정되지 않습니다. 지원 언어 조합은 선택한 엔진과 기기의 언어 자료에 따라 다릅니다.</p></details>
+
+      <h2 id="connections">서비스·프로토콜별 연결</h2>
+      <details><summary>Synology DSM 직접 연결과 WebDAV는 무엇이 다른가요?</summary><p>DSM 직접 연결은 시놀로지의 파일 서비스에 DSM 계정으로 로그인하는 방식입니다. 주소, 계정, 비밀번호를 입력하고 2단계 인증을 사용한다면 요청 시 코드를 입력하세요. WebDAV는 서버에서 해당 기능을 활성화하고 WebDAV용 주소와 권한으로 연결하는 별도 방식입니다. HTTPS 주소를 권장합니다.</p></details>
+      <details><summary>DLNA 서버가 자동으로 나타나지 않으면 어떻게 하나요?</summary><p>자동 검색은 같은 네트워크와 로컬 네트워크·멀티캐스트 권한이 필요합니다. 현재 iPhone·iPad 실기기의 자동 검색에는 제한이 있습니다. Apple TV에서는 미디어 소스의 주소로 추가에서 서버 주소를 지정할 수 있습니다. iPhone·iPad는 Synology DSM 또는 WebDAV 연결 경로를 이용하세요. 주소 입력이 모든 서버의 호환성을 보장하는 것은 아닙니다.</p></details>
+      <details><summary>SMB 공유 폴더를 직접 연결할 수 있나요?</summary><p>Mac은 Finder의 이동 → 서버에 연결(⌘K)에서 SMB 공유 폴더를 마운트한 뒤 글레이즈로 파일을 엽니다. Mac에서 마운트한 폴더는 로컬 폴더처럼 처리합니다. iPhone·iPad·Apple TV 앱의 직접 SMB 로그인 기능을 뜻하지 않습니다.</p></details>
+      <details id="pairing"><summary>iPhone에 저장한 연결을 Apple TV로 어떻게 보내나요?</summary><p>같은 네트워크에서 Apple TV의 연결 정보 받기 화면에 QR을 표시하세요. iPhone 글레이즈에서 저장된 서버를 길게 누르고 TV로 보내기를 선택한 뒤 QR을 스캔합니다. 지원되는 Synology·WebDAV 연결 정보를 전달하며, 영상 파일·자막 파일·재생 위치를 전송하거나 동기화하는 기능은 아닙니다. 실기기 카메라와 네트워크 접근이 필요합니다.</p></details>
+
+      <h2 id="journey">기기를 바꿔 감상하려면</h2>
+      <details>
+        <summary>지하철에서 영상을 보려면 무엇을 준비하나요?</summary>
+        <p>영상 파일과 Mac에서 준비한 자막 파일을 iPhone·iPad의 글레이즈 폴더에 미리 복사하세요.
+          파일 앱의 가져오기 또는 Finder 파일 공유를 이용할 수 있습니다. 영상과 자막을 같은 폴더에 두면
+          인터넷 연결 없이 감상할 수 있습니다. 집의 NAS가 이동 중 자동으로 연결되는 기능은 아닙니다.</p>
+      </details>
+      <details>
+        <summary>iPhone·iPad에서 어떤 책을 읽을 수 있나요?</summary>
+        <p>EPUB, PDF와 CBZ·ZIP·7z·CB7 만화 파일을 지원합니다. 기기에 가져온 책을 책장에서 열고,
+          읽던 위치를 해당 기기에 저장합니다. CBR 파일과 기기 간 독서 위치 자동 동기화는 지원하지 않습니다.</p>
+      </details>
+      <details>
+        <summary>Mac에서 만든 자막을 Apple TV에서도 볼 수 있나요?</summary>
+        <p>영상과 자막을 NAS의 같은 공유 폴더에 보관하고 Apple TV에서 그 소스를 연결해 감상하는 방식입니다.
+          영상 옆 저장에는 Mac의 해당 폴더 접근·쓰기 권한이 필요합니다. 자막이 Mac 앱 내부에만 저장되어 있다면
+          다른 기기에서 바로 사용할 수 없습니다. 재생 위치는 각 기기에 저장되며 자동으로 이어받지 않습니다.</p>
+      </details>
+      <p>현재 App Store 출시 준비 중입니다. 위 내용은 플랫폼별 구현을 기준으로 한 이용 안내이며,
+        실제 배포 일정과 이용 가능 여부는 출시 안내를 확인해 주세요.</p>
+
+      <h2>관련 문서</h2>
+      <ul>
+        <li><a href="../privacy/">개인정보 처리방침</a></li>
+        <li><a href="../terms/">이용약관</a></li>
+        <li><a href="https://github.com/Edwin-space/glaze">소스 코드와 오픈소스 라이선스</a></li>
+      </ul>
+    </main>
+
+    <footer class="foot">
+      <span>© 2026 Glaze</span>
+      <a href="../">글레이즈 홈</a>
+    </footer>
+  </div>
+</body>
+</html>
