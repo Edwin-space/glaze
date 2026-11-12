@@ -10,6 +10,8 @@ import SwiftUI
 /// so it is asked once and the answer is remembered.
 struct AutoTranslationPrompt: View {
     let sourceName: String
+    let sourceLanguageOrigin: SubtitleLanguageAssessment.Origin
+    @Binding var sourceLanguageCode: String
     let targetLanguageName: String
     let onChoose: (SubtitleTranslationTiming) -> Void
     let onDecline: () -> Void
@@ -24,13 +26,36 @@ struct AutoTranslationPrompt: View {
                 Text(
                     String(
                         format: L10n.string("subtitle.auto_translate.detail"),
-                        sourceName,
+                        L10n.languageName(for: sourceLanguageCode) ?? L10n.string("subtitle.language.unknown"),
                         targetLanguageName
                     )
                 )
                 .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.secondary)
             }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(L10n.string("subtitle.auto_translate.loaded"))
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(sourceName)
+                    .font(.callout.weight(.medium))
+                    .lineLimit(2)
+                    .help(sourceName)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("subtitle.auto_translate.source_name")
+                Picker(L10n.string("subtitle.language.source"), selection: $sourceLanguageCode) {
+                    Text(L10n.string("subtitle.language.unknown")).tag("")
+                    ForEach(languageCodes, id: \.self) { code in
+                        Text(L10n.languageName(for: code) ?? code).tag(code)
+                    }
+                }
+                .accessibilityIdentifier("subtitle.auto_translate.source_language")
+                Text(L10n.string(languageHintKey))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
 
             VStack(spacing: 10) {
                 choice(
@@ -53,6 +78,9 @@ struct AutoTranslationPrompt: View {
                 .toggleStyle(.checkbox)
                 .font(.callout)
 
+            Text(L10n.string("subtitle.auto_translate.preserves_original"))
+                .font(.caption).foregroundStyle(.secondary)
+
             HStack {
                 Spacer()
                 Button(L10n.string("subtitle.auto_translate.keep_original")) {
@@ -60,11 +88,29 @@ struct AutoTranslationPrompt: View {
                     onDecline()
                 }
                 .keyboardShortcut(.cancelAction)
+                .accessibilityIdentifier("subtitle.auto_translate.decline")
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 500)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("subtitle.auto_translate.prompt")
         .preferredColorScheme(.dark)
+    }
+
+    private var languageCodes: [String] {
+        var codes = ["ko", "en", "ja", "zh", "es", "fr", "de", "pt", "it", "ru", "ar", "hi", "id", "th", "tr", "vi"]
+        if !sourceLanguageCode.isEmpty, !codes.contains(sourceLanguageCode) { codes.append(sourceLanguageCode) }
+        return codes
+    }
+
+    private var languageHintKey: String {
+        switch sourceLanguageOrigin {
+        case .content: "subtitle.auto_translate.detected"
+        case .metadata: "subtitle.auto_translate.check_language"
+        case .user: "subtitle.auto_translate.user_language"
+        case .unknown: "subtitle.auto_translate.unknown_language"
+        }
     }
 
     private func choice(
@@ -100,6 +146,7 @@ struct AutoTranslationPrompt: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.bordered)
+        .accessibilityIdentifier("subtitle.auto_translate.\(timing.rawValue)")
         .tint(isProminent ? .accentColor : nil)
     }
 }

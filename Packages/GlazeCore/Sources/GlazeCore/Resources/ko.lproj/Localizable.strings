@@ -348,7 +348,7 @@
 "subtitle.language.source" = "현재 자막 언어";
 "subtitle.language.target" = "번역할 언어";
 "subtitle.language.unknown" = "알 수 없음 / 자동";
-"help.subtitle.source_language" = "영상에 기록된 언어 정보가 잘못된 경우 여기서 바로잡으세요. 자막 내용은 바뀌지 않으며 번역 기준만 변경됩니다.";
+"help.subtitle.source_language" = "자막 내용에서 언어를 확인하고, 확실하지 않으면 파일이나 트랙의 언어 정보를 참고합니다. 실제 언어와 다르면 여기서 수정하세요. 원본 내용은 바뀌지 않습니다.";
 "help.subtitle.target_language" = "사용자가 자막을 읽을 언어입니다. macOS 표시 언어와 다르게 지정할 수 있습니다.";
 "subtitle.ai.section" = "AI로 자막 만들기";
 "subtitle.ai.description" = "영상에 사용할 수 있는 자막이 없을 때만 사용하세요. 사용자가 시작하면 영상의 음성을 Mac에서 분석합니다.";
@@ -765,12 +765,18 @@
 "ios.network.title" = "네트워크";
 
 /* 자동 번역 제안 — 내 언어의 자막이 없는 영상을 열었을 때 */
-"subtitle.auto_translate.title" = "%@ 자막이 없습니다";
-"subtitle.auto_translate.detail" = "이 영상에는 %1$@ 자막만 있습니다. 이 Mac에서 %2$@로 번역할 수 있습니다.";
+"subtitle.auto_translate.title" = "%@로 번역할까요?";
+"subtitle.auto_translate.detail" = "불러온 자막은 %1$@입니다. 기본 자막 언어인 %2$@로 번역할 수 있습니다.";
+"subtitle.auto_translate.loaded" = "불러온 자막";
+"subtitle.auto_translate.detected" = "자막 내용에서 감지한 언어입니다. 다르면 직접 수정하세요.";
+"subtitle.auto_translate.check_language" = "자막에 표시된 언어입니다. 실제 내용과 다르면 수정하세요.";
+"subtitle.auto_translate.user_language" = "직접 확인한 원문 언어를 번역에 사용합니다.";
+"subtitle.auto_translate.unknown_language" = "원문 언어를 확인하거나 자동 감지를 선택하세요.";
+"subtitle.auto_translate.preserves_original" = "원본 자막은 변경하지 않고 번역본을 별도 파일로 저장합니다.";
 "subtitle.auto_translate.while_watching" = "보면서 번역하기";
 "subtitle.auto_translate.while_watching.detail" = "바로 재생하고, 번역된 줄부터 화면에 올립니다.";
 "subtitle.auto_translate.before_watching" = "번역하고 보기";
-"subtitle.auto_translate.before_watching.detail" = "전체를 번역한 뒤에 재생합니다. 영화 한 편이면 몇 분 걸립니다.";
+"subtitle.auto_translate.before_watching.detail" = "번역이 끝날 때까지 재생을 잠시 멈춥니다.";
 "subtitle.auto_translate.keep_original" = "원본 자막으로 보기";
 "subtitle.auto_translate.remember" = "이 선택을 기억하고 다시 묻지 않기";
 "subtitle.auto_translate.ask" = "물어보기";

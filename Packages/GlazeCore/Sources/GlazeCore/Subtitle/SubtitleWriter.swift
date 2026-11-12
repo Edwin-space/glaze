@@ -11,7 +11,7 @@ public enum SubtitleWriter {
     /// - Parameter relatedTo: the video this subtitle belongs beside. Under the App
     ///   Sandbox, writing next to an opened film is only permitted as a related item of
     ///   it — see `RelatedFileAccess`.
-    public static func writeSRT(cues: [SubtitleCue], to url: URL, relatedTo videoURL: URL? = nil) throws {
+    public static func writeSRT(cues: [SubtitleCue], to url: URL, relatedTo videoURL: URL? = nil, replacingExisting: Bool = true) throws {
         let content = srt(from: cues)
         let directory = url.deletingLastPathComponent()
 
@@ -21,7 +21,7 @@ public enum SubtitleWriter {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         }
 
-        try RelatedFileAccess.write(Data(content.utf8), to: url, relatedTo: videoURL)
+        try RelatedFileAccess.write(Data(content.utf8), to: url, relatedTo: videoURL, replacingExisting: replacingExisting)
     }
 
     private static func timestamp(_ time: TimeInterval) -> String {

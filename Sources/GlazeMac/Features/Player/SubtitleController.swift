@@ -18,6 +18,8 @@ final class SubtitleController {
     /// What the currently loaded subtitle is written in. Container tags are only a
     /// default: users can correct incorrect/missing tags before translating.
     private(set) var selectedSubtitleLanguageCode: String?
+    private(set) var selectedSubtitleLanguageOrigin: SubtitleLanguageAssessment.Origin = .unknown
+    private(set) var isAnalyzingSubtitleLanguage = false
     var status: SubtitleStatus = .noVideo
     var errorMessage: String?
     var isInspectingEmbeddedSubtitles = false
@@ -100,6 +102,8 @@ final class SubtitleController {
     private var sidecarDiscoveryTask: Task<Void, Never>?
     private var embeddedSubtitleTask: Task<Void, Never>?
     private var translationTask: Task<Void, Never>?
+    private var subtitleLanguageTask: Task<Void, Never>?
+    private var subtitleLanguageRevision = UUID()
     private let embeddedSubtitleService = EmbeddedSubtitleService()
     private let probeCoordinator = MediaProbeCoordinator.shared
     private let networkSubtitleLoader = NetworkSubtitleLoader(
@@ -146,6 +150,7 @@ final class SubtitleController {
         let sessionID = mediaSessionID
         sidecarDiscoveryTask?.cancel()
         embeddedSubtitleTask?.cancel()
+        cancelSubtitleLanguageAnalysis()
         cancelTranslating()
         needsFolderAccess = false
         // Reopen a folder the viewer already allowed, before looking for subtitles in
@@ -162,6 +167,7 @@ final class SubtitleController {
         selectedSubtitlePath = nil
         selectedEmbeddedTrackID = nil
         selectedSubtitleLanguageCode = nil
+        selectedSubtitleLanguageOrigin = .unknown
         selectedSubtitleDisplayName = nil
         errorMessage = nil
         isInspectingEmbeddedSubtitles = true
@@ -201,13 +207,14 @@ final class SubtitleController {
                             load(
                                 subtitle,
                                 sourceLanguageCode: remoteSubtitle.languageCode,
-                                displayName: remoteSubtitle.displayName
+                                displayName: remoteSubtitle.displayName,
+                                automaticallyLoaded: true
                             )
                         } else {
                             // Every later sidecar still changes what the panel can offer.
                             status = computeStatus(for: detectedSubtitles)
                         }
-                        loadedAny = true
+                        loadedAny = loadedAny || !subtitleCues.isEmpty
                     } catch {
                         continue
                     }
@@ -270,6 +277,8 @@ final class SubtitleController {
     }
 
     func loadEmbedded(_ track: EmbeddedSubtitleTrack, from videoURL: URL) {
+        automaticOfferArmed = false
+        pendingAutoDecision = nil
         embeddedSubtitleTask?.cancel()
         embeddedSubtitleTask = Task {
             await extractAndLoadEmbedded(track, from: videoURL)
@@ -283,7 +292,7 @@ final class SubtitleController {
     /// translated at all. The offer now follows the loaded subtitle rather than where it
     /// came from.
     private func offerTranslation(displayName: String, sourceLanguageCode: String?) {
-        let target = preferredTranslationLanguageCode
+        let target = SubtitleLanguageCode.normalized(preferredTranslationLanguageCode) ?? "en"
 
         // Nothing to translate, or it already reads in the viewer's language.
         guard !subtitleCues.isEmpty, sourceLanguageCode != target else {
@@ -305,11 +314,13 @@ final class SubtitleController {
     /// The film has just opened with a subtitle that is not in the viewer's language.
     /// What happens next is the viewer's standing choice, made once and remembered.
     private func raiseAutomaticDecisionIfArmed() {
-        guard automaticOfferArmed, !isTranslating else { return }
+        guard automaticOfferArmed, !isTranslating, !isGenerating, !isAnalyzingSubtitleLanguage else { return }
         automaticOfferArmed = false
         let decision = SubtitleAutoTranslationDecision.decide(
             setting: autoTranslation,
-            hasTranslatableSubtitle: pendingTranslationRequest != nil
+            // Unknown/mixed text remains manually translatable, but is not a
+            // reason to interrupt playback with a confidently worded question.
+            hasTranslatableSubtitle: pendingTranslationRequest?.source.languageCode != nil
         )
         pendingAutoDecision = decision == .doNothing ? nil : decision
     }
@@ -339,8 +350,14 @@ final class SubtitleController {
     func load(
         _ subtitle: SubtitleFile,
         sourceLanguageCode: String? = nil,
-        displayName: String? = nil
+        displayName: String? = nil,
+        automaticallyLoaded: Bool = false
     ) {
+        cancelSubtitleLanguageAnalysis()
+        if isTranslating { cancelTranslating() }
+        pendingTranslationRequest = nil
+        pendingAutoDecision = nil
+        if !automaticallyLoaded { automaticOfferArmed = false }
         do {
             // The video is named so file access can be coordinated against it. This
             // does not yet unlock sidecar subtitles under the App Sandbox — see
@@ -355,22 +372,21 @@ final class SubtitleController {
             selectedSubtitleLanguageCode = SubtitleLanguageCode.normalized(
                 sourceLanguageCode ?? subtitle.languageCode
             )
+            selectedSubtitleLanguageOrigin = selectedSubtitleLanguageCode == nil ? .unknown : .metadata
             selectedSubtitleDisplayName = displayName ?? subtitle.displayName
             activeSubtitleText = ""
             isSubtitleVisible = true
             status = computeStatus(for: detectedSubtitles)
             errorMessage = nil
             needsFolderAccess = false
-            offerTranslation(
-                displayName: selectedSubtitleDisplayName ?? subtitle.displayName,
-                sourceLanguageCode: selectedSubtitleLanguageCode
-            )
+            analyzeSubtitleLanguage(declaredLanguageCode: selectedSubtitleLanguageCode)
         } catch {
             subtitleCues = []
             selectedSubtitleName = nil
             selectedSubtitlePath = nil
             selectedEmbeddedTrackID = nil
             selectedSubtitleLanguageCode = nil
+            selectedSubtitleLanguageOrigin = .unknown
             selectedSubtitleDisplayName = nil
             activeSubtitleText = ""
             status = computeStatus(for: detectedSubtitles)
@@ -386,8 +402,64 @@ final class SubtitleController {
     /// Corrects an incorrect container/file language tag without changing subtitle
     /// contents. The translation offer is rebuilt immediately from the same cues.
     func setSelectedSubtitleLanguageCode(_ languageCode: String?) {
+        cancelSubtitleLanguageAnalysis()
         selectedSubtitleLanguageCode = SubtitleLanguageCode.normalized(languageCode)
+        selectedSubtitleLanguageOrigin = languageCode == nil ? .unknown : .user
         refreshTranslationOffer()
+    }
+
+    private func cancelSubtitleLanguageAnalysis() {
+        subtitleLanguageRevision = UUID()
+        subtitleLanguageTask?.cancel()
+        subtitleLanguageTask = nil
+        isAnalyzingSubtitleLanguage = false
+    }
+
+    private func analyzeSubtitleLanguage(declaredLanguageCode: String?) {
+        let revision = subtitleLanguageRevision
+        let session = mediaSessionID
+        let cues = subtitleCues
+        isAnalyzingSubtitleLanguage = true
+        subtitleLanguageTask = Task { [weak self] in
+            let result = await Task.detached(priority: .utility) {
+                SubtitleLanguageAssessment.assess(cues: cues, declaredLanguageCode: declaredLanguageCode)
+            }.value
+            guard let self, !Task.isCancelled, mediaSessionID == session,
+                  subtitleLanguageRevision == revision else { return }
+            let target = SubtitleLanguageCode.normalized(preferredTranslationLanguageCode)
+            if automaticOfferArmed, result.languageCode != target {
+                // A mislabelled .ko source must not hide an already saved Korean
+                // translation next to it. Verify alternatives before asking again.
+                let alternatives = Array(detectedSubtitles.filter {
+                    $0.url.path != selectedSubtitlePath && $0.languageCode == target
+                }.prefix(8))
+                let relatedVideo = currentResource?.localFileURL
+                let matching = await Task.detached(priority: .utility) { () -> SubtitleFile? in
+                    for candidate in alternatives {
+                        guard let bytes = try? candidate.url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+                              bytes <= 16 * 1_024 * 1_024,
+                              let cues = try? SubtitleParser.parse(url: candidate.url, relatedTo: relatedVideo) else { continue }
+                        let assessment = SubtitleLanguageAssessment.assess(cues: cues, declaredLanguageCode: candidate.languageCode)
+                        if assessment.origin == .content, assessment.languageCode == target { return candidate }
+                    }
+                    return nil as SubtitleFile?
+                }.value
+                guard !Task.isCancelled, mediaSessionID == session, subtitleLanguageRevision == revision else { return }
+                if let matching {
+                    load(matching, automaticallyLoaded: true)
+                    return
+                }
+            }
+            selectedSubtitleLanguageCode = result.languageCode
+            selectedSubtitleLanguageOrigin = result.origin
+            isAnalyzingSubtitleLanguage = false
+            subtitleLanguageTask = nil
+            DiagnosticsCenter.shared.record("subtitle.language_assessed", numbers: [
+                "content": result.origin == .content ? 1 : 0,
+                "known": result.languageCode == nil ? 0 : 1,
+                "confidence": result.confidence])
+            refreshTranslationOffer()
+        }
     }
 
     private func refreshTranslationOffer() {
@@ -395,10 +467,7 @@ final class SubtitleController {
             pendingTranslationRequest = nil
             return
         }
-        let correctedDisplayName = selectedSubtitleLanguageCode.flatMap {
-            L10n.languageName(for: $0)
-        } ?? displayName
-        offerTranslation(displayName: correctedDisplayName, sourceLanguageCode: selectedSubtitleLanguageCode)
+        offerTranslation(displayName: displayName, sourceLanguageCode: selectedSubtitleLanguageCode)
     }
 
     /// Starts on-device AI subtitle generation for the given video. No-op if a generation is already running.
@@ -799,7 +868,8 @@ final class SubtitleController {
             load(
                 subtitle,
                 sourceLanguageCode: track.languageCode,
-                displayName: embeddedTrackLabel(track)
+                displayName: embeddedTrackLabel(track),
+                automaticallyLoaded: automaticOfferArmed
             )
             selectedEmbeddedTrackID = track.id
             onEmbeddedSubtitleLoaded?()
@@ -932,22 +1002,15 @@ final class SubtitleController {
             return
         }
 
-        load(preferredSubtitle)
+        load(preferredSubtitle, automaticallyLoaded: true)
     }
 
     private func preferredSubtitleSort(_ lhs: SubtitleFile, _ rhs: SubtitleFile) -> Bool {
-        priority(for: lhs.kind) < priority(for: rhs.kind)
-    }
-
-    private func priority(for kind: SubtitleFile.Kind) -> Int {
-        switch kind {
-        case .korean:
-            0
-        case .original:
-            1
-        case .unknown:
-            2
-        }
+        let target = SubtitleLanguageCode.normalized(preferredTranslationLanguageCode)
+        let left = lhs.languageCode == target ? 0 : (lhs.languageCode == nil ? 1 : 2)
+        let right = rhs.languageCode == target ? 0 : (rhs.languageCode == nil ? 1 : 2)
+        if left != right { return left < right }
+        return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
     }
 
     private func computeStatus(for subtitles: [SubtitleFile]) -> SubtitleStatus {

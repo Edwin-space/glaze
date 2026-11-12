@@ -94,6 +94,26 @@ struct SubtitleStoreTests {
 
     // MARK: - Writing
 
+    @Test func translationNeverOverwritesAnExistingOriginalOrTranslation() throws {
+        let (store, library) = makeStore()
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("glaze-preserve-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: folder)
+            try? FileManager.default.removeItem(at: library)
+        }
+        let video = folder.appendingPathComponent("movie.mp4")
+        let source = folder.appendingPathComponent("movie.ko.srt")
+        let original = Data("Actually Japanese, despite the Korean filename.".utf8)
+        try original.write(to: source)
+        let first = try store.save(cues: cues, for: .localFile(video), kind: .translated(languageCode: "ko"), preferring: .besideVideo)
+        let second = try store.save(cues: cues, for: .localFile(video), kind: .translated(languageCode: "ko"), preferring: .besideVideo)
+        #expect(first.lastPathComponent == "movie.translated-1.ko.srt")
+        #expect(second.lastPathComponent == "movie.translated-2.ko.srt")
+        #expect(try Data(contentsOf: source) == original)
+        #expect(try SubtitleParser.parse(url: first) == cues)
+    }
+
     @Test func writesBesideTheVideoWhenTheFolderIsWritable() throws {
         let (store, _) = makeStore()
         let folder = FileManager.default.temporaryDirectory

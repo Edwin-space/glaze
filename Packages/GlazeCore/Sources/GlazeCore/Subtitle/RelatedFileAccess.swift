@@ -35,14 +35,14 @@ public enum RelatedFileAccess {
         }
     }
 
-    public static func write(_ data: Data, to url: URL, relatedTo primaryURL: URL?) throws {
+    public static func write(_ data: Data, to url: URL, relatedTo primaryURL: URL?, replacingExisting: Bool = true) throws {
         try coordinate(url, relatedTo: primaryURL) { coordinator, presenter in
             var coordinationError: NSError?
             var writeError: Error?
 
-            coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &coordinationError) { granted in
+            coordinator.coordinate(writingItemAt: url, options: replacingExisting ? .forReplacing : [], error: &coordinationError) { granted in
                 do {
-                    try data.write(to: granted, options: .atomic)
+                    try data.write(to: granted, options: replacingExisting ? .atomic : .withoutOverwriting)
                 } catch {
                     writeError = error
                 }

@@ -409,3 +409,23 @@ SF Symbols 대신 공식 Lucide 벡터 일부를 임시 사용했다. 이 사실
 - Apple Design Resources: https://developer.apple.com/design/resources/
 - Apple — Build a SwiftUI app with the new design: https://developer.apple.com/videos/play/wwdc2025/323/
 - Apple — Meet Liquid Glass: https://developer.apple.com/videos/play/wwdc2025/219/
+
+## 2026-11-12 · Mac 자동 연결 자막 번역 동의창
+
+500pt 네이티브 시트에 질문 → 불러온 자막 이름/수정 가능한 원문 언어 → 보면서 번역/번역하고 보기
+→ 기억하기(기본 해제) → 원본 보존 설명 → 원본 보기 액션을 배치한다. 특정 언어 자막이 전혀 없다고
+단정하지 않고 **현재 불러온 자막**의 언어만 설명한다. 내용 감지·메타데이터·사용자 수정 근거를 구분한다.
+데스크톱 UI 도구로 실제 Debug 앱의 시트·파일 태그 오류·동의 후 번역 저장과 재열기를 확인했다.
+
+기존 Glaze Brand Guidelines `Release / 2026-11-09 Verified UI` 페이지에 편집 가능한 계층과
+SF Pro 스타일·새 최소 토큰을 준비했으나 Figma 검수는 **미완료**다. Apple macOS 26 UI 키트의
+import는 `Not permitted to upsert from library`로 차단됐다. SF Pro는 목록과 loadFontAsync에는
+정상으로 나오지만 실제 TextNode.hasMissingFont=true이며 캡처에 글자가 빠졌다.
+전체 UI 이미지를 대신 붙이거나 임의의 폰트로 바꾸지 않았다. 신규 시트/컴포넌트만 숨겨 기존 화면을
+보존했고, 사용자에게 폰트 복구 또는 Figma 전용 Inter 대체 여부를 요청했다.
+변수 바인딩 후 paint opacity가 1로 돌아가는 현상도 확인돼, 재개 시 배경 알파와 대비를 함께 다시 검증해야 한다.
+
+- 파일: `p1Y9SkEuKnXdfMHWBiSmRa`, 페이지 `144:22`
+- 숨긴 대기 시트 `166:34`; 액션/언어 선택/기억하기/원본 보기 컴포넌트 `166:25`, `166:26`, `166:29`, `166:32`
+- 새 SF Pro 스타일: `macos/translation/{title,body,headline,callout,caption}`
+- 원본 이미지 없는 30개 하위 레이어, 5개 인스턴스. 구조·명목 font family만 통과했고 시각 검증은 실패했다.

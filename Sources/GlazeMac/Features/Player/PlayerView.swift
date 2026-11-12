@@ -68,6 +68,12 @@ struct PlayerView: View {
                 await runTranslation(input: input, engine: AppleTranslationEngine(session: session))
             }
             .sheet(isPresented: $isAskingAutoTranslation) { autoTranslationPrompt }
+            .onChange(of: subtitles.pendingTranslationRequest) { _, request in
+                if request == nil {
+                    isAskingAutoTranslation = false
+                    subtitles.pendingAutoDecision = nil
+                }
+            }
             // Raised once per film, when it opens with subtitles but none in the
             // language the viewer reads.
             .onChange(of: subtitles.pendingAutoDecision) { _, decision in
@@ -798,6 +804,8 @@ struct PlayerView: View {
         if let request = subtitles.pendingTranslationRequest {
             AutoTranslationPrompt(
                 sourceName: request.source.displayName,
+                sourceLanguageOrigin: subtitles.selectedSubtitleLanguageOrigin,
+                sourceLanguageCode: selectedSubtitleLanguageBinding,
                 targetLanguageName: languageDisplayName(request.targetLanguageCode),
                 onChoose: { timing in beginTranslation(timing: timing) },
                 onDecline: {

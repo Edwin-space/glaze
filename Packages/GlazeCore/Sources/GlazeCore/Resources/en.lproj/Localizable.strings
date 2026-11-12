@@ -348,7 +348,7 @@
 "subtitle.language.source" = "Subtitle is written in";
 "subtitle.language.target" = "Translate to";
 "subtitle.language.unknown" = "Unknown / Auto";
-"help.subtitle.source_language" = "Container language tags can be wrong. Correct the language here before translating; this does not change the subtitle text.";
+"help.subtitle.source_language" = "Glaze checks the subtitle text and falls back to file or track metadata when uncertain. Correct the language here if needed. The original text stays unchanged.";
 "help.subtitle.target_language" = "The language you want to read. It can be different from the language used by macOS.";
 "subtitle.ai.section" = "Create subtitles with AI";
 "subtitle.ai.description" = "Use this only when the video has no usable subtitle. Glaze transcribes the audio locally after you start it.";
@@ -765,12 +765,18 @@ Pull down to refresh in the app afterwards. You can delete this note.
 "ios.network.title" = "Network";
 
 /* Offered when a film opens with no subtitle in the viewer's language */
-"subtitle.auto_translate.title" = "No %@ subtitles";
-"subtitle.auto_translate.detail" = "This film carries %1$@ subtitles only. Glaze can translate them into %2$@ on this Mac.";
+"subtitle.auto_translate.title" = "Translate into %@?";
+"subtitle.auto_translate.detail" = "The loaded subtitle is in %1$@. You can translate it into %2$@, your preferred subtitle language.";
+"subtitle.auto_translate.loaded" = "Loaded subtitle";
+"subtitle.auto_translate.detected" = "Detected from the subtitle text. Correct the language if needed.";
+"subtitle.auto_translate.check_language" = "Language from the subtitle metadata. Correct it if the text differs.";
+"subtitle.auto_translate.user_language" = "Translation will use the source language you confirmed.";
+"subtitle.auto_translate.unknown_language" = "Confirm the source language or choose automatic detection.";
+"subtitle.auto_translate.preserves_original" = "Your original stays unchanged. The translation is saved as a separate file.";
 "subtitle.auto_translate.while_watching" = "Translate while watching";
 "subtitle.auto_translate.while_watching.detail" = "Starts playing now; each line appears as it is translated.";
 "subtitle.auto_translate.before_watching" = "Translate, then watch";
-"subtitle.auto_translate.before_watching.detail" = "Translates the whole film first. A feature takes a few minutes.";
+"subtitle.auto_translate.before_watching.detail" = "Pauses playback until the translation is ready.";
 "subtitle.auto_translate.keep_original" = "Watch with the original";
 "subtitle.auto_translate.remember" = "Remember this and stop asking";
 "subtitle.auto_translate.ask" = "Ask";

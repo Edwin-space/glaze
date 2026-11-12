@@ -105,15 +105,27 @@ public struct FileSubtitleStore: SubtitleStoring {
         let videoURL: URL? = if case .localFile(let url) = resource { url } else { nil }
 
         var lastError: Error?
-        for destination in candidates {
-            do {
-                try SubtitleWriter.writeSRT(cues: cues, to: destination, relatedTo: videoURL)
-                return destination
-            } catch {
-                // Beside-the-video can fail on a read-only volume or a folder the
-                // sandbox will not grant; fall through to app storage rather than
-                // losing work the user waited for.
-                lastError = error
+        let isTranslation: Bool = if case .translated = kind { true } else { false }
+        for base in candidates {
+            for index in 0..<(isTranslation ? 1_000 : 1) {
+                let destination = index == 0 ? base : base.deletingPathExtension().deletingPathExtension()
+                    .appendingPathExtension("translated-\(index)")
+                    .appendingPathExtension(kind.filenameSuffix).appendingPathExtension("srt")
+                do {
+                    // A .ko.srt can actually contain Japanese. Never overwrite it
+                    // (or an earlier translation), even if its filename lies.
+                    try SubtitleWriter.writeSRT(cues: cues, to: destination, relatedTo: videoURL,
+                        replacingExisting: !isTranslation)
+                    return destination
+                } catch {
+                    let nsError = error as NSError
+                    if isTranslation, nsError.domain == NSCocoaErrorDomain,
+                       nsError.code == CocoaError.fileWriteFileExists.rawValue { continue }
+                    // Beside-the-video can fail on a read-only volume or a folder
+                    // the sandbox will not grant; fall through to app storage.
+                    lastError = error
+                    break
+                }
             }
         }
 

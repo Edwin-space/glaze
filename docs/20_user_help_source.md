@@ -247,3 +247,23 @@ and Audio, or adjust its timing, size, selection and visibility there. Clearing 
 downloaded subtitles, never server originals. Already prepared text may remain for the current playback.
 The cache defaults to a 24-hour lifetime and a 64 MB budget, and the OS may evict it sooner. No subtitle
 or video is sent to an analysis service. Video seek/buffering time still depends on the file and network.
+
+## 2026-11-12 · Mac에서 자동으로 열린 자막의 언어가 다를 때
+
+글레이즈는 파일 이름뿐 아니라 자막 내용의 언어도 확인합니다. 일본어 자막이 열렸는데 기본 자막
+언어가 한국어이면, 불러온 자막 이름과 원문 언어를 보여주고 한국어로 번역할지 묻습니다.
+원문 언어가 다르게 감지됐다면 안내창에서 수정할 수 있습니다. 원본으로 보기를 선택하면 번역하지
+않습니다. 이미 기본 언어의 자막이 확인되거나 언어 판단이 불확실하면 불필요한 질문을 생략합니다.
+필요할 때 자막 패널에서 언어를 확인해 직접 번역할 수 있습니다.
+
+번역본은 별도 SRT로 저장합니다. 원본과 기존 번역본은 덮어쓰지 않으며 이름이 겹치면
+`movie.translated-1.ko.srt`처럼 다른 이름을 사용합니다. 언어 확인만으로 음성 인식이나 번역을
+시작하지 않습니다. 설정에서 이전에 기억한 자동 번역 방식은 그대로 적용됩니다.
+
+On Mac, Glaze checks subtitle text as well as its filename. If the loaded subtitle differs from your
+preferred subtitle language, the default Ask setting shows its name and source language before offering
+translation. Correct the detected language if needed, or keep the original without translating.
+Existing subtitles in your language are reused when verified. Uncertain/mixed text does not trigger a
+confident automatic prompt; you can still set its language and translate manually in the subtitle panel.
+Translations keep the original timing and are saved as separate SRT files, never overwriting an existing
+file. Previously remembered automatic-translation preferences still apply.

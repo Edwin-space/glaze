@@ -317,3 +317,18 @@ GlazeCore 한/영 `diagnostics.*`: title, enabled, detail, prepare, export, clea
 | ios.player.subtitle.prepare_failed | 자막을 불러오지 못했습니다. 자막 파일을 다시 선택해 주세요. | Couldn’t load the subtitles. Choose the subtitle file again to retry. |
 | ios.settings.cache.detail | 압축을 푼 책, 표지 그림, 네트워크 자막의 로컬 캐시입니다. 원본은 그대로 유지되며, 캐시한 자막은 필요할 때 다시 내려받습니다. | Unpacked books, cover images, and locally cached network subtitles. Your originals are untouched; cached subtitles are downloaded again when needed. |
 | ios.settings.cache.confirm | 압축을 푼 책, 표지와 자막 캐시를 지웁니다. 원본 파일과 서버의 파일은 지워지지 않습니다. | Deletes unpacked books, covers, and cached subtitles. Your original files and files on the server are not touched. |
+
+## Mac 자막 내용 확인·번역 동의 (2026-11-12)
+
+| 키 | 한국어 | English |
+|---|---|---|
+| subtitle.auto_translate.title | %@로 번역할까요? | Translate into %@? |
+| subtitle.auto_translate.detail | 불러온 자막은 %1$@입니다. 기본 자막 언어인 %2$@로 번역할 수 있습니다. | The loaded subtitle is in %1$@. You can translate it into %2$@, your preferred subtitle language. |
+| subtitle.auto_translate.loaded | 불러온 자막 | Loaded subtitle |
+| subtitle.auto_translate.detected | 자막 내용에서 감지한 언어입니다. 다르면 직접 수정하세요. | Detected from the subtitle text. Correct the language if needed. |
+| subtitle.auto_translate.check_language | 자막에 표시된 언어입니다. 실제 내용과 다르면 수정하세요. | Language from the subtitle metadata. Correct it if the text differs. |
+| subtitle.auto_translate.user_language | 직접 확인한 원문 언어를 번역에 사용합니다. | Translation will use the source language you confirmed. |
+| subtitle.auto_translate.unknown_language | 원문 언어를 확인하거나 자동 감지를 선택하세요. | Confirm the source language or choose automatic detection. |
+| subtitle.auto_translate.preserves_original | 원본 자막은 변경하지 않고 번역본을 별도 파일로 저장합니다. | Your original stays unchanged. The translation is saved as a separate file. |
+| subtitle.auto_translate.before_watching.detail | 번역이 끝날 때까지 재생을 잠시 멈춥니다. | Pauses playback until the translation is ready. |
+| help.subtitle.source_language | 자막 내용에서 언어를 확인하고, 확실하지 않으면 파일이나 트랙의 언어 정보를 참고합니다. 실제 언어와 다르면 여기서 수정하세요. 원본 내용은 바뀌지 않습니다. | Glaze checks the subtitle text and falls back to file or track metadata when uncertain. Correct the language here if needed. The original text stays unchanged. |
